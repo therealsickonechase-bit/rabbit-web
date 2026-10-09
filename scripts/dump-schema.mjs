@@ -50,7 +50,7 @@ for (const r of await q(`select extname, extversion, n.nspname from pg_extension
 // ---- enum types
 section('Enum types (public)')
 for (const r of await q(`
-  select t.typname, array_agg(e.enumlabel order by e.enumsortorder) as labels
+  select t.typname, array_agg(e.enumlabel::text order by e.enumsortorder) as labels
   from pg_type t join pg_enum e on e.enumtypid = t.oid join pg_namespace n on n.oid = t.typnamespace
   where n.nspname = 'public' group by t.typname order by 1`))
   out.push(`create type public.${ident(r.typname)} as enum (${r.labels.map((l) => `'${l.replace(/'/g, "''")}'`).join(', ')});`)
@@ -102,7 +102,7 @@ out.push('', `-- tables WITHOUT row level security (${off.length}): ${off.join('
 
 section('Policies (public and storage)')
 for (const r of await q(`
-  select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies
+  select schemaname, tablename, policyname, permissive, roles::text[] as roles, cmd, qual, with_check from pg_policies
   where schemaname in ('public','storage') order by schemaname, tablename, policyname`)) {
   out.push(
     `create policy ${ident(r.policyname)} on ${r.schemaname}.${ident(r.tablename)} as ${r.permissive.toLowerCase()} for ${r.cmd.toLowerCase()} to ${r.roles.join(', ')}` +
