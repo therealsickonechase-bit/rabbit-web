@@ -12,6 +12,10 @@ export default defineConfig({
       SUPABASE_SERVICE_ROLE_KEY: bindings.secret(),
       INGEST_SHARED_SECRET: bindings.secret(),
       KEY_ENCRYPTION_SECRET: bindings.secret(),
+      SEND_EMAIL_HOOK_SECRET: bindings.secret(),
+      // Auth emails go out through Cloudflare Email Sending, from this one address only.
+      EMAIL: bindings.sendEmail({ allowedSenderAddresses: ['accounts@mail.rabbitsoftware.io'] }),
+      APP_URL: bindings.text('https://app.rabbitsoftware.io'),
     },
   }),
 });
