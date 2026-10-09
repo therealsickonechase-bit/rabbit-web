@@ -12,6 +12,7 @@ export default defineConfig({
       SUPABASE_SERVICE_ROLE_KEY: bindings.secret(),
       INGEST_SHARED_SECRET: bindings.secret(),
       KEY_ENCRYPTION_SECRET: bindings.secret(),
+      DASHBOARD_ALLOWED_EMAILS: bindings.secret(),
     },
   }),
 });

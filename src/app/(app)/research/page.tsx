@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { requireAllowedUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from '@/lib/secrets'
 import { DISCLAIMER, MODEL, buildPrompt, summarize } from '@/lib/summarize'
@@ -43,9 +44,8 @@ const NOTICE: Record<string, { tone: 'ok' | 'bad'; text: string }> = {
 
 async function summarizeTopic(formData: FormData) {
   'use server'
+  const user = await requireAllowedUser()
   const sb = await createClient()
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) redirect('/login')
 
   const topicId = Number(formData.get('topic_id'))
   const admin = createAdminClient()
