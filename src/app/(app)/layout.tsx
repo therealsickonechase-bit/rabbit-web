@@ -20,6 +20,7 @@ const OWNER_NAV = [
   { href: '/ask', label: 'Ask RabbitOS' },
   { href: '/crispr', label: 'CRISPR Explorer' },
   { href: '/collections', label: 'Collections' },
+  { href: '/tasks', label: 'Agent tasks' },
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
   { href: '/members', label: 'Members' },
@@ -29,6 +30,7 @@ const MEMBER_NAV = [
   { href: '/ask', label: 'Ask RabbitOS' },
   { href: '/crispr', label: 'CRISPR Explorer' },
   { href: '/collections', label: 'Collections' },
+  { href: '/tasks', label: 'Agent tasks' },
 ]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

@@ -32,7 +32,7 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // These endpoints authenticate with their own request signature, not a user session.
-  if (path.startsWith('/api/ingest') || path.startsWith('/api/auth/send-email')) return supabaseResponse
+  if (path.startsWith('/api/ingest') || path.startsWith('/api/agent/') || path.startsWith('/api/auth/send-email')) return supabaseResponse
   // Public, read-only feed for rabbitsoftware.io (public literature titles, counts and chain heads only).
   if (path === '/api/public/research-feed') return supabaseResponse
 
