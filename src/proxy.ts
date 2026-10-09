@@ -1,6 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Pages anyone may open without being signed in (the account forms and the emailed-link landing page).
+const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/confirm']
+const isPublicPath = (path: string) => PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -25,13 +29,15 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // The ingest endpoint authenticates with its own request signature, not a user session.
-  if (request.nextUrl.pathname.startsWith('/api/ingest')) return supabaseResponse
+  const path = request.nextUrl.pathname
+
+  // These endpoints authenticate with their own request signature, not a user session.
+  if (path.startsWith('/api/ingest') || path.startsWith('/api/auth/send-email')) return supabaseResponse
 
   // Refresh session if expired
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  if (!user && !isPublicPath(path)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.search = ''
