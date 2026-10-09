@@ -31,7 +31,7 @@ export default function GuidePage() {
             research agents and an EEG headset.
           </p>
           <nav aria-label="On this page" className="flex flex-wrap gap-2 text-xs">
-            {[['what', 'What it is'], ['members', 'For members'], ['owner', 'For the owner'], ['headset', 'EEG headset'], ['trouble', 'Troubleshooting'], ['privacy', 'Privacy']].map(([id, label]) => (
+            {[['what', 'What it is'], ['members', 'For members'], ['owner', 'For the owner'], ['headset', 'EEG headset'], ['mcp', 'Claude / MCP'], ['trouble', 'Troubleshooting'], ['privacy', 'Privacy']].map(([id, label]) => (
               <a key={id} href={`#${id}`} className="rounded-full border border-line px-3 py-1 text-muted hover:text-fg">{label}</a>
             ))}
             <Link href="/login" className="rounded-full border border-accent text-accent px-3 py-1">Sign in</Link>
@@ -131,6 +131,23 @@ python rabbit_sync.py       # signed upload to RabbitOS`}</Code>
             Only the owner’s account can see EEG data, and only the owner’s computer can send it, because the bridge uses the owner’s signing secret.
             Other people cannot stream their own headsets yet: that needs personal API keys, which are planned. Do not give anyone the secret as a shortcut.
           </Note>
+        </Section>
+
+        <Section id="mcp" title="Use RabbitOS from Claude or your own scripts (MCP)">
+          <Steps>
+            <li>Sign in and open <strong>API keys</strong> (top bar). Name the key (for example “Claude Desktop”) and press <em>Create key</em>. Copy it immediately: it is shown once.</li>
+            <li>
+              In Claude Code, add the server:
+              <Code>{`claude mcp add --transport http rabbitos https://app.rabbitsoftware.io/api/mcp \
+  --header "Authorization: Bearer rbk_YOUR_KEY"`}</Code>
+              Other MCP clients: server address <code>https://app.rabbitsoftware.io/api/mcp</code>, header <code>Authorization: Bearer rbk_…</code>.
+            </li>
+            <li>Ask your assistant things like “search RabbitOS for BRCA1 PARP inhibitor trials” or “verify the CRISPR digest”.</li>
+          </Steps>
+          <P>
+            A key acts as you with limited access: it can search the public research, read CRISPR guides and check the proof digest (and, if you tick the box, queue agent tasks that an owner still has to approve).
+            It cannot read chats, notes, EEG or twin data. Keys last 90 days, allow 60 calls a minute, and can be revoked at any time.
+          </P>
         </Section>
 
         <Section id="site" title="Showing live research on rabbitsoftware.io">
