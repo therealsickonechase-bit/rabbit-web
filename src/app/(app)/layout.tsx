@@ -15,6 +15,7 @@ async function signOut() {
 const OWNER_NAV = [
   { href: '/dashboard', label: 'Overview' },
   { href: '/twin', label: 'Twin Atlas' },
+  { href: '/brain', label: 'Brain Network' },
   { href: '/research', label: 'Research' },
   { href: '/ask', label: 'Ask RabbitOS' },
   { href: '/crispr', label: 'CRISPR Explorer' },

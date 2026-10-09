@@ -171,6 +171,14 @@ export async function POST(request: Request) {
       if (res.error) throw res.error
     }
 
+    if (p.eeg.length) {
+      const res = await sb.from('eeg_band_samples').upsert(
+        p.eeg.map((e) => ({ agent_id: node, session: e.session, ts: e.ts, channel: e.channel, band: e.band, power: e.power, rel_power: e.rel_power ?? null, board: e.board })),
+        { onConflict: 'agent_id,session,ts,channel,band', ignoreDuplicates: true }
+      )
+      if (res.error) throw res.error
+    }
+
     if (p.audit.length) {
       const sorted = [...p.audit].sort((a, b) => a.seq - b.seq)
       const first = sorted[0]
