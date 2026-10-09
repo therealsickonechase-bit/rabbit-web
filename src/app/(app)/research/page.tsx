@@ -18,6 +18,10 @@ const SOURCE_LABEL: Record<string, string> = {
   nih_grant: 'NIH grants',
   clinvar: 'ClinVar',
   topic_summary: 'Topic summaries',
+  crispr_guide: 'CRISPR guides',
+  crispr_trial: 'CRISPR trials',
+  crispr_paper: 'CRISPR papers',
+  crispr_preprint: 'CRISPR preprints',
 }
 
 function detail(source: string, m: Record<string, unknown>) {

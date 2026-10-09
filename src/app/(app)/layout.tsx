@@ -17,6 +17,7 @@ const OWNER_NAV = [
   { href: '/twin', label: 'Twin Atlas' },
   { href: '/research', label: 'Research' },
   { href: '/ask', label: 'Ask RabbitOS' },
+  { href: '/crispr', label: 'CRISPR Explorer' },
   { href: '/collections', label: 'Collections' },
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
@@ -25,6 +26,7 @@ const OWNER_NAV = [
 const MEMBER_NAV = [
   { href: '/research', label: 'Research' },
   { href: '/ask', label: 'Ask RabbitOS' },
+  { href: '/crispr', label: 'CRISPR Explorer' },
   { href: '/collections', label: 'Collections' },
 ]
 

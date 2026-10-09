@@ -23,6 +23,9 @@ const LABEL: Record<string, string> = {
   europepmc: 'EUROPE PMC',
   nih_grant: 'NIH GRANTS',
   clinvar: 'CLINVAR VARIANTS',
+  crispr_trial: 'CRISPR TRIALS',
+  crispr_paper: 'CRISPR PAPERS',
+  crispr_preprint: 'CRISPR PREPRINTS',
 }
 
 export function buildPrompt(topic: string, biomarker: string | null, records: RecordRow[]) {
