@@ -11,7 +11,9 @@
     "dev:vinext": "vite dev --port 3001",
     "build:vinext": "vite build",
     "start:vinext": "vite preview",
-    "deploy:vinext": "vinext-cloudflare deploy"
+    "deploy:vinext": "vinext-cloudflare deploy",
+    "schema:snapshot": "node scripts/snapshot-api-schema.mjs",
+    "schema:dump": "node scripts/dump-schema.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -35,6 +37,7 @@
     "cf": "^1.0.0-beta.13",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "pg": "^8.23.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite": "^8.3.0"
