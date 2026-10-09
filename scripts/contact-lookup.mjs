@@ -11,7 +11,7 @@
 // opened. See docs/legal-requests.md for the procedure to follow before running this.
 import { readFileSync } from 'node:fs'
 import { hostname, userInfo } from 'node:os'
-import { emailHash, openContact } from '../src/lib/contact-crypto.ts'
+import { emailHash, openContact, sealContact } from '../src/lib/contact-crypto.ts'
 
 function loadEnv(path) {
   const env = {}
@@ -38,6 +38,30 @@ const fromProcess = Object.fromEntries(
   ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'CONTACT_HASH_KEY'].filter((k) => process.env[k]).map((k) => [k, process.env[k]])
 )
 const env = { ...loadEnv('.env.local'), ...loadEnv('.dev.vars'), ...fromProcess }
+// selftest: proves a private key matches the public key the site uses. No database access, nothing logged.
+// Run it on the key file you use, and again on each backup copy.
+if (argv[0] === 'selftest') {
+  const keyFile = flag('key')
+  if (!keyFile) fail('--key <path to a private key .pem> is required.')
+  if (!env.CONTACT_PUBLIC_KEY) fail('CONTACT_PUBLIC_KEY is missing (.dev.vars).')
+  let priv
+  try {
+    priv = readFileSync(keyFile, 'utf8').replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')
+  } catch {
+    fail(`Cannot read the private key at ${keyFile}.`)
+  }
+  try {
+    const probe = `selftest-${Date.now()}@example.com`
+    const sealed = await sealContact(probe, env.CONTACT_PUBLIC_KEY)
+    const ok = (await openContact(sealed, priv)) === probe
+    console.log(ok ? 'PASS: this private key opens records sealed with the public key the site uses.' : 'FAIL: decrypted, but the result did not match.')
+    process.exit(ok ? 0 : 1)
+  } catch {
+    console.log('FAIL: this private key does NOT match the public key in .dev.vars (or the file is damaged).')
+    process.exit(1)
+  }
+}
+
 const url = env.NEXT_PUBLIC_SUPABASE_URL
 const svc = env.SUPABASE_SERVICE_ROLE_KEY
 if (!url || !svc) fail('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required (.env.local).')
@@ -53,7 +77,9 @@ const api = async (path, init = {}) => {
     headers: { apikey: svc, Authorization: `Bearer ${svc}`, 'Content-Type': 'application/json', ...init.headers },
   })
   if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`)
-  return res.status === 204 ? null : res.json()
+  // inserts and deletes can answer with an empty body
+  const text = await res.text()
+  return text ? JSON.parse(text) : null
 }
 const who = `${userInfo().username}@${hostname()}`
 const logAccess = (recordId, why) =>
