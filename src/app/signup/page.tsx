@@ -72,8 +72,9 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
     >
       <form action={signUp} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-xs font-medium mb-1">Email</label>
-          <input id="email" name="email" type="email" required autoComplete="email" className={authInput} />
+          <label htmlFor="email" className="block text-xs font-medium mb-1">Your email address</label>
+          <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" className={authInput} />
+          <p className="text-xs text-muted mt-1">We send one confirmation link to this address. Use an address you can open now.</p>
         </div>
         <div>
           <label htmlFor="password" className="block text-xs font-medium mb-1">Password (at least {MIN_PASSWORD} characters)</label>

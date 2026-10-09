@@ -47,7 +47,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <form action={signIn} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-xs font-medium mb-1">Email</label>
-          <input id="email" name="email" type="email" required autoComplete="email" className={authInput} />
+          <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" className={authInput} />
         </div>
         <div>
           <label htmlFor="password" className="block text-xs font-medium mb-1">Password</label>

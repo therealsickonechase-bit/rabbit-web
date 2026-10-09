@@ -40,7 +40,7 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
       <form action={requestReset} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-xs font-medium mb-1">Email</label>
-          <input id="email" name="email" type="email" required autoComplete="email" className={authInput} />
+          <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" className={authInput} />
         </div>
         {error && <Notice tone="bad">{error === 'captcha' ? 'Please complete the check and try again.' : 'Enter a valid email address.'}</Notice>}
         <Turnstile />
