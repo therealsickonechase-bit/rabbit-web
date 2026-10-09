@@ -27,4 +27,7 @@ drop policy if exists "owner read" on public.guest_passes;
 create policy "owner read" on public.guest_passes for select to authenticated using ((select public.is_owner()));
 revoke all on public.guest_passes from anon;
 revoke insert, update, delete, truncate on public.guest_passes from authenticated;
-revoke select (token_hash) on public.guest_passes from authenticated;
+-- The token hash must never reach the browser: drop table-level SELECT, then grant every column except token_hash.
+revoke select on public.guest_passes from authenticated;
+grant select (id, label, issued_to, user_id, created_by, created_at, link_expires_at, first_used_at, access_until, uses, max_uses, revoked_at)
+  on public.guest_passes to authenticated;
