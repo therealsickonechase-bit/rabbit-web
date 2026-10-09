@@ -60,11 +60,11 @@ export async function keyIsValid(key: string) {
   return res.status === 200 ? true : res.status === 401 || res.status === 403 ? false : null
 }
 
-export async function summarize(key: string, prompt: string) {
+export async function summarize(key: string, prompt: string, system?: string, maxTokens = 600) {
   const res = await fetch(`${API}/messages`, {
     method: 'POST',
     headers: headers(key),
-    body: JSON.stringify({ model: MODEL, max_tokens: 600, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, ...(system ? { system } : {}), messages: [{ role: 'user', content: prompt }] }),
   })
   if (!res.ok) {
     const detail = await res.text().catch(() => '')

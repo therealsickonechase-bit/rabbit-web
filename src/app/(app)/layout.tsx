@@ -15,11 +15,17 @@ async function signOut() {
 const OWNER_NAV = [
   { href: '/dashboard', label: 'Overview' },
   { href: '/research', label: 'Research' },
+  { href: '/ask', label: 'Ask RabbitOS' },
+  { href: '/collections', label: 'Collections' },
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
   { href: '/members', label: 'Members' },
 ]
-const MEMBER_NAV = [{ href: '/research', label: 'Research' }]
+const MEMBER_NAV = [
+  { href: '/research', label: 'Research' },
+  { href: '/ask', label: 'Ask RabbitOS' },
+  { href: '/collections', label: 'Collections' },
+]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isOwner } = await getSessionRole()

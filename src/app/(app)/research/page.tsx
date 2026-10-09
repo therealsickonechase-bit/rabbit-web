@@ -41,6 +41,7 @@ const NOTICE: Record<string, { tone: 'ok' | 'bad'; text: string }> = {
   credits: { tone: 'bad', text: 'Your Anthropic account has no credits. Add credits under Plans & Billing in the Anthropic console, then try again.' },
   badkey: { tone: 'bad', text: 'Anthropic rejected your saved key. Replace it in Settings.' },
   ratelimit: { tone: 'bad', text: 'Anthropic is rate limiting this key. Wait a minute and try again.' },
+  nocollection: { tone: 'bad', text: 'Create a collection first, then save records to it.' },
 }
 
 const DAILY_SUMMARY_LIMIT = 20
@@ -102,6 +103,23 @@ async function summarizeTopic(formData: FormData) {
   redirect(`/research?msg=${outcome}`)
 }
 
+async function saveRecord(formData: FormData) {
+  'use server'
+  const user = await requireUser()
+  const admin = createAdminClient()
+  const collectionId = String(formData.get('collection') ?? '')
+  const recordId = String(formData.get('record') ?? '')
+  const own = await admin.from('collections').select('id').eq('id', collectionId).eq('user_id', user.id).maybeSingle()
+  if (!own.data) redirect('/research?msg=nocollection')
+  const exists = await admin.from('research_records').select('id').eq('id', recordId).maybeSingle()
+  if (!exists.data) redirect('/research')
+  await admin.from('collection_items').upsert(
+    { collection_id: collectionId, record_id: recordId, user_id: user.id },
+    { onConflict: 'collection_id,record_id', ignoreDuplicates: true },
+  )
+  redirect(`/collections?c=${collectionId}`)
+}
+
 export default async function ResearchPage({ searchParams }: { searchParams: Promise<{ source?: string; msg?: string }> }) {
   const { source, msg } = await searchParams
   const notice = msg ? NOTICE[msg] : undefined
@@ -114,7 +132,7 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
     .limit(50)
   if (source) recordQuery = recordQuery.eq('source', source)
 
-  const [topics, records, sources, runs, summaries] = await Promise.all([
+  const [topics, records, sources, runs, summaries, myCollections] = await Promise.all([
     sb.from('research_topics').select('*').order('created_at', { ascending: false }).limit(50),
     recordQuery,
     sb.from('research_records').select('source').limit(5000),
@@ -124,6 +142,7 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
       .select('id, model, ai_interpretation, disclaimer, created_at, research_topics(topic, biomarker)')
       .order('created_at', { ascending: false })
       .limit(5),
+    sb.from('collections').select('id, name').order('name'),
   ])
 
   const topicRows = topics.data ?? []
@@ -198,7 +217,7 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
               <FilterLink key={k} href={`/research?source=${encodeURIComponent(k)}`} active={source === k} label={`${SOURCE_LABEL[k] ?? k} (${n})`} />
             ))}
           </nav>
-          <Table head={['Source', 'Title', 'Details', 'Topic', 'Seen']} empty="No records for this filter.">
+          <Table head={['Source', 'Title', 'Details', 'Topic', 'Seen', 'Save']} empty="No records for this filter.">
             {(records.data ?? []).map((r) => {
               const t = one(r.research_topics)
               return (
@@ -214,6 +233,19 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
                   <Td className="text-muted">{detail(r.source, (r.meta ?? {}) as Record<string, unknown>)}</Td>
                   <Td>{t ? `${t.topic}${t.biomarker ? ` · ${t.biomarker}` : ''}` : '—'}</Td>
                   <Td>{ago(r.first_seen_at)}</Td>
+                  <Td>
+                    {(myCollections.data ?? []).length ? (
+                      <form action={saveRecord} className="flex gap-1">
+                        <input type="hidden" name="record" value={r.id} />
+                        <select name="collection" aria-label="Collection" className="text-xs rounded border border-line bg-canvas px-1 py-1 max-w-28">
+                          {(myCollections.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        <button className="text-xs rounded-md border border-line px-2 hover:border-accent hover:text-accent">Save</button>
+                      </form>
+                    ) : (
+                      <Link href="/collections" className="text-xs text-muted underline">Create a collection</Link>
+                    )}
+                  </Td>
                 </tr>
               )
             })}
