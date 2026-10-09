@@ -1,21 +1,22 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-const DEFAULT_INTERVAL = 30_000
-
-export default function AutoRefresh({ intervalMs = DEFAULT_INTERVAL }: { intervalMs?: number }) {
+export default function AutoRefresh({ intervalMs = 30_000 }: { intervalMs?: number }) {
   const router = useRouter()
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [lastRefresh, setLastRefresh] = useState<string>('—')
   const [countdown, setCountdown] = useState(intervalMs / 1000)
-  const nextRefreshRef = useRef<number>(Date.now() + intervalMs)
+  const nextRefreshRef = useRef(0)
 
   useEffect(() => {
+    nextRefreshRef.current = Date.now() + intervalMs
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only clock, set after mount
+    setLastRefresh(new Date().toLocaleTimeString())
+
     const refreshTimer = setInterval(() => {
       router.refresh()
-      const now = new Date()
-      setLastRefresh(now)
+      setLastRefresh(new Date().toLocaleTimeString())
       nextRefreshRef.current = Date.now() + intervalMs
     }, intervalMs)
 
@@ -30,11 +31,9 @@ export default function AutoRefresh({ intervalMs = DEFAULT_INTERVAL }: { interva
   }, [router, intervalMs])
 
   return (
-    <div className="flex items-center gap-3 text-xs text-zinc-600 font-mono">
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-      <span>next refresh in {countdown}s</span>
-      <span className="text-zinc-700">·</span>
-      <span>last {lastRefresh.toLocaleTimeString()}</span>
+    <div className="flex items-center gap-2 text-xs text-muted">
+      <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
+      <span>Live · refresh in {countdown}s · last {lastRefresh}</span>
     </div>
   )
 }
