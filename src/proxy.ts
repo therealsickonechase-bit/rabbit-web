@@ -33,6 +33,8 @@ export async function proxy(request: NextRequest) {
 
   // These endpoints authenticate with their own request signature, not a user session.
   if (path.startsWith('/api/ingest') || path.startsWith('/api/auth/send-email')) return supabaseResponse
+  // Public, read-only feed for rabbitsoftware.io (public literature titles, counts and chain heads only).
+  if (path === '/api/public/research-feed') return supabaseResponse
 
   // Refresh session if expired
   const { data: { user } } = await supabase.auth.getUser()
