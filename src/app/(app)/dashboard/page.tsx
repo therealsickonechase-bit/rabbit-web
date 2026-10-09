@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { requireOwner } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, Stat, Table, Td, short, when } from '@/components/ui'
 
 const GATE = { cortisol: 0.75, gsr: 0.05, arousal: 0.6 }
@@ -6,6 +7,7 @@ const GATE = { cortisol: 0.75, gsr: 0.05, arousal: 0.6 }
 const tierTone = { EXISTENTIAL: 'bad', CRITICAL: 'bad', HIGH: 'warn', LOW: 'ok', MINIMAL: 'muted' } as const
 
 export default async function OverviewPage() {
+  await requireOwner()
   const sb = await createClient()
   const [twin, tokens, nodes, readings, anchors] = await Promise.all([
     sb.from('twin_identity').select('*').limit(1).maybeSingle(),

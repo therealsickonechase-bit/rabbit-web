@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation'
-import { requireAllowedUser } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { encryptSecret } from '@/lib/secrets'
 import { keyIsValid } from '@/lib/summarize'
 import { Badge, Card, PageHeader } from '@/components/ui'
 
-const currentUser = requireAllowedUser
+const currentUser = requireUser
 
 async function saveKey(formData: FormData) {
   'use server'

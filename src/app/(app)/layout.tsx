@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { requireAllowedUser } from '@/lib/auth/session'
+import { getSessionRole } from '@/lib/auth/session'
 import Sidebar from '@/components/Sidebar'
 import AutoRefresh from '@/components/AutoRefresh'
 
@@ -12,8 +12,16 @@ async function signOut() {
   redirect('/login')
 }
 
+const OWNER_NAV = [
+  { href: '/dashboard', label: 'Overview' },
+  { href: '/research', label: 'Research' },
+  { href: '/agents', label: 'Agents' },
+  { href: '/chain', label: 'Chain & Audit' },
+]
+const MEMBER_NAV = [{ href: '/research', label: 'Research' }]
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAllowedUser()
+  const { user, isOwner } = await getSessionRole()
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[220px_1fr]">
@@ -24,7 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </p>
           <p className="text-xs text-muted">rabbitsoftware.io</p>
         </div>
-        <Sidebar />
+        <Sidebar items={isOwner ? OWNER_NAV : MEMBER_NAV} />
       </aside>
 
       <div className="min-w-0">
@@ -32,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <AutoRefresh intervalMs={30_000} />
           <div className="flex items-center gap-3 text-sm">
             <span className="text-muted hidden sm:inline">{user?.email}</span>
+            <span className="text-xs rounded border border-line px-2 py-0.5 text-muted">{isOwner ? 'Owner' : 'Member'}</span>
             <Link href="/settings" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Settings</Link>
             <form action={signOut}>
               <button className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Sign out</button>

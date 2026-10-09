@@ -1,19 +1,36 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { isAllowedDashboardEmail } from '@/lib/auth/allowlist'
 
 /**
- * Returns the signed-in user, or redirects to /login. Also rejects confirmed-but-not-allowlisted
- * accounts. The proxy already enforces this on every request; calling it again in the layout and
- * in each server action means a mistake in one layer cannot expose the console.
+ * Two roles:
+ *   owner  - listed in public.owners. Sees everything.
+ *   member - any other confirmed, signed-in account (the default for a sign-up). Research data only.
+ *
+ * The database enforces this with row-level security (see the owner_member_roles migration); these
+ * helpers only decide what the app shows and where it redirects. A mistake here cannot expose owner data.
  */
-export async function requireAllowedUser() {
+
+/** Signed-in, email-confirmed user, or a redirect to /login. */
+export async function requireUser() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
-  if (!user.email_confirmed_at || !isAllowedDashboardEmail(user.email)) {
-    redirect('/login?error=unauthorized')
-  }
+  if (!user.email_confirmed_at) redirect('/login?error=unconfirmed')
   return user
+}
+
+/** The user plus their role, from the database's own is_owner() check. */
+export async function getSessionRole() {
+  const user = await requireUser()
+  const supabase = await createClient()
+  const { data } = await supabase.rpc('is_owner')
+  return { user, isOwner: data === true }
+}
+
+/** Owner-only pages: members are sent to the research page. */
+export async function requireOwner() {
+  const session = await getSessionRole()
+  if (!session.isOwner) redirect('/research')
+  return session.user
 }

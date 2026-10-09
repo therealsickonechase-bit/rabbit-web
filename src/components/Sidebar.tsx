@@ -3,14 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const items = [
-  { href: '/dashboard', label: 'Overview' },
-  { href: '/research', label: 'Research' },
-  { href: '/agents', label: 'Agents' },
-  { href: '/chain', label: 'Chain & Audit' },
-]
-
-export default function Sidebar() {
+export default function Sidebar({ items }: { items: { href: string; label: string }[] }) {
   const path = usePathname()
   return (
     <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible px-3 md:px-3 py-2 md:py-4">
