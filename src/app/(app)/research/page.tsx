@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { requireAllowedUser } from '@/lib/auth/session'
+import { requireUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from '@/lib/secrets'
 import { DISCLAIMER, MODEL, buildPrompt, summarize } from '@/lib/summarize'
@@ -35,6 +35,7 @@ function detail(source: string, m: Record<string, unknown>) {
 const NOTICE: Record<string, { tone: 'ok' | 'bad'; text: string }> = {
   done: { tone: 'ok', text: 'Summary saved. It appears under AI summaries below.' },
   nokey: { tone: 'bad', text: 'Add your Anthropic key in Settings first.' },
+  limit: { tone: 'bad', text: 'Daily summary limit reached (20 per day). Try again tomorrow.' },
   norecords: { tone: 'bad', text: 'This topic has no stored records to summarize yet.' },
   failed: { tone: 'bad', text: 'The summary could not be generated. Try again in a moment.' },
   credits: { tone: 'bad', text: 'Your Anthropic account has no credits. Add credits under Plans & Billing in the Anthropic console, then try again.' },
@@ -42,13 +43,24 @@ const NOTICE: Record<string, { tone: 'ok' | 'bad'; text: string }> = {
   ratelimit: { tone: 'bad', text: 'Anthropic is rate limiting this key. Wait a minute and try again.' },
 }
 
+const DAILY_SUMMARY_LIMIT = 20
+
 async function summarizeTopic(formData: FormData) {
   'use server'
-  const user = await requireAllowedUser()
+  const user = await requireUser()
   const sb = await createClient()
 
   const topicId = Number(formData.get('topic_id'))
   const admin = createAdminClient()
+
+  // Each person may request a limited number of summaries per day (they are billed to their own key).
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+  const recent = await admin
+    .from('research_summaries')
+    .select('id', { count: 'exact', head: true })
+    .eq('created_by', user.id)
+    .gte('created_at', since)
+  if ((recent.count ?? 0) >= DAILY_SUMMARY_LIMIT) redirect('/research?msg=limit')
   const { data: settings } = await admin.from('user_settings').select('anthropic_key_enc').eq('user_id', user.id).maybeSingle()
   if (!settings?.anthropic_key_enc) redirect('/research?msg=nokey')
 
@@ -70,6 +82,7 @@ async function summarizeTopic(formData: FormData) {
       .map((b) => b.toString(16).padStart(2, '0')).join('')
     const saved = await admin.from('research_summaries').insert({
       agent_id: 'rabbitos-web',
+      created_by: user.id,
       topic_id: topicId,
       model: MODEL,
       ai_interpretation: text,

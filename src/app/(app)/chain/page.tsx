@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { requireOwner } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, Table, Td, short, when } from '@/components/ui'
 
 export default async function ChainPage({ searchParams }: { searchParams: Promise<{ chain?: string }> }) {
+  await requireOwner()
   const { chain = 'network' } = await searchParams
   const isMaxwell = chain === 'maxwell'
   const sb = await createClient()

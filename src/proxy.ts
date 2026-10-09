@@ -1,6 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isAllowedDashboardEmail } from '@/lib/auth/allowlist'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -39,13 +38,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Signed in, but not an address on the allowlist (or unconfirmed): clear the session and send
-  // them to the login page. Fails closed if DASHBOARD_ALLOWED_EMAILS is missing.
-  if (user && (!user.email_confirmed_at || !isAllowedDashboardEmail(user.email))) {
+  // Signed in but never confirmed their email: clear the session and send them to the login page.
+  // Who may see what (owner vs member) is enforced by the database, not here.
+  if (user && !user.email_confirmed_at) {
     await supabase.auth.signOut({ scope: 'local' })
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    url.search = '?error=unauthorized'
+    url.search = '?error=unconfirmed'
     const rejected = NextResponse.redirect(url)
     supabaseResponse.cookies.getAll().forEach((c) => rejected.cookies.set(c))
     return rejected
