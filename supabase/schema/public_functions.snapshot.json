@@ -1,0 +1,698 @@
+{
+  "generated": "2026-10-09",
+  "functions": [
+    {
+      "name": "apply_ghost_filter",
+      "args": {
+        "p_carrier_freq_ghz": "real",
+        "p_filter_method": "text",
+        "p_node_id": "smallint",
+        "p_noise_floor_rad": "real",
+        "p_raw_phase_shift": "real",
+        "p_reading_id": "bigint",
+        "p_session_id": "bigint",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_session_id",
+        "p_node_id",
+        "p_reading_id",
+        "p_raw_phase_shift",
+        "p_noise_floor_rad"
+      ]
+    },
+    {
+      "name": "apply_rna_interference",
+      "args": {
+        "p_duration_h": "real",
+        "p_off_target_score": "real",
+        "p_silencing_efficiency": "real",
+        "p_sirna_molecule_id": "bigint",
+        "p_target_molecule_id": "bigint",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_sirna_molecule_id",
+        "p_target_molecule_id",
+        "p_silencing_efficiency"
+      ]
+    },
+    {
+      "name": "apply_tuning_event",
+      "args": {
+        "p_tuning_event_id": "bigint",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_tuning_event_id"
+      ]
+    },
+    {
+      "name": "begin_corpus_session",
+      "args": {
+        "p_carrier_hz": "double precision",
+        "p_duration_s": "real",
+        "p_node_count": "smallint",
+        "p_resolution_ms": "real",
+        "p_sensor_id": "text",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_sensor_id"
+      ]
+    },
+    {
+      "name": "begin_p2p_group_session",
+      "args": {
+        "p_duration_s": "integer",
+        "p_group_session_id": "text",
+        "p_participant_ids": "uuid[]",
+        "p_topic": "text"
+      },
+      "required": [
+        "p_topic",
+        "p_group_session_id",
+        "p_participant_ids"
+      ]
+    },
+    {
+      "name": "bootstrap_hardware_profiles",
+      "args": {
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id"
+      ]
+    },
+    {
+      "name": "build_convergence_token",
+      "args": {
+        "p_arousal": "real",
+        "p_convergence": "uuid",
+        "p_cortisol": "real",
+        "p_gsr": "real",
+        "p_twin_id": "uuid",
+        "p_valence": "real"
+      },
+      "required": [
+        "p_twin_id",
+        "p_convergence",
+        "p_valence",
+        "p_arousal",
+        "p_gsr",
+        "p_cortisol"
+      ]
+    },
+    {
+      "name": "close_gateway_session",
+      "args": {
+        "p_session_id": "uuid"
+      },
+      "required": [
+        "p_session_id"
+      ]
+    },
+    {
+      "name": "close_spectrum_session",
+      "args": {
+        "p_session_id": "uuid"
+      },
+      "required": [
+        "p_session_id"
+      ]
+    },
+    {
+      "name": "complete_corpus_session",
+      "args": {
+        "p_session_id": "bigint",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_session_id",
+        "p_twin_id"
+      ]
+    },
+    {
+      "name": "complete_p2p_group_session",
+      "args": {
+        "p_handshake_count": "integer",
+        "p_interaction_count": "integer",
+        "p_session_id": "bigint"
+      },
+      "required": [
+        "p_session_id",
+        "p_interaction_count",
+        "p_handshake_count"
+      ]
+    },
+    {
+      "name": "compute_molecular_rf_freq",
+      "args": {
+        "p_molecule_type": "public.bio_molecule_type",
+        "p_sequence": "text"
+      },
+      "required": [
+        "p_sequence",
+        "p_molecule_type"
+      ]
+    },
+    {
+      "name": "design_crispr_guide",
+      "args": {
+        "p_edit_type": "public.crispr_edit_type",
+        "p_guide_molecule_id": "bigint",
+        "p_off_target_score": "real",
+        "p_on_target_score": "real",
+        "p_pam_site": "text",
+        "p_target_gene": "text",
+        "p_target_sequence": "text",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_guide_molecule_id",
+        "p_edit_type",
+        "p_target_sequence"
+      ]
+    },
+    {
+      "name": "detect_internal_reflection",
+      "args": {
+        "p_carrier_freq_ghz": "real",
+        "p_modulation_freq_hz": "real",
+        "p_node_id": "smallint",
+        "p_phase_mod_rad": "real",
+        "p_reading_id": "bigint",
+        "p_reflection_source": "text",
+        "p_sensor_id": "text",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_node_id",
+        "p_sensor_id",
+        "p_reflection_source",
+        "p_phase_mod_rad"
+      ]
+    },
+    {
+      "name": "establish_p2p_handshake",
+      "args": {
+        "p_signal_strength": "real",
+        "p_twin_id_a": "uuid",
+        "p_twin_id_b": "uuid"
+      },
+      "required": [
+        "p_twin_id_a",
+        "p_twin_id_b"
+      ]
+    },
+    {
+      "name": "generate_pobw",
+      "args": {
+        "p_bot_id": "bigint",
+        "p_coherence_threshold": "real",
+        "p_twin_id": "uuid",
+        "p_window_end": "timestamp with time zone",
+        "p_window_start": "timestamp with time zone"
+      },
+      "required": [
+        "p_twin_id",
+        "p_window_start",
+        "p_window_end"
+      ]
+    },
+    {
+      "name": "get_bio_node_state",
+      "args": {
+        "p_node_id": "integer",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_node_id"
+      ]
+    },
+    {
+      "name": "get_bio_operation_history",
+      "args": {
+        "p_node_id": "integer",
+        "p_operation_type": "public.bio_operation_type",
+        "p_since": "timestamp with time zone",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id"
+      ]
+    },
+    {
+      "name": "get_calibration_summary",
+      "args": {
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id"
+      ]
+    },
+    {
+      "name": "get_mask_ratio",
+      "args": {
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id"
+      ]
+    },
+    {
+      "name": "get_mesh_deviation",
+      "args": {
+        "p_snapshot_id": "bigint",
+        "p_twin_id": "uuid",
+        "p_window_min": "integer"
+      },
+      "required": [
+        "p_twin_id",
+        "p_snapshot_id"
+      ]
+    },
+    {
+      "name": "get_molecular_rf_spectrum",
+      "args": {
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id"
+      ]
+    },
+    {
+      "name": "get_neural_conduction",
+      "args": {
+        "p_node_a": "smallint",
+        "p_node_b": "smallint",
+        "p_twin_id": "uuid",
+        "p_window_min": "integer"
+      },
+      "required": [
+        "p_twin_id",
+        "p_node_a",
+        "p_node_b"
+      ]
+    },
+    {
+      "name": "get_p2p_summary",
+      "args": {
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id"
+      ]
+    },
+    {
+      "name": "get_pwv_between",
+      "args": {
+        "p_node_a": "smallint",
+        "p_node_b": "smallint",
+        "p_twin_id": "uuid",
+        "p_window_min": "integer"
+      },
+      "required": [
+        "p_twin_id",
+        "p_node_a",
+        "p_node_b"
+      ]
+    },
+    {
+      "name": "get_relay_path_summary",
+      "args": {
+        "p_dest_node_id": "smallint",
+        "p_source_node_id": "smallint",
+        "p_twin_id": "uuid",
+        "p_window_min": "integer"
+      },
+      "required": [
+        "p_twin_id",
+        "p_source_node_id",
+        "p_dest_node_id"
+      ]
+    },
+    {
+      "name": "get_tuning_history",
+      "args": {
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id"
+      ]
+    },
+    {
+      "name": "grant_collaborator_access",
+      "args": {
+        "p_allowed_nodes": "smallint[]",
+        "p_bot_id": "bigint",
+        "p_collaborator": "text",
+        "p_grant_type": "text",
+        "p_hours": "integer",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_collaborator",
+        "p_bot_id",
+        "p_grant_type"
+      ]
+    },
+    {
+      "name": "increment_session_count",
+      "args": {
+        "p_session_id": "uuid"
+      },
+      "required": [
+        "p_session_id"
+      ]
+    },
+    {
+      "name": "ingest_corpus_frame",
+      "args": {
+        "p_intensity_raw": "real",
+        "p_node_snapshot": "jsonb",
+        "p_session_id": "bigint",
+        "p_timestamp_s": "smallint",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_session_id",
+        "p_twin_id",
+        "p_timestamp_s",
+        "p_intensity_raw",
+        "p_node_snapshot"
+      ]
+    },
+    {
+      "name": "lock_calibration_phase",
+      "args": {
+        "p_dna_sig": "text",
+        "p_phase": "public.dev_phase",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_phase",
+        "p_dna_sig"
+      ]
+    },
+    {
+      "name": "log_bio_operation",
+      "args": {
+        "p_effect_duration": "public.bio_effect_duration",
+        "p_freq_after_ghz": "real",
+        "p_molecule_id": "bigint",
+        "p_node_effect": "public.node_effect_type",
+        "p_notes": "text",
+        "p_operation_ref_id": "bigint",
+        "p_operation_type": "public.bio_operation_type",
+        "p_target_node_id": "integer",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_operation_type",
+        "p_operation_ref_id",
+        "p_molecule_id",
+        "p_target_node_id",
+        "p_node_effect",
+        "p_effect_duration"
+      ]
+    },
+    {
+      "name": "mint_bio_nft",
+      "args": {
+        "p_bot_id": "bigint",
+        "p_collaborator": "uuid",
+        "p_content_hash": "text",
+        "p_mint_type": "public.nft_mint_type",
+        "p_pobw_id": "bigint",
+        "p_snapshot_id": "integer",
+        "p_token_uri": "text",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_snapshot_id",
+        "p_mint_type",
+        "p_bot_id"
+      ]
+    },
+    {
+      "name": "open_gateway_session",
+      "args": {
+        "p_device": "text",
+        "p_firmware": "text",
+        "p_transport": "public.transport_medium",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_transport"
+      ]
+    },
+    {
+      "name": "record_bot_window",
+      "args": {
+        "p_action": "text",
+        "p_active_nodes": "smallint[]",
+        "p_bot_id": "bigint",
+        "p_intervention_payload": "jsonb",
+        "p_intervention_type": "public.intervention_type",
+        "p_motifs": "jsonb",
+        "p_presigned_hash": "text",
+        "p_resonance_delta": "real",
+        "p_trigger_condition": "text",
+        "p_trigger_metrics": "jsonb",
+        "p_twin_id": "uuid",
+        "p_window_at": "timestamp with time zone"
+      },
+      "required": [
+        "p_bot_id",
+        "p_twin_id",
+        "p_window_at",
+        "p_active_nodes",
+        "p_motifs",
+        "p_resonance_delta",
+        "p_presigned_hash",
+        "p_action"
+      ]
+    },
+    {
+      "name": "record_chemo_hash",
+      "args": {
+        "p_access_tier": "text",
+        "p_branch_key": "text",
+        "p_chemo_hash": "text",
+        "p_chemo_salt": "text",
+        "p_eeg_provenance": "text",
+        "p_indicator_vector": "jsonb",
+        "p_session_id": "uuid",
+        "p_stress_state_id": "uuid",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_indicator_vector",
+        "p_chemo_salt",
+        "p_chemo_hash",
+        "p_branch_key"
+      ]
+    },
+    {
+      "name": "record_p2p_share",
+      "args": {
+        "p_data_hash": "text",
+        "p_data_type": "text",
+        "p_group_session_id": "bigint",
+        "p_handshake_id": "text",
+        "p_payload": "jsonb",
+        "p_share_id": "text",
+        "p_source_twin_id": "uuid",
+        "p_target_twin_id": "uuid"
+      },
+      "required": [
+        "p_share_id",
+        "p_source_twin_id",
+        "p_target_twin_id",
+        "p_handshake_id",
+        "p_data_type",
+        "p_data_hash"
+      ]
+    },
+    {
+      "name": "register_bio_molecule",
+      "args": {
+        "p_chromosome": "text",
+        "p_gene_symbol": "text",
+        "p_node_id": "integer",
+        "p_sequence": "text",
+        "p_source_region": "text",
+        "p_twin_id": "uuid",
+        "p_type": "public.bio_molecule_type"
+      },
+      "required": [
+        "p_twin_id",
+        "p_sequence",
+        "p_type"
+      ]
+    },
+    {
+      "name": "register_bot",
+      "args": {
+        "p_assigned_nodes": "smallint[]",
+        "p_bot_class": "public.bot_class",
+        "p_target": "public.deployment_target",
+        "p_template_id": "bigint",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_bot_class",
+        "p_template_id",
+        "p_assigned_nodes"
+      ]
+    },
+    {
+      "name": "register_sdr_profile",
+      "args": {
+        "p_carrier_freq_ghz": "real",
+        "p_doppler_baseline_hz": "real",
+        "p_doppler_std_hz": "real",
+        "p_node_id": "smallint",
+        "p_path_loss_air_db": "real",
+        "p_path_loss_skin_db": "real",
+        "p_prf_hz": "real",
+        "p_reflection_sources": "text[]",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_node_id",
+        "p_prf_hz"
+      ]
+    },
+    {
+      "name": "request_ephemeral_key",
+      "args": {
+        "p_key_hash": "text",
+        "p_requester": "text",
+        "p_sig_count": "smallint",
+        "p_snapshot_id": "integer",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_snapshot_id",
+        "p_twin_id",
+        "p_key_hash",
+        "p_requester"
+      ]
+    },
+    {
+      "name": "request_vault_destruction",
+      "args": {
+        "p_confirm": "boolean",
+        "p_snapshot_id": "integer",
+        "p_twin_id": "uuid",
+        "p_witness": "text"
+      },
+      "required": [
+        "p_snapshot_id",
+        "p_twin_id",
+        "p_witness"
+      ]
+    },
+    {
+      "name": "revoke_p2p_connection",
+      "args": {
+        "p_peer_twin_id": "uuid",
+        "p_reason": "text",
+        "p_revoking_twin_id": "uuid"
+      },
+      "required": [
+        "p_revoking_twin_id",
+        "p_peer_twin_id"
+      ]
+    },
+    {
+      "name": "rls_auto_enable",
+      "args": {},
+      "required": []
+    },
+    {
+      "name": "trace_relay_path",
+      "args": {
+        "p_carrier_freq_ghz": "real",
+        "p_destination_node_id": "smallint",
+        "p_destination_phase_rad": "real",
+        "p_heart_reflection": "boolean",
+        "p_lung_reflection": "boolean",
+        "p_operation": "text",
+        "p_prf_hz": "real",
+        "p_relay_medium": "public.propagation_medium",
+        "p_relay_node_id": "smallint",
+        "p_relay_phase_rad": "real",
+        "p_sensor_id": "text",
+        "p_session_id": "bigint",
+        "p_snapshot_id": "integer",
+        "p_source_medium": "public.propagation_medium",
+        "p_source_node_id": "smallint",
+        "p_source_phase_rad": "real",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_sensor_id",
+        "p_source_node_id",
+        "p_relay_node_id",
+        "p_destination_node_id",
+        "p_source_phase_rad",
+        "p_relay_phase_rad",
+        "p_destination_phase_rad"
+      ]
+    },
+    {
+      "name": "trigger_twin_sync_lock",
+      "args": {
+        "p_intensity": "real",
+        "p_sensor_id": "text",
+        "p_session_id": "bigint",
+        "p_twin_id": "uuid",
+        "p_window_end": "timestamp with time zone"
+      },
+      "required": [
+        "p_twin_id",
+        "p_session_id",
+        "p_sensor_id",
+        "p_intensity"
+      ]
+    },
+    {
+      "name": "verify_biological_integrity",
+      "args": {
+        "p_origin_at": "timestamp with time zone",
+        "p_origin_node_id": "smallint",
+        "p_sensor_id": "text",
+        "p_terminal_at": "timestamp with time zone",
+        "p_terminal_node_id": "smallint",
+        "p_twin_id": "uuid"
+      },
+      "required": [
+        "p_twin_id",
+        "p_origin_node_id",
+        "p_terminal_node_id",
+        "p_origin_at",
+        "p_terminal_at",
+        "p_sensor_id"
+      ]
+    }
+  ]
+}
