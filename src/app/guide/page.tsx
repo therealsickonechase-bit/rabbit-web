@@ -63,6 +63,10 @@ export default function GuidePage() {
             <li>Open <strong>Ask RabbitOS</strong> and try: <em>“What do we have on BRCA1?”</em>. Open <strong>CRISPR Explorer</strong>, pick a guide and a deletion or insertion to see the sequence change.</li>
           </Steps>
           <P>
+            <strong>Just visiting?</strong> If the owner sent you a <em>guest link</em>, open it and press <em>Open guest pass</em>. No account or password is needed.
+            A guest pass lasts 3 days from first use and lets you browse Research, the CRISPR Explorer and this guide, read-only. It has no email address attached, so keep the link private.
+          </P>
+          <P>
             <strong>Forgot your password?</strong> Use “Forgot password” on the sign-in page. The email works once. Limits: 20 AI summaries and 40 questions per day per person.
           </P>
         </Section>

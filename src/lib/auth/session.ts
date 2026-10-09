@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { guestState } from '@/lib/guest'
 
 /**
  * Two roles:
@@ -25,7 +26,15 @@ export async function getSessionRole() {
   const user = await requireUser()
   const supabase = await createClient()
   const { data } = await supabase.rpc('is_owner')
-  return { user, isOwner: data === true }
+  const guest = guestState(user)
+  return { user, isOwner: data === true, isGuest: guest.isGuest, guestUntil: guest.isGuest ? guest.until : null }
+}
+
+/** For pages and actions that need a real account: a guest-pass visitor is sent back to Research. */
+export async function requireMember() {
+  const user = await requireUser()
+  if (guestState(user).isGuest) redirect('/research')
+  return user
 }
 
 /** Owner-only pages: members are sent to the research page. */

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { env } from 'cloudflare:workers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getSessionRole, requireOwner, requireUser } from '@/lib/auth/session'
+import { getSessionRole, requireOwner, requireMember } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, Stat, Table, Td } from '@/components/ui'
 import { EMBED_MODEL, embedTexts, recordText, toVectorLiteral, type AiLike } from '@/lib/embed'
 import { buildLinks } from '@/lib/brain'
@@ -68,7 +68,7 @@ async function rebuildGraph() {
 
 async function search(formData: FormData) {
   'use server'
-  await requireUser()
+  await requireMember()
   const q = String(formData.get('q') ?? '').trim().slice(0, 200)
   if (q.length < 3) redirect('/memory?msg=empty')
   redirect(`/memory?q=${encodeURIComponent(q)}`)

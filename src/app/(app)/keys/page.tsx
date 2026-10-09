@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { requireUser } from '@/lib/auth/session'
+import { requireMember } from '@/lib/auth/session'
 import KeyCreator from '@/components/KeyCreator'
 import { Badge, Card, PageHeader, Table, Td, ago, when } from '@/components/ui'
 import { MAX_ACTIVE_KEYS, RATE_LIMIT_PER_MINUTE, keyUsable } from '@/lib/mcp'
 import { createKey, revokeKey } from './actions'
 
 export default async function KeysPage() {
-  await requireUser()
+  await requireMember()
   const sb = await createClient()
   const keys = await sb.from('api_keys').select('id, name, prefix, scopes, created_at, expires_at, last_used_at, revoked_at').order('created_at', { ascending: false })
   const rows = keys.data ?? []

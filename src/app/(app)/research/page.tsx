@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { requireUser } from '@/lib/auth/session'
+import { requireMember } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from '@/lib/secrets'
 import { DISCLAIMER, MODEL, buildPrompt, summarize } from '@/lib/summarize'
@@ -54,7 +54,7 @@ const DAILY_SUMMARY_LIMIT = 20
 
 async function summarizeTopic(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const sb = await createClient()
 
   const topicId = Number(formData.get('topic_id'))
@@ -111,7 +111,7 @@ async function summarizeTopic(formData: FormData) {
 
 async function saveRecord(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const admin = createAdminClient()
   const collectionId = String(formData.get('collection') ?? '')
   const recordId = String(formData.get('record') ?? '')

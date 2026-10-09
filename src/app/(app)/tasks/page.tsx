@@ -21,7 +21,8 @@ const NOTICE: Record<string, { ok: boolean; text: string }> = {
 
 async function createTask(formData: FormData) {
   'use server'
-  const { user } = await getSessionRole()
+  const { user, isGuest } = await getSessionRole()
+  if (isGuest) redirect('/research')
   const kind = String(formData.get('kind') ?? '')
   const topic = String(formData.get('topic') ?? '')
   const second = String(formData.get('biomarker') ?? '').trim()

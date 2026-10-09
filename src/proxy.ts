@@ -1,8 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { guestPathAllowed, guestState } from '@/lib/guest'
 
 // Pages anyone may open without being signed in (the account forms and the emailed-link landing page).
-const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/confirm', '/guide']
+const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/confirm', '/guide', '/guest']
 const isPublicPath = (path: string) => PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
 
 export async function proxy(request: NextRequest) {
@@ -44,6 +45,26 @@ export async function proxy(request: NextRequest) {
     url.pathname = '/login'
     url.search = ''
     return NextResponse.redirect(url)
+  }
+
+  // Guest passes: an ended pass is signed out; a live one may only use a few read-only pages.
+  const guest = guestState(user)
+  if (user && guest.isGuest) {
+    if (!guest.active) {
+      await supabase.auth.signOut({ scope: 'local' })
+      const url = request.nextUrl.clone()
+      url.pathname = '/guest'
+      url.search = '?ended=1'
+      const ended = NextResponse.redirect(url)
+      supabaseResponse.cookies.getAll().forEach((c) => ended.cookies.set(c))
+      return ended
+    }
+    if (!guestPathAllowed(path)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/research'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
   }
 
   // Signed in but never confirmed their email: clear the session and send them to the login page.

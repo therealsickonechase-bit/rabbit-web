@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireOwner } from '@/lib/auth/session'
+import { isGuestEmail } from '@/lib/guest'
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, when } from '@/components/ui'
 
 export default async function MembersPage() {
@@ -33,7 +34,7 @@ export default async function MembersPage() {
             {users.map((u) => (
               <tr key={u.id}>
                 <Td>{u.email}</Td>
-                <Td><Badge tone={ownerIds.has(u.id) ? 'accent' : 'muted'}>{ownerIds.has(u.id) ? 'Owner' : 'Member'}</Badge></Td>
+                <Td><Badge tone={ownerIds.has(u.id) ? 'accent' : 'muted'}>{ownerIds.has(u.id) ? 'Owner' : isGuestEmail(u.email) ? 'Guest' : 'Member'}</Badge></Td>
                 <Td className="whitespace-nowrap">{when(u.created_at)}</Td>
                 <Td>{ago(u.last_sign_in_at)}</Td>
                 <Td><Badge tone={u.email_confirmed_at ? 'ok' : 'warn'}>{u.email_confirmed_at ? 'Yes' : 'No'}</Badge></Td>

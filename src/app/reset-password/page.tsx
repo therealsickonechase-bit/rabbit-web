@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { requireUser } from '@/lib/auth/session'
+import { requireMember } from '@/lib/auth/session'
 import { MIN_PASSWORD, passwordProblem } from '@/lib/auth/password'
 import { AuthShell, Notice, authInput, button } from '@/components/AuthShell'
 
 // Reached after the emailed link signed the person in (type=recovery), so a session already exists.
 async function setPassword(formData: FormData) {
   'use server'
-  await requireUser()
+  await requireMember()
   const password = String(formData.get('password') ?? '')
   const problem = passwordProblem(password, String(formData.get('confirm') ?? ''))
   if (problem) redirect(`/reset-password?error=${problem}`)
@@ -30,7 +30,7 @@ const ERRORS: Record<string, string> = {
 }
 
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  await requireUser()
+  await requireMember()
   const { error } = await searchParams
 
   return (
