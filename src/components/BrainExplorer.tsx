@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Brain3D, { rampColor, type ElectrodeView } from '@/components/Brain3D'
+import Brain3D, { DEFAULT_LAYERS, rampColor, type ElectrodeView, type Layers, type ViewName } from '@/components/Brain3D'
+import PathwayPanel from '@/components/PathwayPanel'
+import { SCENARIO_IDS, SCENARIO_INFO, SYSTEM_IDS, SYSTEM_INFO, type ScenarioId, type SystemId } from '@/lib/neuro'
 import { BANDS, BAND_HZ, dominantBand, electrodePosition, latestByChannel, regionOf, type Band, type EegSample } from '@/lib/brain'
 
 export interface RecordRef { id: string; source: string; title: string; url: string | null }
@@ -25,6 +27,11 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
   const [lastAt, setLastAt] = useState<string | null>(initial[0]?.ts ?? null)
   const [similar, setSimilar] = useState(true)
   const [now, setNow] = useState(0)
+  const [layers, setLayers] = useState<Layers>(DEFAULT_LAYERS)
+  const [view, setView] = useState<{ name: ViewName; nonce: number } | undefined>()
+  const [system, setSystem] = useState<SystemId | 'none'>('none')
+  const [scenario, setScenario] = useState<ScenarioId>('healthy')
+  const [lobe, setLobe] = useState<string | null>(null)
 
   const poll = useCallback(async () => {
     try {
@@ -99,7 +106,33 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
           </span>
         </div>
 
-        <Brain3D electrodes={electrodes} selected={selected} onSelect={setSelected} spin={spin} links={links} />
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Chemical pathway">
+          <span className="text-xs text-muted">Pathway</span>
+          {(['none', ...SYSTEM_IDS] as const).map((s) => (
+            <button key={s} onClick={() => setSystem(s)} aria-pressed={system === s}
+              className={`text-xs rounded-full border px-3 py-1 ${system === s ? 'border-accent text-accent bg-accent-soft' : 'border-line text-muted hover:text-fg'}`}>
+              {s === 'none' ? 'None' : SYSTEM_INFO[s].name.split(' (')[0].replace(' loops', '')}
+            </button>
+          ))}
+          <label className="text-xs text-muted flex items-center gap-1 ml-auto">Damage overlay
+            <select value={scenario} onChange={(e) => setScenario(e.target.value as ScenarioId)} className="rounded border border-line bg-canvas px-2 py-1 text-xs text-fg">
+              {SCENARIO_IDS.map((s) => <option key={s} value={s}>{SCENARIO_INFO[s].name}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <Brain3D electrodes={electrodes} selected={selected} onSelect={setSelected} onCortex={setLobe} spin={spin} links={links} layers={layers} view={view} system={system} scenario={scenario} />
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" role="group" aria-label="Camera view and layers">
+          {(['home', 'top', 'front', 'back', 'left', 'right'] as const).map((v) => (
+            <button key={v} onClick={() => setView({ name: v, nonce: Date.now() })} className="rounded-full border border-line px-2.5 py-0.5 hover:border-accent hover:text-accent">{v === 'home' ? '3/4' : v}</button>
+          ))}
+          <span className="mx-1 text-line">|</span>
+          {([['heat', 'cortex heat map'], ['lobes', 'lobes'], ['scalp', 'scalp'], ['arcs', 'network arcs'], ['labels', 'labels'], ['cereb', 'cerebellum']] as const).map(([k, label]) => (
+            <label key={k} className="flex items-center gap-1"><input type="checkbox" checked={layers[k]} onChange={(e) => setLayers({ ...layers, [k]: e.target.checked })} /> {label}</label>
+          ))}
+          {lobe && <span className="ml-auto rounded border border-line px-2 py-0.5">{lobe} lobe</span>}
+        </div>
 
         <div className="flex items-center gap-2 text-xs text-muted" aria-hidden>
           <span>low</span>
@@ -108,8 +141,9 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
           <span className="ml-3">grey = no data</span>
         </div>
         <p className="text-xs text-muted">
-          Schematic head and brain with electrodes at approximate international 10-20 positions. It is not an MRI-based model, and the colours show band power at the scalp, not activity at a particular spot in the brain.
+          Schematic head and brain with electrodes at approximate international 10-20 positions. It is not an MRI-based model. The cortex colours are an estimate spread from the scalp electrodes, not located brain activity, and the arcs join electrodes with similar band levels, which is not measured connectivity.
         </p>
+        <section className="bg-surface border border-line rounded-lg p-4"><PathwayPanel system={system} scenario={scenario} /></section>
       </div>
 
       <aside className="space-y-4 text-sm" aria-live="polite">

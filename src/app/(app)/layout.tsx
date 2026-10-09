@@ -16,6 +16,7 @@ const OWNER_NAV = [
   { href: '/dashboard', label: 'Overview' },
   { href: '/twin', label: 'Twin Atlas' },
   { href: '/brain', label: 'Brain Network' },
+  { href: '/connections', label: 'Chemistry & DNA' },
   { href: '/research', label: 'Research' },
   { href: '/ask', label: 'Ask RabbitOS' },
   { href: '/memory', label: 'Memory' },
@@ -31,6 +32,7 @@ const MEMBER_NAV = [
   { href: '/ask', label: 'Ask RabbitOS' },
   { href: '/memory', label: 'Memory' },
   { href: '/crispr', label: 'CRISPR Explorer' },
+  { href: '/connections', label: 'Chemistry & DNA' },
   { href: '/collections', label: 'Collections' },
   { href: '/tasks', label: 'Agent tasks' },
 ]
