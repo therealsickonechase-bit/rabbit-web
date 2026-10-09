@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Pages anyone may open without being signed in (the account forms and the emailed-link landing page).
-const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/confirm']
+const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/confirm', '/guide']
 const isPublicPath = (path: string) => PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
 
 export async function proxy(request: NextRequest) {

@@ -52,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3 text-sm">
             <span className="text-muted hidden sm:inline">{user?.email}</span>
             <span className="text-xs rounded border border-line px-2 py-0.5 text-muted">{isOwner ? 'Owner' : 'Member'}</span>
+            <Link href="/guide" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Guide</Link>
             <Link href="/settings" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Settings</Link>
             <form action={signOut}>
               <button className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Sign out</button>
