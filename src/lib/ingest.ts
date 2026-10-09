@@ -106,6 +106,21 @@ export const ingestSchema = z.object({
     )
     .max(1000)
     .default([]),
+  // Band powers per EEG channel from a BrainFlow/OpenBCI bridge (never raw waveforms).
+  eeg: z
+    .array(
+      z.object({
+        session: z.string().min(1).max(64),
+        ts: z.string().datetime({ offset: true }),
+        channel: z.string().min(1).max(16),
+        band: z.enum(['delta', 'theta', 'alpha', 'beta', 'gamma']),
+        power: z.number().min(0).finite(),
+        rel_power: z.number().min(0).max(1).nullish(),
+        board: z.string().min(1).max(40).default('unknown'),
+      })
+    )
+    .max(500)
+    .default([]),
 })
 
 export type IngestPayload = z.infer<typeof ingestSchema>

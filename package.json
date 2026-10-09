@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:auth": "node --test tests/auth-email.test.mjs tests/contact-crypto.test.mjs tests/ask.test.mjs tests/twin-stats.test.mjs tests/crispr-sim.test.mjs tests/public-feed.test.mjs",
+    "test:auth": "node --test tests/auth-email.test.mjs tests/contact-crypto.test.mjs tests/ask.test.mjs tests/twin-stats.test.mjs tests/crispr-sim.test.mjs tests/public-feed.test.mjs tests/brain.test.mjs",
     "contacts:keys": "node scripts/contact-keys.mjs",
     "contacts:lookup": "node scripts/contact-lookup.mjs",
     "contacts:selftest": "node scripts/contact-lookup.mjs selftest",
@@ -21,11 +21,13 @@
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
+    "@types/three": "^0.186.0",
     "@vinext/cloudflare": "^1.1.0",
     "next": "16.2.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-server-dom-webpack": "^19.3.0",
+    "three": "^0.186.1",
     "vinext": "^1.1.0",
     "zod": "^4.6.5"
   },

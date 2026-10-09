@@ -6,7 +6,7 @@ export const PUBLIC_ORIGINS = ['https://rabbitsoftware.io', 'https://www.rabbits
 /** Sources whose titles and links are already public elsewhere (PubMed, ClinicalTrials.gov, ClinVar ...). */
 export const PUBLIC_SOURCES = [
   'trial', 'pubmed', 'stjude', 'stjude_dataset', 'europepmc', 'nih_grant', 'clinvar',
-  'crispr_trial', 'crispr_paper', 'crispr_preprint',
+  'crispr_trial', 'crispr_paper', 'crispr_preprint', 'brain_paper', 'brain_preprint',
 ] as const
 
 export function corsHeaders(origin: string | null): Record<string, string> {

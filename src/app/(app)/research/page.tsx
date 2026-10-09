@@ -22,6 +22,8 @@ const SOURCE_LABEL: Record<string, string> = {
   crispr_trial: 'CRISPR trials',
   crispr_paper: 'CRISPR papers',
   crispr_preprint: 'CRISPR preprints',
+  brain_paper: 'Brain / EEG papers',
+  brain_preprint: 'Brain / EEG preprints',
 }
 
 function detail(source: string, m: Record<string, unknown>) {
