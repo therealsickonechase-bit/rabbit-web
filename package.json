@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:auth": "node --test tests/auth-email.test.mjs tests/contact-crypto.test.mjs tests/ask.test.mjs tests/twin-stats.test.mjs tests/crispr-sim.test.mjs tests/public-feed.test.mjs tests/brain.test.mjs",
+    "test:auth": "node --test tests/auth-email.test.mjs tests/contact-crypto.test.mjs tests/ask.test.mjs tests/twin-stats.test.mjs tests/crispr-sim.test.mjs tests/public-feed.test.mjs tests/brain.test.mjs tests/tasks.test.mjs",
     "contacts:keys": "node scripts/contact-keys.mjs",
     "contacts:lookup": "node scripts/contact-lookup.mjs",
     "contacts:selftest": "node scripts/contact-lookup.mjs selftest",
