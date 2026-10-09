@@ -17,6 +17,7 @@ const OWNER_NAV = [
   { href: '/research', label: 'Research' },
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
+  { href: '/members', label: 'Members' },
 ]
 const MEMBER_NAV = [{ href: '/research', label: 'Research' }]
 
