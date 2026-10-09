@@ -1,26 +1,54 @@
 @import "tailwindcss";
 
+/* Cloudflare-dashboard-style tokens: neutral surfaces, orange accent. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --canvas: #f6f6f6;
+  --surface: #ffffff;
+  --line: #e3e3e3;
+  --fg: #1d1d1d;
+  --muted: #6b6b6b;
+  --accent: #f6821f;
+  --accent-soft: #fff1e3;
+  --ok: #1a7f37;
+  --warn: #b45309;
+  --bad: #c62828;
+  --info: #0051c3;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --canvas: #121212;
+    --surface: #1b1b1b;
+    --line: #2f2f2f;
+    --fg: #ededed;
+    --muted: #9b9b9b;
+    --accent: #f6821f;
+    --accent-soft: #2b2016;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --info: #60a5fa;
   }
 }
 
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-info: var(--info);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
