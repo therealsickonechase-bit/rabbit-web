@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { recordContact } from '@/lib/contact-record'
 import { appUrl } from '@/lib/mail'
 import { EMAIL_SHAPE, MIN_PASSWORD, passwordProblem } from '@/lib/auth/password'
 import { AuthShell, Notice, authInput, button } from '@/components/AuthShell'
@@ -18,7 +20,7 @@ async function signUp(formData: FormData) {
   if (formData.get('agree') !== 'on') redirect('/signup?error=agree')
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { captchaToken: captchaTokenFrom(formData), emailRedirectTo: `${appUrl()}/auth/confirm` },
@@ -32,6 +34,20 @@ async function signUp(formData: FormData) {
     const code = m.includes('captcha') ? 'captcha' : m.includes('not allowed') || m.includes('disabled') ? 'closed' : error.status === 429 ? 'rate' : 'failed'
     redirect(`/signup?error=${code}`)
   }
+
+  // Supabase answers an already-registered address with the same success but no identities, so only a
+  // genuinely new account gets a record. If the record cannot be stored, the new account is removed again:
+  // an account never exists without its contact record.
+  const isNew = (data.user?.identities?.length ?? 0) > 0
+  if (isNew && data.user) {
+    try {
+      await recordContact(data.user.id, email)
+    } catch (e) {
+      console.error('contact record failed', e instanceof Error ? e.message : 'unknown')
+      await createAdminClient().auth.admin.deleteUser(data.user.id)
+      redirect('/signup?error=failed')
+    }
+  }
   redirect('/signup?sent=1')
 }
 
@@ -40,7 +56,7 @@ const ERRORS: Record<string, string> = {
   weak: `Use at least ${MIN_PASSWORD} characters for your password.`,
   long: 'That password is too long (72 bytes at most).',
   mismatch: 'The two passwords do not match.',
-  agree: 'Please confirm that you have read the privacy policy.',
+  agree: 'Please confirm that you have read the privacy policy and the contact record notice.',
   captcha: 'Please complete the check and try again.',
   closed: 'Sign-up is not open yet.',
   rate: 'Too many attempts. Please wait a few minutes and try again.',
@@ -84,11 +100,20 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
           <label htmlFor="confirm" className="block text-xs font-medium mb-1">Repeat password</label>
           <input id="confirm" name="confirm" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" className={authInput} />
         </div>
+        <div className="rounded-md border border-line bg-canvas p-3 text-xs text-muted space-y-1">
+          <p className="font-medium text-fg">Contact record</p>
+          <p>
+            We keep an encrypted copy of your email address. It is kept only so we can respond to a valid legal request,
+            for example a court order about illegal activity, and for no other purpose. Only the site owner holds the key
+            that opens it, and every time one is opened it is logged.
+          </p>
+        </div>
         <label className="flex items-start gap-2 text-xs text-muted">
           <input type="checkbox" name="agree" required className="mt-0.5" />
           <span>
             I have read the{' '}
-            <a href="https://rabbitsoftware.io/privacy.html" className="text-accent underline" target="_blank" rel="noopener noreferrer">privacy policy</a>.
+            <a href="https://rabbitsoftware.io/privacy.html" className="text-accent underline" target="_blank" rel="noopener noreferrer">privacy policy</a>{' '}
+            and the contact record notice above.
           </span>
         </label>
         {error && <Notice tone="bad">{ERRORS[error] ?? ERRORS.failed}</Notice>}
