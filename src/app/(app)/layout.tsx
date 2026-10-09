@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { requireAllowedUser } from '@/lib/auth/session'
 import Sidebar from '@/components/Sidebar'
 import AutoRefresh from '@/components/AutoRefresh'
 
@@ -12,8 +13,7 @@ async function signOut() {
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const sb = await createClient()
-  const { data: { user } } = await sb.auth.getUser()
+  const user = await requireAllowedUser()
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[220px_1fr]">

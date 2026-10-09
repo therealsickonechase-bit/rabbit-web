@@ -1,14 +1,19 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { isAllowedDashboardEmail } from '@/lib/auth/allowlist'
 
 async function signIn(formData: FormData) {
   'use server'
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: String(formData.get('email') ?? ''),
     password: String(formData.get('password') ?? ''),
   })
   if (error) redirect('/login?error=1')
+  if (!isAllowedDashboardEmail(data.user?.email)) {
+    await supabase.auth.signOut({ scope: 'local' })
+    redirect('/login?error=unauthorized')
+  }
   redirect('/dashboard')
 }
 
@@ -40,7 +45,7 @@ export default async function LoginPage({
         </div>
         {error && (
           <p role="alert" className="text-sm text-bad border border-bad/40 rounded-md px-3 py-2">
-            Invalid email or password.
+            {error === 'unauthorized' ? 'This account is not authorized to use this console.' : 'Invalid email or password.'}
           </p>
         )}
         <button className="w-full rounded-md bg-accent text-white font-medium py-2 text-sm hover:opacity-90">

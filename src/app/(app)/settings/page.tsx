@@ -1,16 +1,11 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireAllowedUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { encryptSecret } from '@/lib/secrets'
 import { keyIsValid } from '@/lib/summarize'
 import { Badge, Card, PageHeader } from '@/components/ui'
 
-async function currentUser() {
-  const sb = await createClient()
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) redirect('/login')
-  return user
-}
+const currentUser = requireAllowedUser
 
 async function saveKey(formData: FormData) {
   'use server'
