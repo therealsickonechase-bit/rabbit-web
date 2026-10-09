@@ -53,7 +53,8 @@ const COPY: Record<Exclude<AuthEmailType, 'reauthentication'>, { subject: string
 }
 
 export function renderAuthEmail(input: AuthEmailInput): RenderedEmail {
-  const footer = 'If you did not request this, you can ignore this email. Nothing will change.'
+  const footer =
+    'If you did not request this, you can ignore this email. Nothing will change. Questions? Reply to this email or write to contact@rabbitsoftware.io.'
 
   if (input.type === 'reauthentication') {
     const code = input.token ?? ''
