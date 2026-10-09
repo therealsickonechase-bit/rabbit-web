@@ -18,6 +18,7 @@ const OWNER_NAV = [
   { href: '/brain', label: 'Brain Network' },
   { href: '/research', label: 'Research' },
   { href: '/ask', label: 'Ask RabbitOS' },
+  { href: '/memory', label: 'Memory' },
   { href: '/crispr', label: 'CRISPR Explorer' },
   { href: '/collections', label: 'Collections' },
   { href: '/tasks', label: 'Agent tasks' },
@@ -28,6 +29,7 @@ const OWNER_NAV = [
 const MEMBER_NAV = [
   { href: '/research', label: 'Research' },
   { href: '/ask', label: 'Ask RabbitOS' },
+  { href: '/memory', label: 'Memory' },
   { href: '/crispr', label: 'CRISPR Explorer' },
   { href: '/collections', label: 'Collections' },
   { href: '/tasks', label: 'Agent tasks' },

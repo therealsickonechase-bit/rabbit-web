@@ -1,8 +1,10 @@
+import { env } from 'cloudflare:workers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { orFilter } from '@/lib/ask'
 import { guideDigest, type GuideRow } from '@/lib/crispr-sim'
 import { PUBLIC_SOURCES } from '@/lib/public-feed'
 import { MAX_OPEN_PER_USER, MAX_PER_DAY } from '@/lib/tasks'
+import { embedTexts, toVectorLiteral, type AiLike } from '@/lib/embed'
 import type { Db } from '@/lib/mcp'
 
 // The only sources an API key can read: public literature/variants and CRISPR guides. Never chats, notes, EEG or twin data.
@@ -17,6 +19,14 @@ export function makeDb(): Db {
       const r = await q
       if (r.error) throw r.error
       return r.data ?? []
+    },
+    async semanticSearch(query, limit) {
+      const ai = env.AI as AiLike | undefined
+      if (!ai) return null
+      const [v] = await embedTexts(ai, [query])
+      const m = await sb.rpc('match_records', { query_embedding: toVectorLiteral(v), match_count: limit, only_sources: READABLE.filter((s) => s !== 'crispr_guide') })
+      if (m.error) throw m.error
+      return ((m.data ?? []) as { id: string; source: string; title: string; url: string | null; similarity: number }[])
     },
     async getRecord(id) {
       const r = await sb.from('research_records').select('id, source, title, url, meta, first_seen_at').eq('id', id).in('source', READABLE).maybeSingle()

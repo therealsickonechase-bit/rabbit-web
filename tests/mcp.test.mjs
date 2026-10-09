@@ -5,6 +5,7 @@ import { bearerFrom, generateKey, handleRpc, hashKey, keyUsable, originAllowed, 
 const calls = []
 const db = {
   searchRecords: async (words, source, limit) => { calls.push(['search', words, source, limit]); return [{ id: 'pubmed:1', source: 'pubmed', title: 'BRCA1 paper', url: 'https://x.org' }] },
+  semanticSearch: async (q, n) => (q === 'unavailable query' ? null : [{ id: 'pubmed:1', source: 'pubmed', title: 'BRCA1 paper', url: null, similarity: 0.87654321 }]),
   getRecord: async (id) => (id === 'pubmed:1' ? { id, source: 'pubmed', title: 't', url: null, meta: {} } : null),
   guides: async () => [{ id: 'g1', meta: { gene: 'BRCA1', guide: 'A'.repeat(20), secret_internal: 'x' } }],
   stats: async () => ({ pubmed: 8 }),
@@ -102,4 +103,11 @@ test('a failing tool returns a generic error and never leaks details', async () 
 test('long results are truncated', async () => {
   const big = { ...reader, db: { ...db, stats: async () => Object.fromEntries(Array.from({ length: 2000 }, (_, i) => [`source_${i}`, i])) } }
   assert.match(text(await call('research_stats', {}, big)), /truncated\)$/)
+})
+
+test('semantic_search returns rounded similarity, or a clear fallback when embeddings are unavailable', async () => {
+  const r = JSON.parse(text(await call('semantic_search', { query: 'DNA repair in breast tumours' })))
+  assert.equal(r.records[0].similarity, 0.877)
+  assert.match(text(await call('semantic_search', { query: 'unavailable query' })), /search_research/)
+  assert.equal((await call('semantic_search', { query: 'hi' })).result.isError, true)   // too short
 })
