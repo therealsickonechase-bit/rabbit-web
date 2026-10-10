@@ -6,6 +6,7 @@ import LiveBridge from '@/components/LiveBridge'
 import CapturePanel from '@/components/CapturePanel'
 import HfGenerator from '@/components/HfGenerator'
 import SelfData from '@/components/SelfData'
+import AvatarPanel from '@/components/AvatarPanel'
 import { eegIndices, type Baseline, type LiveFrame } from '@/lib/live-signals'
 import PathwayPanel from '@/components/PathwayPanel'
 import BodyPanel from '@/components/BodyPanel'
@@ -249,6 +250,10 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
         <CapturePanel controlRef={controlRef} lines={cardLines} scenario={scenario} system={system} organ={organ} live={bridge} />
       </section>
     </div>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Walking avatar">
+      <AvatarPanel live={bridge} scenario={scenario} />
+    </section>
 
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="Qwen-Image generator">
       <HfGenerator live={bridge} baseline={baseline} />

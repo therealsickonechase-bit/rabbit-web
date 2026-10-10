@@ -155,6 +155,7 @@ python rabbit_sync.py       # signed upload to RabbitOS`}</Code>
 & C:\Users\odaat\Projects\research-agents\start-selfdata.ps1 -Inbox`}</Code>
               Then press <em>Connect to my hub</em> in the “My data portrait” panel. Step-by-step export directions are in <code>research-agents/docs/self-data.md</code>.
             </li>
+            <li><strong>Walking avatar:</strong> on Brain Network, the avatar chooses by itself how to move and says why. Its mood comes from hormone levels, the time of day and EEG and heart signals: its own simulated twin by default, or yours if you tick &quot;mirror my live signals&quot; while the bridge is connected. Type or tap a question (&quot;How do you feel?&quot;, &quot;What does your liver do?&quot;) and the relevant organ glows through its skin. Answers come from the body model; tick the Claude box to let your own Anthropic key answer open questions (only fixed words about its state are sent). It is a model, not a conscious being, and its body is a stylised figure built in code, not a scan of a real person.</li>
             <li><strong>Optional save:</strong> “Save today’s summary to my account” stores a coarse summary per body system and lab flag counts (never raw values or names) in an owner-only table. It needs the <code>self_daily</code> migration. “Delete saved summaries” removes them.</li>
           </Steps>
           <Note>Descriptive analytics against your own usual, for research and education. Not medical advice and not a diagnosis.</Note>
