@@ -60,6 +60,9 @@ Blue particles are data coming in, amber are data going out; petal length is the
 Organs in `/api/model/body?section=organs` carry NLM MeSH IDs, and `/api/model/concepts?term=...` maps a term to MeSH. UMLS CUIs are added only if you run
 `scripts\add-umls.ps1` with a UMLS key, and only from open sources.
 
+Genes can carry standard identifiers too (NCBI Gene, HGNC, OMIM, Ensembl, UniProt, RefSeq) from NCBI Datasets packages, kept in `src/lib/gene-ids.ts`; SLC6A4 has them now and
+they appear in `/api/model/body?section=genes` and on its card in Chemistry & DNA.
+
 ## Files
 
 `src/components/LiveBridge.tsx` connection | `HfGenerator.tsx` Qwen panel | `CapturePanel.tsx` pictures, clips, files, Workers AI |

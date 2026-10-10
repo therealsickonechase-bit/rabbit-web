@@ -8,6 +8,7 @@ import { BODY_ROUTES, GENE_BODY, ORGANS, ORGAN_IDS, SCENARIO_BODY, SYSTEM_BODY, 
 import { PATHWAY_BARS, SEIZURE_PERIOD, pathwayLevel, physioAt, readings } from './body-physiology.ts'
 import { SCENARIO_IDS, SCENARIO_INFO, SYSTEM_IDS, SYSTEM_INFO, type ScenarioId, type SystemId } from './neuro.ts'
 import { GENE_COUNTS, GENE_COUNTS_DATE } from './neuro-genes.ts'
+import { geneLinks, identifiersFor } from './gene-ids.ts'
 
 export const MODEL_VERSION = '1.0.0'
 export const DISCLAIMER = 'Educational and research visualisation. Anatomical positions follow standard teaching references and are typical adult values; patterns are textbook-level and illustrative, not measurements from or predictions for any person. Not medical advice and not for diagnosis.'
@@ -34,7 +35,7 @@ export function bodyModelJson(section?: Section): unknown {
       body_effects: SCENARIO_BODY[id].map((e) => ({ organ: e.organ, evidence: e.evidence, strength: e.level, description: e.text })),
     })),
     systems: SYSTEM_IDS.map((id) => ({ id, name: SYSTEM_INFO[id].name, description: SYSTEM_INFO[id].text, body_links: SYSTEM_BODY[id].map((e) => ({ organ: e.organ, evidence: e.evidence, description: e.text })) })),
-    genes: Object.entries(GENE_BODY).map(([gene, g]) => ({ gene, organs: g.organs, evidence: g.evidence, description: g.text, clinvar_variants: GENE_COUNTS[gene]?.variants ?? null, clinvar_pathogenic_or_likely: GENE_COUNTS[gene]?.pathogenic_or_likely ?? null, clinvar_snapshot: GENE_COUNTS_DATE })),
+    genes: Object.entries(GENE_BODY).map(([gene, g]) => ({ gene, organs: g.organs, evidence: g.evidence, description: g.text, clinvar_variants: GENE_COUNTS[gene]?.variants ?? null, clinvar_pathogenic_or_likely: GENE_COUNTS[gene]?.pathogenic_or_likely ?? null, clinvar_snapshot: GENE_COUNTS_DATE, identifiers: ((id) => (id ? { ...id, links: geneLinks(id) } : null))(identifiersFor(gene)) })),
     layout: {
       landmarks_cm_below_notch: LANDMARKS,
       vertebral_body_centres_cm: Object.fromEntries([...VERTEBRAE, 'S1', 'S5', 'Coccyx'].map((v) => [v, vertZ(v)])),

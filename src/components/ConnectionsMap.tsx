@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui'
 import { BAND_TEXT, COND_IDS, EDGES, GENE_SYSTEMS, GRAPH_SYSTEM_OF, MAP_COLUMNS, MAP_HEIGHT, NODE_LABEL, SCENARIO_INFO, SYSTEM_INFO, connectedEdges, edgePath, mapNodes, type Evidence } from '@/lib/neuro'
 import { GENE_COUNTS, GENE_COUNTS_DATE } from '@/lib/neuro-genes'
+import { geneLinks, identifiersFor } from '@/lib/gene-ids'
 
 export interface GeneExample { title: string; cls: string | null; url: string }
 const DASH: Record<Evidence, string | undefined> = { established: undefined, supported: '7 5', exploratory: '2 5' }
@@ -115,6 +116,20 @@ function GeneCard({ id, examples, papers, ask }: { id: string; examples: GeneExa
   return (
     <div className="space-y-3">
       <p>{c.role.charAt(0).toUpperCase() + c.role.slice(1)}.</p>
+      {(() => {
+        const ids = identifiersFor(id)
+        if (!ids) return null
+        const l = geneLinks(ids)
+        return (
+          <p className="text-xs text-muted" title={ids.source}>
+            {ids.name}, {ids.cytoband}. Also known as {ids.synonyms.slice(0, 4).join(', ')}. Records:{' '}
+            <a className="underline" href={l.ncbi_gene} target="_blank" rel="noopener noreferrer">NCBI Gene {ids.ncbi_gene_id}</a>,{' '}
+            <a className="underline" href={l.omim} target="_blank" rel="noopener noreferrer">OMIM {ids.omim}</a>,{' '}
+            <a className="underline" href={l.ensembl} target="_blank" rel="noopener noreferrer">Ensembl</a>,{' '}
+            <a className="underline" href={l.uniprot} target="_blank" rel="noopener noreferrer">UniProt {ids.uniprot}</a>. Transcript {ids.refseq_transcript}.
+          </p>
+        )
+      })()}
       <div className="grid grid-cols-2 gap-2">
         <div className="border border-line rounded-md p-2"><p className="text-xs text-muted">ClinVar variants</p><p className="font-mono text-lg">{c.variants.toLocaleString()}</p></div>
         <div className="border border-line rounded-md p-2"><p className="text-xs text-muted">Pathogenic or likely</p><p className="font-mono text-lg">{c.pathogenic_or_likely.toLocaleString()}</p></div>
