@@ -1,0 +1,143 @@
+{
+  "source": "NLM MeSH lookup (id.nlm.nih.gov/mesh); UMLS CUIs only when UMLS_API_KEY was set",
+  "generated": "2026-10-10",
+  "umls_included": false,
+  "concepts": {
+    "eyes": {
+      "mesh": {
+        "id": "D005123",
+        "label": "Eye",
+        "uri": "https://id.nlm.nih.gov/mesh/D005123"
+      },
+      "umls": null
+    },
+    "lungs": {
+      "mesh": {
+        "id": "D008168",
+        "label": "Lung",
+        "uri": "https://id.nlm.nih.gov/mesh/D008168"
+      },
+      "umls": null
+    },
+    "heart": {
+      "mesh": {
+        "id": "D006321",
+        "label": "Heart",
+        "uri": "https://id.nlm.nih.gov/mesh/D006321"
+      },
+      "umls": null
+    },
+    "diaphragm": {
+      "mesh": {
+        "id": "D003964",
+        "label": "Diaphragm",
+        "uri": "https://id.nlm.nih.gov/mesh/D003964"
+      },
+      "umls": null
+    },
+    "esophagus": {
+      "mesh": {
+        "id": "D004947",
+        "label": "Esophagus",
+        "uri": "https://id.nlm.nih.gov/mesh/D004947"
+      },
+      "umls": null
+    },
+    "liver": {
+      "mesh": {
+        "id": "D008099",
+        "label": "Liver",
+        "uri": "https://id.nlm.nih.gov/mesh/D008099"
+      },
+      "umls": null
+    },
+    "gallbladder": {
+      "mesh": {
+        "id": "D005704",
+        "label": "Gallbladder",
+        "uri": "https://id.nlm.nih.gov/mesh/D005704"
+      },
+      "umls": null
+    },
+    "stomach": {
+      "mesh": {
+        "id": "D013270",
+        "label": "Stomach",
+        "uri": "https://id.nlm.nih.gov/mesh/D013270"
+      },
+      "umls": null
+    },
+    "pancreas": {
+      "mesh": {
+        "id": "D010179",
+        "label": "Pancreas",
+        "uri": "https://id.nlm.nih.gov/mesh/D010179"
+      },
+      "umls": null
+    },
+    "spleen": {
+      "mesh": {
+        "id": "D013154",
+        "label": "Spleen",
+        "uri": "https://id.nlm.nih.gov/mesh/D013154"
+      },
+      "umls": null
+    },
+    "adrenals": {
+      "mesh": {
+        "id": "D000311",
+        "label": "Adrenal Glands",
+        "uri": "https://id.nlm.nih.gov/mesh/D000311"
+      },
+      "umls": null
+    },
+    "kidneys": {
+      "mesh": {
+        "id": "D007668",
+        "label": "Kidney",
+        "uri": "https://id.nlm.nih.gov/mesh/D007668"
+      },
+      "umls": null
+    },
+    "gut": {
+      "mesh": {
+        "id": "D007422",
+        "label": "Intestines",
+        "uri": "https://id.nlm.nih.gov/mesh/D007422"
+      },
+      "umls": null
+    },
+    "bladder": {
+      "mesh": {
+        "id": "D001743",
+        "label": "Urinary Bladder",
+        "uri": "https://id.nlm.nih.gov/mesh/D001743"
+      },
+      "umls": null
+    },
+    "muscle": {
+      "mesh": {
+        "id": "D018482",
+        "label": "Muscle, Skeletal",
+        "uri": "https://id.nlm.nih.gov/mesh/D018482"
+      },
+      "umls": null
+    },
+    "spinalcord": {
+      "mesh": {
+        "id": "D013116",
+        "label": "Spinal Cord",
+        "uri": "https://id.nlm.nih.gov/mesh/D013116"
+      },
+      "umls": null
+    },
+    "brain": {
+      "mesh": {
+        "id": "D001921",
+        "label": "Brain",
+        "uri": "https://id.nlm.nih.gov/mesh/D001921"
+      },
+      "umls": null
+    }
+  }
+}

@@ -3,6 +3,7 @@
 // content and contains no personal or live data, which is why the public routes can serve it to anyone.
 
 import { CONUS_Z, LANDMARKS, LAYOUT, SEGMENT_COUNTS, SUPPLY, VERTEBRAE, vertZ } from './anatomy.ts'
+import { conceptForOrgan } from './concepts.ts'
 import { BODY_ROUTES, GENE_BODY, ORGANS, ORGAN_IDS, SCENARIO_BODY, SYSTEM_BODY, organStates } from './body.ts'
 import { PATHWAY_BARS, SEIZURE_PERIOD, pathwayLevel, physioAt, readings } from './body-physiology.ts'
 import { SCENARIO_IDS, SCENARIO_INFO, SYSTEM_IDS, SYSTEM_INFO, type ScenarioId, type SystemId } from './neuro.ts'
@@ -25,7 +26,7 @@ export function bodyModelJson(section?: Section): unknown {
       sections: SECTIONS,
       sources: ['standard vertebral-level teaching (transpyloric plane at L1; heart T5-T8; diaphragm openings T8, T10, T12)', 'Wikipedia: Spinal cord, Vagus nerve, Sympathetic nervous system, Thoracic diaphragm, Kidney, Human heart, Lung, Transpyloric plane (checked 2026-10-10)'],
     },
-    organs: ORGAN_IDS.map((id) => ({ id, name: ORGANS[id].name, description: ORGANS[id].text, centre_cm: toCm(ORGANS[id].pos), routes: Object.entries(BODY_ROUTES).filter(([, r]) => r.organs.includes(id)).map(([k]) => k) })),
+    organs: ORGAN_IDS.map((id) => ({ id, name: ORGANS[id].name, concepts: conceptForOrgan(id), description: ORGANS[id].text, centre_cm: toCm(ORGANS[id].pos), routes: Object.entries(BODY_ROUTES).filter(([, r]) => r.organs.includes(id)).map(([k]) => k) })),
     routes: Object.entries(BODY_ROUTES).map(([id, r]) => ({ id, name: r.name, from: r.from, evidence: r.evidence, organs: r.organs, description: r.text })),
     supply: Object.entries(SUPPLY).map(([organ, s]) => ({ organ, sympathetic_cord_segments: s.sympathetic ?? null, parasympathetic_or_motor: s.parasympathetic, sensation: s.sensory ?? null, evidence: s.evidence, note: s.note })),
     scenarios: SCENARIO_IDS.map((id) => ({
@@ -81,6 +82,11 @@ export function openapiJson(origin: string) {
           parameters: [{ name: 'section', in: 'query', required: false, schema: { type: 'string', enum: SECTIONS } }],
           responses: { 200: { description: 'The model, or one section of it' }, 400: err } },
       },
+      '/api/model/concepts': {
+        get: { summary: 'Map a medical term or research topic to MeSH', description: "Looks the term up in NLM's public MeSH vocabulary (exact label first, then contains). Organs in /api/model/body already carry their MeSH IDs.",
+          parameters: [{ name: 'term', in: 'query', required: true, schema: { type: 'string', minLength: 2, maxLength: 80 } }],
+          responses: { 200: { description: 'Matching MeSH descriptors' }, 400: err, 502: { description: 'NLM did not answer' } } },
+      },
       '/api/model/state': {
         get: { summary: 'Computed body state for a scenario', description: 'Heart rate and rhythm, breathing, gut, hormones, muscle strength, pathway signal strengths and which organs are involved.',
           parameters: [
@@ -102,6 +108,7 @@ export function llmsTxt(origin: string) {
 ## Endpoints (no key needed, CORS open, cached)
 - [Model overview and sections](${origin}/api/model/body): add ?section=${SECTIONS.join('|')}
 - [Computed state](${origin}/api/model/state?scenario=epilepsy&t=11): scenario=${SCENARIO_IDS.join('|')}, system=none|${SYSTEM_IDS.join('|')}, t=seconds
+- [Map a term to MeSH](${origin}/api/model/concepts?term=hippocampus): standard vocabulary IDs; organs in the model carry theirs
 - [OpenAPI description](${origin}/api/model/openapi.json)
 - MCP server: ${origin}/api/mcp (tools body_model and body_state need only a read key; see the Keys page)
 

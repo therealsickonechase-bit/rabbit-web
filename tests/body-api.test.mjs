@@ -32,9 +32,9 @@ test('state queries are validated', () => {
 
 test('the OpenAPI description and llms.txt point at the real endpoints', () => {
   const api = openapiJson('https://app.example')
-  assert.deepEqual(Object.keys(api.paths).sort(), ['/api/model/body', '/api/model/state'])
+  assert.deepEqual(Object.keys(api.paths).sort(), ['/api/model/body', '/api/model/concepts', '/api/model/state'])
   const txt = llmsTxt('https://app.example')
-  for (const part of ['/api/model/body', '/api/model/state', '/api/model/openapi.json', 'body_state', 'evidence level', 'not measurements']) assert.ok(txt.includes(part), part)
+  for (const part of ['/api/model/body', '/api/model/state', '/api/model/concepts', '/api/model/openapi.json', 'body_state', 'evidence level', 'not measurements']) assert.ok(txt.includes(part), part)
 })
 
 test('the MCP tools answer from the model alone and refuse bad input', async () => {
