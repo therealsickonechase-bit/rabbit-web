@@ -1,7 +1,8 @@
 {
-  "source": "NLM MeSH lookup (id.nlm.nih.gov/mesh); UMLS CUIs only when UMLS_API_KEY was set",
+  "source": "NLM MeSH lookup (id.nlm.nih.gov/mesh); UMLS CUIs (from open source MSH only) only when UMLS_API_KEY was set",
   "generated": "2026-10-10",
   "umls_included": false,
+  "umls_sources": [],
   "concepts": {
     "eyes": {
       "mesh": {
