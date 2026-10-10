@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RabbitOS (rabbit-web)
 
-## Getting Started
+The RabbitOS console at **app.rabbitsoftware.io**: a Next.js app (run on Cloudflare Workers with vinext) over Supabase. People and research agents work on one body of
+research; every agent write is signed and recorded in a hash-linked audit trail. Start with [docs/rabbitos.md](docs/rabbitos.md) for what it is and the in-app
+**Guide** (`/guide`) for step-by-step instructions.
 
-First, run the development server:
+## What is in it
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| Area | Who | Notes |
+|---|---|---|
+| Sign-in | anyone | Email magic link, no password, Cloudflare Turnstile check. Accounts are kept; sign-ups are open to anyone. |
+| Research, Ask RabbitOS, Collections, Memory, CRISPR Explorer, Agent tasks, API keys | signed-in members | Research corpus (with MeSH tags on topics), cited answers (your own Anthropic key), private notes, in-silico guide design, task queue with owner approval, scoped keys and an MCP server at `/api/mcp`. |
+| Overview, Twin Atlas, Chemistry & DNA, Agents, Chain & Audit, Members | owner | Twin data, agent runs, audit chain, accounts. |
+| **Brain Network** | owner | 3D brain and a detailed body (organs, spinal cord, nerve routes) driven by scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; picture, clip and glTF export; Qwen-Image-2.1-Turbo pictures through a Hugging Face Space; **My data portrait** (your own wearable, lab and PC data drawn against your own baseline, with live network in/out). |
+| Open model API | anyone, read-only | `/api/model/body`, `/api/model/state`, `/api/model/concepts` (MeSH), `/api/model/openapi.json`, `/llms.txt`. Teaching data only; no personal data. |
+| Public feed | anyone, read-only | `/api/public/research-feed` for rabbitsoftware.io. |
+
+## Commands
+
+```powershell
+npm install
+npm run dev            # http://localhost:3000 (needs .env.local, see below)
+npm run lint
+npm run test:auth      # all unit tests (node --test)
+npm run deploy:vinext  # production deploy to Cloudflare; run it deliberately
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` needs `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and the secrets named in the code (`INGEST_SHARED_SECRET`, Turnstile, mail).
+Never commit it. Database changes are the files in `supabase/migrations/` (`all_pending_migrations.sql` is the same set in one paste); run them in the Supabase SQL editor by
+pasting the file's **contents**, not its path.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Things that run on your own computer
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The live and personal-data features use programs in the sibling `research-agents` folder, so raw signals and medical values stay on your PC:
 
-## Learn More
+- `start-live.ps1`: BrainFlow/OpenBCI bridge on `ws://127.0.0.1:8765` (see [docs/live-and-generators.md](docs/live-and-generators.md)).
+- `start-selfdata.ps1`: the self-data hub on `ws://127.0.0.1:8766` (see `research-agents/docs/self-data.md`).
+- `rabbit_sync.py`: the signed upload of research results.
 
-To learn more about Next.js, take a look at the following resources:
+Only fixed words ever leave the page for an image model, and the optional owner-only summary sync (`/api/self/daily`, table `self_daily`) carries coarse levels and lab flag counts, never raw values.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Rules
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Production is live. Deploys, migrations and remote writes are done on purpose, one at a time. Standards vocabulary IDs for organs come from NLM MeSH (`scripts/build-concepts.mjs`;
+UMLS CUIs are added only with a key and only from open sources). This is a research and education tool; nothing in it is medical advice.

@@ -1,5 +1,8 @@
 # Connecting rabbitsoftware.io to RabbitOS
 
+The site (`rabbitsoftware-cloudflare/site/`) already links to RabbitOS in its **RabbitOS** section, with a brain-network graphic above the link, and its status page
+(`/status`) probes the app's `/api/health`. The feed below is the optional next step.
+
 RabbitOS exposes one public, read-only feed so the marketing site can show live research and proof of integrity
 without signing anyone in.
 
@@ -31,7 +34,7 @@ twin data or contact records.
   <p id="lr-summary"></p>
   <ul id="lr-list"></ul>
   <p><small>Audit chain head: <code id="lr-hash"></code></small></p>
-  <a href="https://app.rabbitsoftware.io/signup">Open RabbitOS</a>
+  <a href="https://app.rabbitsoftware.io/">Open RabbitOS</a>  <!-- sign in with just an email; no password -->
 </section>
 <script>
   fetch('https://app.rabbitsoftware.io/api/public/research-feed')

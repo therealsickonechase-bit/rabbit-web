@@ -1,6 +1,6 @@
 # RabbitOS — what it is, and where it is going
 
-RabbitOS is the logged-in console at `app.rabbitsoftware.io` (later `rabbitsoftware.io/console`). It is the one
+RabbitOS is the logged-in console at `app.rabbitsoftware.io` (it is linked from rabbitsoftware.io, section RabbitOS). It is the one
 place where **people, AI agents and a digital twin** meet around a body of research. Supabase is the system of
 record; Cloudflare Workers serve it; the Python research agents feed it through a signed ingest.
 
@@ -8,13 +8,18 @@ record; Cloudflare Workers serve it; the Python research agents feed it through 
 
 | Area | Who | What it does |
 |---|---|---|
-| Sign-in | anyone (once sign-ups open) | Email + password, email confirmation, bot check, password reset |
-| Research | any confirmed user | Browse the corpus, summarise an item with their own Anthropic key (20/day) |
-| Overview | owner | The digital twin: identity, convergence gate (valence, arousal, GSR, cortisol), RF mesh nodes, XRPL anchors |
-| Agents | owner | Status and runs of the research agents |
-| Chain & Audit | owner | Hash-chained audit log, verified on read |
-| Members | owner | Accounts, roles, whether a sealed contact record exists |
+| Sign-in | anyone | Email magic link (no password), email confirmation, Cloudflare Turnstile check. Accounts are kept; sign-ups are open to anyone |
+| Research | any confirmed user | Browse the corpus (topics carry NLM MeSH tags), summarise an item with their own Anthropic key (20/day) |
+| Ask RabbitOS | any confirmed user | Cited answers built only from stored records (40/day) |
+| Collections, Memory | any confirmed user | Save and tag records, private notes, semantic memory |
+| CRISPR Explorer | any confirmed user | Real gene sequences, SpCas9 guide candidates, in-silico edit preview (education only) |
+| Agent tasks | members file, owner approves | Task queue: queued, claimed, proposed, approved or rejected, done |
+| API keys and MCP | any confirmed user | Scoped, revocable keys; MCP server at `/api/mcp` (search, CRISPR guides, proof digest, body model) |
+| Overview, Twin Atlas, Chemistry & DNA | owner | The digital twin: identity, convergence gate, RF mesh nodes, readings vs baseline, reference variants |
+| Brain Network | owner | 3D brain and detailed body with organs, spinal cord and nerve routes tied to scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; Qwen-Image pictures through a Hugging Face Space; **My data portrait** from the local self-data hub |
+| Agents, Chain & Audit, Members | owner | Agent runs, hash-chained audit log with Merkle batches (verified on read), accounts and roles |
 | Ingest | agents | HMAC-signed, replay-protected writes from the research machines |
+| Open model API | anyone, read-only | `/api/model/body`, `/state`, `/concepts` (MeSH), `/openapi.json` and `/llms.txt`: teaching data for people, AI models and open-source tools; no personal data |
 
 Principles that stay fixed: members never see the owner's twin; agents never get a key that can read other
 people's data; every action that changes something is written to the audit chain.
@@ -26,7 +31,12 @@ The twin (`twin_identity`) is a sealed, hash-identified record of one subject, w
 sessions, XRPL anchors). RabbitOS reads it, never edits it in place. A change is a new row that points at the
 old one, so the history is the proof.
 
-## Planned features
+## Feature notes and status
+
+Built so far: Ask RabbitOS, agent task queue, API keys and MCP, collections and notes, semantic memory, the CRISPR simulator, Merkle batches of the audit chain,
+the Brain Network with the body model, live signals, generators and the data portrait, and standard vocabulary (MeSH) tags. Not built yet: email alerts for saved
+searches, consent receipts, XRPL anchoring of batches (the page shows "not anchored"), the person data vault, and UMLS CUIs (waiting for an NLM key).
+The design notes below are the original plan and still describe the rules those features follow.
 
 Everything in the "agent" column follows the rule **read and propose; an owner approves**.
 
@@ -84,7 +94,7 @@ A member may attach their own data to their account (for example a sequence file
 simulator and chat. It is encrypted before storage with a key derived per user, is never shown to other members,
 is covered by explicit consent, and can be exported or deleted by the member at any time.
 
-## Build order
+## Build order (original plan; steps 1 to 5 are done, step 6 is partly done, step 7 is not started)
 
 1. **Foundations:** `agent_tasks`, `api_keys`, `collections`/`notes`, `consents`, audit entries for all of them (one migration).
 2. **Ask RabbitOS + collections/notes.**
