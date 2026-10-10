@@ -17,6 +17,7 @@ const SOURCE_LABEL: Record<string, string> = {
   europepmc: 'Europe PMC',
   nih_grant: 'NIH grants',
   clinvar: 'ClinVar',
+  ncbi_datasets: 'NCBI sequences',
   topic_summary: 'Topic summaries',
   crispr_guide: 'CRISPR guides',
   crispr_trial: 'CRISPR trials',
@@ -33,6 +34,7 @@ function detail(source: string, m: Record<string, unknown>) {
     : source === 'pubmed' || source === 'stjude' ? [s('journal'), s('pub_date')]
     : source === 'europepmc' ? [s('pub_year'), m.is_preprint ? 'preprint' : null]
     : source === 'nih_grant' ? [s('org'), s('fiscal_year') ? `FY${s('fiscal_year')}` : null]
+    : source === 'ncbi_datasets' ? [s('kind'), m.length ? `${m.length} ${(s('kind') ?? '').includes('protein') ? 'aa' : 'bp'}` : null]
     : source === 'clinvar' ? [s('classification'), s('review_status'), s('last_evaluated')]
     : []
   return parts.filter(Boolean).join(' · ') || '—'
