@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from '@/lib/secrets'
 import { DISCLAIMER, MODEL, buildPrompt, summarize } from '@/lib/summarize'
+import MeshTag from '@/components/MeshTag'
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, short } from '@/components/ui'
 
 const statusTone = { explored: 'ok', queued: 'info', dropped: 'muted' } as const
@@ -202,7 +203,7 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
           <Table head={['Topic', 'Biomarker', 'Status', 'Found by', 'Added', 'AI summary']} empty="No topics yet. Run rabbit_sync.py to import them.">
             {topicRows.map((t) => (
               <tr key={t.id}>
-                <Td>{t.topic}</Td>
+                <Td>{t.topic}<MeshTag term={t.topic} /></Td>
                 <Td mono>{t.biomarker ?? '—'}</Td>
                 <Td><Badge tone={statusTone[t.status as keyof typeof statusTone]}>{t.status}</Badge></Td>
                 <Td mono>{short(t.discovered_by, 10)}</Td>
