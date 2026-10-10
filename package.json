@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@gradio/client": "^2.7.1",
+    "@supabase/server": "^1.9.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
     "@types/three": "^0.186.0",
