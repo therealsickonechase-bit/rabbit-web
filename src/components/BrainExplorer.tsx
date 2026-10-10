@@ -5,6 +5,7 @@ import Brain3D, { DEFAULT_LAYERS, rampColor, type Brain3DControls, type Electrod
 import LiveBridge from '@/components/LiveBridge'
 import CapturePanel from '@/components/CapturePanel'
 import HfGenerator from '@/components/HfGenerator'
+import SelfData from '@/components/SelfData'
 import { eegIndices, type Baseline, type LiveFrame } from '@/lib/live-signals'
 import PathwayPanel from '@/components/PathwayPanel'
 import BodyPanel from '@/components/BodyPanel'
@@ -250,6 +251,10 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
 
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="Qwen-Image generator">
       <HfGenerator live={bridge} baseline={baseline} />
+    </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="My data portrait">
+      <SelfData />
     </section>
     </div>
   )
