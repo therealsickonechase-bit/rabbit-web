@@ -15,13 +15,14 @@ record; Cloudflare Workers serve it; the Python research agents feed it through 
 | CRISPR Explorer | any confirmed user | Real gene sequences, SpCas9 guide candidates, in-silico edit preview (education only) |
 | Agent tasks | members file, owner approves | Task queue: queued, claimed, proposed, approved or rejected, done |
 | API keys and MCP | any confirmed user | Scoped, revocable keys; MCP server at `/api/mcp` (search, CRISPR guides, proof digest, body model) |
-| Overview, Twin Atlas, Chemistry & DNA | owner | The digital twin: identity, convergence gate, RF mesh nodes, readings vs baseline, reference variants |
-| Brain Network | owner | 3D brain and detailed body with organs, spinal cord and nerve routes tied to scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; Qwen-Image pictures through a Hugging Face Space; **My data portrait** from the local self-data hub |
-| Agents, Chain & Audit, Members | owner | Agent runs, hash-chained audit log with Merkle batches (verified on read), accounts and roles |
+| Overview, Twin Atlas, Chemistry & DNA | everyone signed in (read-only; owner can switch off with `GUEST_MIRROR=off`) | The digital twin (name and date of birth hidden from guests): identity, convergence gate, RF mesh nodes, readings vs baseline, reference variants |
+| Brain Network | everyone signed in; stored EEG and AI illustrations owner-only | 3D brain and detailed body with organs, spinal cord and nerve routes tied to scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; Qwen-Image pictures through a Hugging Face Space; **My data portrait** from the local self-data hub |
+| Agents, Chain & Audit | everyone signed in (read-only); sealing batches is owner-only |
+| Members | owner | Accounts and roles. |
 | Ingest | agents | HMAC-signed, replay-protected writes from the research machines |
 | Open model API | anyone, read-only | `/api/model/body`, `/state`, `/concepts` (MeSH), `/openapi.json` and `/llms.txt`: teaching data for people, AI models and open-source tools; no personal data |
 
-Principles that stay fixed: members never see the owner's twin; agents never get a key that can read other
+Principles that stay fixed: guests see only a read-only mirror of the twin (never its name or date of birth, and never the owner's stored EEG), and only while the owner leaves the mirror on; agents never get a key that can read other
 people's data; every action that changes something is written to the audit chain.
 
 ## What the digital twin is

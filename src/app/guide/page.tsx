@@ -49,7 +49,8 @@ export default function GuidePage() {
             <li><strong>Ask RabbitOS</strong> — ask a question and get an answer built only from the stored records, with the sources cited.</li>
             <li><strong>Collections</strong> — save records, group them, keep private notes.</li>
             <li><strong>CRISPR Explorer</strong> — real gene sequences, SpCas9 guide candidates and an interactive edit preview (text only, for learning).</li>
-            <li><strong>Owner only:</strong> Twin Atlas (live readings vs baseline, reference variants, chain proof), Brain Network (3D brain and body, live EEG, picture generators, My data portrait), Agents, Chain &amp; Audit, Members.</li>
+            <li><strong>For everyone signed in (read-only):</strong> Overview and Twin Atlas (live readings vs baseline, reference variants, chain proof; the twin&apos;s name and date of birth stay hidden), Brain Network (3D brain and body, picture generators, My data portrait), Agents, Chain &amp; Audit.</li>
+            <li><strong>Owner only:</strong> Members, the stored EEG samples, sealing audit batches, AI illustrations and saved data-portrait summaries.</li>
             <li><strong>Open to everyone, no sign-in:</strong> the body model data (<code>/api/model/body</code>, <code>/api/model/concepts</code>, <code>/llms.txt</code>) for AI models and open-source tools. Topics in Research carry a MeSH tag from the National Library of Medicine.</li>
           </ul>
           <Note>Research and education only. Nothing here is medical advice, a diagnosis, or a lab protocol.</Note>

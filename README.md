@@ -10,8 +10,10 @@ research; every agent write is signed and recorded in a hash-linked audit trail.
 |---|---|---|
 | Sign-in | anyone | Email magic link, no password, Cloudflare Turnstile check. Accounts are kept; sign-ups are open to anyone. |
 | Research, Ask RabbitOS, Collections, Memory, CRISPR Explorer, Agent tasks, API keys | signed-in members | Research corpus (with MeSH tags on topics), cited answers (your own Anthropic key), private notes, in-silico guide design, task queue with owner approval, scoped keys and an MCP server at `/api/mcp`. |
-| Overview, Twin Atlas, Chemistry & DNA, Agents, Chain & Audit, Members | owner | Twin data, agent runs, audit chain, accounts. |
-| **Brain Network** | owner | 3D brain and a detailed body (organs, spinal cord, nerve routes) driven by scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; picture, clip and glTF export; Qwen-Image-2.1-Turbo pictures through a Hugging Face Space; **My data portrait** (your own wearable, lab and PC data drawn against your own baseline, with live network in/out). |
+| Overview, Twin Atlas, Agents, Chain & Audit | everyone signed in (read-only mirror of the owner's view) | Twin readings, agent runs, audit chain. The owner can switch the mirror off with the `GUEST_MIRROR=off` environment variable. Guests do not see the twin's name and date of birth, the owner's stored EEG, or any owner action. |
+| Chemistry & DNA | signed-in members | Gene and chemistry map with standard identifiers. |
+| Members | owner only | Accounts and contact records. |
+| **Brain Network** | everyone signed in (stored EEG and AI illustrations stay owner-only) | 3D brain and a detailed body (organs, spinal cord, nerve routes) driven by scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; picture, clip and glTF export; Qwen-Image-2.1-Turbo pictures through a Hugging Face Space; **My data portrait** (your own wearable, lab and PC data drawn against your own baseline, with live network in/out). |
 | Open model API | anyone, read-only | `/api/model/body`, `/api/model/state`, `/api/model/concepts` (MeSH), `/api/model/openapi.json`, `/llms.txt`. Teaching data only; no personal data. |
 | Public feed | anyone, read-only | `/api/public/research-feed` for rabbitsoftware.io. |
 

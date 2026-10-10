@@ -26,7 +26,7 @@ export interface ChemRef { name: string; unit: string; mean: number; sd: number;
 const CHANNELS_FALLBACK = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2']
 const hex = (c: { getHexString: () => string }) => `#${c.getHexString()}`
 
-export default function BrainExplorer({ initial, graph, chemicals, crisprGenes = [] }: { initial: EegSample[]; graph: GraphData; chemicals: ChemRef[]; crisprGenes?: string[] }) {
+export default function BrainExplorer({ initial, graph, chemicals, crisprGenes = [], storedEeg = true }: { initial: EegSample[]; graph: GraphData; chemicals: ChemRef[]; crisprGenes?: string[]; storedEeg?: boolean }) {
   const [samples, setSamples] = useState<EegSample[]>(initial)
   const [band, setBand] = useState<Band>('alpha')
   const [selected, setSelected] = useState<string | null>(null)
@@ -66,10 +66,11 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
     }
   }, [])
   useEffect(() => {
+    if (!storedEeg) return            // the stored EEG feed is owner only; guests use the model and their own local bridge
     const t0 = setTimeout(poll, 0)
     const id = setInterval(poll, 2000)
     return () => { clearTimeout(t0); clearInterval(id) }
-  }, [poll])
+  }, [poll, storedEeg])
 
   // while the local bridge is live its EEG frame drives the brain colours directly; otherwise the stored samples do
   const liveSamples = useMemo<EegSample[] | null>(() => {
