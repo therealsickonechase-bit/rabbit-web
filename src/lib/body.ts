@@ -6,9 +6,10 @@
 
 import type { Evidence, ScenarioId, SystemId } from './neuro.ts'
 import { GENE_COUNTS } from './neuro-genes.ts'
+import { LAYOUT, sceneOf } from './anatomy.ts'
 
 export type OrganId =
-  | 'eyes' | 'lungs' | 'heart' | 'liver' | 'stomach' | 'spleen' | 'adrenals' | 'kidneys' | 'gut' | 'bladder' | 'muscle'
+  | 'eyes' | 'lungs' | 'heart' | 'diaphragm' | 'esophagus' | 'liver' | 'gallbladder' | 'stomach' | 'pancreas' | 'spleen' | 'adrenals' | 'kidneys' | 'gut' | 'bladder' | 'muscle' | 'spinalcord'
 
 export interface OrganInfo {
   name: string
@@ -19,37 +20,45 @@ export interface OrganInfo {
   text: string
 }
 
+const at = (c: readonly [number, number, number]): [number, number, number] => sceneOf(c[0], c[1], c[2])
 export const ORGANS: Record<OrganId, OrganInfo> = {
-  eyes: { name: 'Eyes and visual pathway', pos: [0.36, 1.12, 0.2], color: '#4dabf7', text: 'The retinas send signals through the thalamus to the occipital cortex at the back of the brain.' },
-  lungs: { name: 'Lungs', pos: [0.5, 0.05, -1.95], color: '#f783ac', text: 'Breathing rhythm is set in the brain stem; the brain also adjusts airway width and responds to carbon dioxide levels.' },
-  heart: { name: 'Heart', pos: [-0.2, 0.22, -2.0], color: '#e03131', text: 'Heart rate is balanced by the vagus nerve (slows it) and sympathetic nerves (speed it up), both steered from the brain stem and hypothalamus.' },
-  liver: { name: 'Liver', pos: [0.42, 0.22, -2.75], color: '#a0522d', text: 'Releases glucose under stress hormones and breaks down many chemicals, including brain monoamines and drugs.' },
-  stomach: { name: 'Stomach', pos: [-0.38, 0.3, -2.7], color: '#fd7e14', text: 'Controlled by the vagus nerve and its own enteric nerves; stress and emotion change acid release and emptying.' },
-  spleen: { name: 'Spleen and immune system', pos: [-0.55, -0.12, -2.65], color: '#7048e8', text: 'Immune cells here respond to nerve signals and to the stress hormone cortisol.' },
-  adrenals: { name: 'Adrenal glands', pos: [0.32, -0.3, -3.05], color: '#fab005', text: 'Make cortisol (cortex) and adrenaline and norepinephrine (medulla) when the brain signals stress through the pituitary and sympathetic nerves.' },
-  kidneys: { name: 'Kidneys', pos: [-0.42, -0.28, -3.3], color: '#c2255c', text: 'Blood pressure and fluid balance are tuned by brain signals (sympathetic nerves and the hormone vasopressin).' },
-  gut: { name: 'Gut (enteric nervous system)', pos: [0, 0.28, -3.7], color: '#94d82d', text: 'A "second brain" of about 500 million neurons. Around 90% of the body\'s serotonin is made here, and the gut talks to the brain through the vagus nerve.' },
-  bladder: { name: 'Bladder', pos: [0, 0.3, -4.5], color: '#15aabf', text: 'Storing and emptying are coordinated by the pons and cortex through the spinal cord.' },
-  muscle: { name: 'Skeletal muscle (arms and legs)', pos: [0.95, 0.05, -2.9], color: '#ff6b6b', text: 'Motor cortex and basal ganglia (dopamine) command muscle through the spinal cord; acetylcholine is the signal at the nerve-muscle junction.' },
+  eyes: { name: 'Eyes and visual pathway', pos: [0.36, 1.12, 0.2], color: '#4dabf7', text: 'The retinas send signals through the optic nerves and chiasm to the thalamus (lateral geniculate) and on to the occipital cortex at the back of the brain.' },
+  lungs: { name: 'Lungs', pos: at(LAYOUT.rightLung.c), color: '#f783ac', text: 'Three lobes on the right and two on the left (the left has a notch for the heart). Breathing rhythm is set in the brain stem; the brain also adjusts airway width and responds to carbon dioxide.' },
+  heart: { name: 'Heart', pos: at(LAYOUT.heart.c), color: '#e03131', text: 'Four chambers behind the breastbone, tilted so the apex points left. The sinoatrial node starts each beat; the vagus nerve slows it and sympathetic nerves from T1-T4 speed it up.' },
+  diaphragm: { name: 'Diaphragm', pos: at([0, 0, -20]), color: '#d6336c', text: 'The dome-shaped breathing muscle under the lungs. The phrenic nerve (C3-C5) drives it; the oesophagus, aorta and vena cava pass through it at T10, T12 and T8.' },
+  esophagus: { name: 'Oesophagus', pos: at([-0.5, -3.4, -12]), color: '#c9706e', text: 'The swallowing tube behind the windpipe. The vagus nerve and brain stem coordinate each swallow.' },
+  liver: { name: 'Liver', pos: at(LAYOUT.liver.c), color: '#a0522d', text: 'Fills the right upper abdomen under the diaphragm. Releases glucose under stress hormones and breaks down many chemicals, including brain monoamines and drugs.' },
+  gallbladder: { name: 'Gallbladder', pos: at(LAYOUT.gallbladder.c), color: '#4f8f45', text: 'Stores bile under the liver; vagal and hormone signals make it contract after a meal.' },
+  stomach: { name: 'Stomach', pos: at(LAYOUT.stomach.c), color: '#fd7e14', text: 'A J-shaped bag from the oesophagus (T10-T11) to the pylorus at L1. Controlled by the vagus nerve and its own enteric nerves; stress and emotion change acid release and emptying.' },
+  pancreas: { name: 'Pancreas', pos: at(LAYOUT.pancreas.c), color: '#e6c47c', text: 'Lies behind the stomach at L1-L2, head in the curve of the duodenum, tail at the spleen. Vagal and sympathetic nerves tune its enzyme and insulin release.' },
+  spleen: { name: 'Spleen and immune system', pos: at(LAYOUT.spleen.c), color: '#7048e8', text: 'Behind the left 9th-11th ribs. Immune cells here respond to nerve signals and to the stress hormone cortisol.' },
+  adrenals: { name: 'Adrenal glands', pos: at(LAYOUT.rightAdrenal.c), color: '#fab005', text: 'Caps on top of each kidney. They make cortisol (cortex) and adrenaline and norepinephrine (medulla) when the brain signals stress through the pituitary and sympathetic nerves.' },
+  kidneys: { name: 'Kidneys', pos: at(LAYOUT.rightKidney.c), color: '#c2255c', text: 'T12-L3 on the back wall of the abdomen, the right a little lower. Blood pressure and fluid balance are tuned by brain signals (sympathetic nerves and the hormone vasopressin). Ureters carry urine down to the bladder.' },
+  gut: { name: 'Gut (small and large intestine)', pos: at([0, 3, -40]), color: '#94d82d', text: 'A "second brain" of about 500 million neurons. Around 90% of the body\'s serotonin is made here, and the gut talks to the brain through the vagus nerve (to the splenic flexure) and sacral nerves (beyond).' },
+  bladder: { name: 'Bladder', pos: at(LAYOUT.bladder.c), color: '#15aabf', text: 'Sits in the pelvis behind the pubic bone. Storing and emptying are coordinated by the pons and cortex through the spinal cord (sacral S2-S4).' },
+  muscle: { name: 'Skeletal muscle (arms and legs)', pos: at([22, 0, -30]), color: '#ff6b6b', text: 'Motor cortex and basal ganglia (dopamine) command muscle through the corticospinal tract and cord; acetylcholine is the signal at the nerve-muscle junction.' },
+  spinalcord: { name: 'Spinal cord and nerves', pos: at([0, -8.6, -12]), color: '#f1e7c8', text: 'About 45 cm long, ending at L1-L2, with 31 pairs of nerves. The cervical enlargement (C4-T1) serves the arms and the lumbar enlargement the legs. Every brain-to-body signal except the vagus passes through it.' },
 }
 export const ORGAN_IDS = Object.keys(ORGANS) as OrganId[]
 /** Organs drawn as a left/right pair. */
 export const PAIRED: ReadonlySet<OrganId> = new Set<OrganId>(['eyes', 'lungs', 'adrenals', 'kidneys'])
 
 // ---- how the brain reaches the body -----------------------------------------------------------------------------
-export type RouteId = 'vagus' | 'sympathetic' | 'hpa' | 'motor' | 'enteric' | 'visual'
+export type RouteId = 'vagus' | 'sympathetic' | 'hpa' | 'motor' | 'enteric' | 'visual' | 'phrenic'
 export interface BodyRoute { name: string; color: string; from: string; text: string; organs: OrganId[]; evidence: Evidence }
 export const BODY_ROUTES: Record<RouteId, BodyRoute> = {
-  vagus: { name: 'Vagus nerve (parasympathetic)', color: '#2f9e44', from: 'brain stem', evidence: 'established', organs: ['heart', 'lungs', 'stomach', 'gut', 'liver', 'spleen'],
+  vagus: { name: 'Vagus nerve (parasympathetic)', color: '#2f9e44', from: 'brain stem', evidence: 'established', organs: ['heart', 'lungs', 'esophagus', 'stomach', 'gallbladder', 'pancreas', 'gut', 'liver', 'spleen'],
     text: 'The longest cranial nerve runs from the brain stem to the chest and abdomen. It slows the heart, drives digestion and carries gut signals back to the brain.' },
-  sympathetic: { name: 'Sympathetic nerves (fight or flight)', color: '#e03131', from: 'locus coeruleus, hypothalamus, spinal cord', evidence: 'established', organs: ['heart', 'lungs', 'adrenals', 'kidneys', 'gut', 'bladder', 'spleen'],
+  sympathetic: { name: 'Sympathetic nerves (fight or flight)', color: '#e03131', from: 'locus coeruleus, hypothalamus, spinal cord', evidence: 'established', organs: ['heart', 'lungs', 'stomach', 'pancreas', 'liver', 'adrenals', 'kidneys', 'gut', 'bladder', 'spleen', 'spinalcord'],
     text: 'Norepinephrine-driven signals leave through the spinal cord to raise heart rate and blood pressure, widen airways and slow digestion.' },
-  hpa: { name: 'Stress hormone axis (HPA)', color: '#868e96', from: 'hypothalamus and pituitary', evidence: 'established', organs: ['adrenals', 'liver', 'heart', 'gut', 'spleen', 'kidneys'],
+  hpa: { name: 'Stress hormone axis (HPA)', color: '#868e96', from: 'hypothalamus and pituitary', evidence: 'established', organs: ['adrenals', 'liver', 'heart', 'gut', 'spleen', 'kidneys', 'pancreas'],
     text: 'The hypothalamus signals the pituitary, which signals the adrenal glands to release cortisol into the blood, so the effect reaches nearly every organ.' },
-  motor: { name: 'Motor pathway (spinal cord)', color: '#1c7ed6', from: 'motor cortex and basal ganglia', evidence: 'established', organs: ['muscle', 'bladder'],
+  motor: { name: 'Motor pathway (spinal cord)', color: '#1c7ed6', from: 'motor cortex and basal ganglia', evidence: 'established', organs: ['muscle', 'bladder', 'spinalcord'],
     text: 'Motor cortex fibres cross to the opposite side, run down the spinal cord and reach muscle at the nerve-muscle junction using acetylcholine.' },
   enteric: { name: 'Gut-brain axis (serotonin)', color: '#7048e8', from: 'gut and raphe nuclei', evidence: 'supported', organs: ['gut', 'stomach'],
     text: 'Gut serotonin and brain serotonin are made separately but talk through the vagus nerve and the blood. Gut-brain links to mood are an active research area.' },
+  phrenic: { name: 'Phrenic nerves (C3-C5)', color: '#ffe08a', from: 'brain stem breathing centres', evidence: 'established', organs: ['diaphragm', 'lungs', 'spinalcord'],
+    text: 'The breathing centres in the brain stem send signals down the cord to C3-C5, where the phrenic nerves leave to drive the diaphragm. A cord injury above C3 cuts this link.' },
   visual: { name: 'Visual pathway', color: '#4dabf7', from: 'occipital cortex', evidence: 'established', organs: ['eyes'],
     text: 'Retina to thalamus to occipital cortex. Damage at the back of the brain removes part of what the eyes can report.' },
 }
@@ -65,6 +74,8 @@ export const SCENARIO_BODY: Record<ScenarioId, BodyEffect[]> = {
     { organ: 'heart', evidence: 'supported', level: 0.5, text: 'Stroke can disturb heart rhythm and raise heart-muscle injury markers ("stroke-heart syndrome"), most clearly with damage near the insula.' },
     { organ: 'lungs', evidence: 'supported', level: 0.4, text: 'Chest infection (aspiration pneumonia) is a common complication after stroke.' },
     { organ: 'bladder', evidence: 'supported', level: 0.4, text: 'Bladder control is often lost in the first days after a stroke.' },
+    { organ: 'esophagus', evidence: 'established', level: 0.5, text: 'The swallow is slowed or mistimed, so food and saliva can slip toward the airway.' },
+    { organ: 'spinalcord', evidence: 'established', level: 0.5, text: 'The motor tract below the damage slowly degenerates (Wallerian degeneration) and the reflexes below it become brisk, which is why weakness turns into stiffness (spasticity).' },
   ],
   tbi: [
     { organ: 'heart', evidence: 'supported', level: 0.7, text: 'Severe injury can cause surges of sympathetic activity: fast heart rate and high blood pressure ("paroxysmal sympathetic hyperactivity").' },
@@ -73,6 +84,9 @@ export const SCENARIO_BODY: Record<ScenarioId, BodyEffect[]> = {
     { organ: 'muscle', evidence: 'established', level: 0.6, text: 'Weakness, stiffness (spasticity) and loss of coordination, depending on which pathways are injured.' },
     { organ: 'gut', evidence: 'supported', level: 0.4, text: 'Digestion slows and stress ulcers are more likely in the first days after severe injury.' },
     { organ: 'kidneys', evidence: 'supported', level: 0.4, text: 'Water and salt balance can swing (for example diabetes insipidus or salt wasting) when the hypothalamus or pituitary is hurt.' },
+    { organ: 'spinalcord', evidence: 'supported', level: 0.4, text: 'Diffuse axonal injury can include long tracts running from the brain stem into the cord, so motor and autonomic signals arrive weakened or out of step.' },
+    { organ: 'esophagus', evidence: 'supported', level: 0.4, text: 'Swallowing coordination is often impaired after moderate to severe injury.' },
+    { organ: 'stomach', evidence: 'supported', level: 0.4, text: 'Emptying slows in the first days.' },
   ],
   occipital: [
     { organ: 'eyes', evidence: 'established', level: 0.9, text: 'The eyes themselves are healthy, but part of the visual field is lost on the side opposite the damage (homonymous hemianopia).' },
@@ -83,6 +97,7 @@ export const SCENARIO_BODY: Record<ScenarioId, BodyEffect[]> = {
     { organ: 'bladder', evidence: 'supported', level: 0.4, text: 'Bladder control is lost in later stages.' },
     { organ: 'muscle', evidence: 'supported', level: 0.4, text: 'Movement slows and walking becomes less steady in later stages.' },
     { organ: 'heart', evidence: 'exploratory', level: 0.25, text: 'Autonomic (heart-rate and blood-pressure) control may change; findings vary.' },
+    { organ: 'esophagus', evidence: 'supported', level: 0.35, text: 'The swallow becomes slower and less coordinated as the disease advances.' },
   ],
   epilepsy: [
     { organ: 'muscle', evidence: 'established', level: 0.8, text: 'In a generalised convulsive seizure muscles stiffen and jerk. Focal seizures can affect one limb or one side.' },
@@ -90,6 +105,8 @@ export const SCENARIO_BODY: Record<ScenarioId, BodyEffect[]> = {
     { organ: 'lungs', evidence: 'supported', level: 0.6, text: 'Breathing can pause (apnea) during or after a seizure.' },
     { organ: 'stomach', evidence: 'exploratory', level: 0.2, text: 'Nausea or a rising feeling in the stomach can start some temporal-lobe seizures.' },
     { organ: 'bladder', evidence: 'established', level: 0.4, text: 'Bladder control can be lost during a convulsive seizure.' },
+    { organ: 'diaphragm', evidence: 'supported', level: 0.6, text: 'During the tonic phase the breathing muscle is overridden by the convulsion, so breathing stops until the seizure ends.' },
+    { organ: 'spinalcord', evidence: 'established', level: 0.8, text: 'The cord carries the seizure\'s motor drive down to the muscles on both sides, and afterwards its signals are briefly reduced.' },
   ],
 }
 
@@ -111,16 +128,23 @@ export const SYSTEM_BODY: Record<SystemId, SystemBody[]> = {
     { organ: 'lungs', evidence: 'established', text: 'Opens the airways so more air can reach the lungs.' },
     { organ: 'adrenals', evidence: 'established', text: 'The adrenal medulla releases norepinephrine and adrenaline into the blood.' },
     { organ: 'kidneys', evidence: 'established', text: 'Raises renin release, which raises blood pressure.' },
+    { organ: 'pancreas', evidence: 'supported', text: 'Dampens insulin release, which helps raise blood sugar during stress.' },
+    { organ: 'spinalcord', evidence: 'established', text: 'Locus coeruleus fibres run down the cord and tune both pain signals and motor neurons.' },
     { organ: 'gut', evidence: 'established', text: 'Slows digestion during stress.' },
   ],
   acetylcholine: [
     { organ: 'muscle', evidence: 'established', text: 'The signal that makes skeletal muscle contract, at the nerve-muscle junction.' },
     { organ: 'heart', evidence: 'established', text: 'Vagal acetylcholine slows the heart.' },
     { organ: 'gut', evidence: 'established', text: 'Drives gut movement and secretions through the vagus and enteric nerves.' },
+    { organ: 'diaphragm', evidence: 'established', text: 'Acetylcholine is the chemical signal from the phrenic nerve to the breathing muscle.' },
+    { organ: 'esophagus', evidence: 'established', text: 'Vagal acetylcholine drives each swallowing wave down the oesophagus.' },
+    { organ: 'stomach', evidence: 'established', text: 'Vagal acetylcholine drives acid release and stomach contractions.' },
+    { organ: 'pancreas', evidence: 'supported', text: 'Vagal acetylcholine tells the pancreas to release enzymes and insulin when food is expected.' },
     { organ: 'spleen', evidence: 'supported', text: 'Vagus signals can dampen inflammation through the spleen (the "cholinergic anti-inflammatory pathway", well shown in animals, still being tested in people).' },
   ],
   thalamocortical: [
     { organ: 'muscle', evidence: 'established', text: 'Runaway glutamate firing, with too little GABA inhibition, is what drives convulsive seizures.' },
+    { organ: 'spinalcord', evidence: 'established', text: 'Glutamate carries the motor drive down the corticospinal tract; GABA interneurons in the cord keep reflexes in check.' },
   ],
   hpa: [
     { organ: 'adrenals', evidence: 'established', text: 'Release cortisol when the pituitary signals them.' },
@@ -179,5 +203,5 @@ export const genesIn = (organ: OrganId): string[] => Object.keys(GENE_BODY).filt
 
 /** The point in the brain where a route leaves for the body (the brain stem, or the hypothalamus for hormones). */
 export const BRAIN_EXIT: Record<RouteId, [number, number, number]> = {
-  vagus: [0, -0.45, -0.95], sympathetic: [0.08, -0.52, -0.55], hpa: [0, 0.26, -0.44], motor: [0.3, 0.0, 0.7], enteric: [0, -0.44, -0.46], visual: [0.35, -0.8, 0.18],
+  phrenic: [0, -0.42, -0.9], vagus: [0, -0.45, -0.95], sympathetic: [0.08, -0.52, -0.55], hpa: [0, 0.26, -0.44], motor: [0.3, 0.0, 0.7], enteric: [0, -0.44, -0.46], visual: [0.35, -0.8, 0.18],
 }
