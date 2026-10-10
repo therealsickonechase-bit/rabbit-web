@@ -50,6 +50,7 @@ export default function GuidePage() {
             <li><strong>Collections</strong> — save records, group them, keep private notes.</li>
             <li><strong>CRISPR Explorer</strong> — real gene sequences, SpCas9 guide candidates and an interactive edit preview (text only, for learning).</li>
             <li><strong>For everyone signed in (read-only):</strong> Overview and Twin Atlas (live readings vs baseline, reference variants, chain proof; the twin&apos;s name and date of birth stay hidden), Brain Network (3D brain and body, picture generators, My data portrait), Agents, Chain &amp; Audit.</li>
+            <li><strong>Public downloads:</strong> <Link className="text-info underline" href="/downloads">/downloads</Link> lists data packages anyone can download without signing in. The owner publishes a file from their computer with the upload button on that page (data files and archives up to 50 MB; text is scanned for keys and personal data first). Anything published is public and cannot be recalled from copies already downloaded.</li>
             <li><strong>Owner only:</strong> Members, the stored EEG samples, sealing audit batches, AI illustrations and saved data-portrait summaries.</li>
             <li><strong>Open to everyone, no sign-in:</strong> the body model data (<code>/api/model/body</code>, <code>/api/model/concepts</code>, <code>/llms.txt</code>) for AI models and open-source tools. Topics in Research carry a MeSH tag from the National Library of Medicine.</li>
           </ul>
@@ -94,7 +95,7 @@ python rabbit_sync.py       # signed upload to RabbitOS`}</Code>
           </Steps>
           <P>
             <strong>Database step (once):</strong> the new tables are added by running the migration files in <code>supabase/migrations/</code> in order in the Supabase SQL editor.
-            Paste the file’s <em>contents</em>, not its path. The newest migration, <code>20261010000000_self_daily.sql</code>, adds the owner-only data-portrait summaries.
+            Paste the file’s <em>contents</em>, not its path. The newest migrations are <code>20261010000000_self_daily.sql</code> (owner-only data-portrait summaries) and <code>20261010010000_public_packages.sql</code> (the public Downloads page).
           </P>
         </Section>
 

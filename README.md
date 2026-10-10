@@ -15,6 +15,7 @@ research; every agent write is signed and recorded in a hash-linked audit trail.
 | Members | owner only | Accounts and contact records. |
 | **Brain Network** | everyone signed in (stored EEG and AI illustrations stay owner-only) | 3D brain and a detailed body (organs, spinal cord, nerve routes) driven by scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; picture, clip and glTF export; Qwen-Image-2.1-Turbo pictures through a Hugging Face Space; **My data portrait** (your own wearable, lab and PC data drawn against your own baseline, with live network in/out). |
 | Open model API | anyone, read-only | `/api/model/body`, `/api/model/state`, `/api/model/concepts` (MeSH), `/api/model/openapi.json`, `/llms.txt`. Teaching data only; no personal data. |
+| **Downloads** (`/downloads`) | anyone can download; only the owner uploads | Public data packages. The owner picks a file on their computer; the browser checks the type, size and scans text for keys and personal identifiers; the file goes to a public storage bucket with its SHA-256 and licence. Needs the `public_packages` migration. |
 | Public feed | anyone, read-only | `/api/public/research-feed` for rabbitsoftware.io. |
 
 ## Commands

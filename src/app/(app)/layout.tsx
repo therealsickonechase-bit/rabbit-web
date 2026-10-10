@@ -25,6 +25,7 @@ const OWNER_NAV = [
   { href: '/tasks', label: 'Agent tasks' },
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
+  { href: '/downloads', label: 'Downloads' },
   { href: '/members', label: 'Members' },
 ]
 const MEMBER_NAV = [
@@ -40,6 +41,7 @@ const MEMBER_NAV = [
   { href: '/tasks', label: 'Agent tasks' },
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
+  { href: '/downloads', label: 'Downloads' },
 ]
 // the same pages as before the mirror was switched on
 const MEMBER_NAV_BASIC = MEMBER_NAV.filter((i) => !['/dashboard', '/twin', '/brain', '/agents', '/chain'].includes(i.href))
