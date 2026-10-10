@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DIMENSIONS, HUB_URL, buildPrompt, drawArt, isFreshSelf, parseSelfFrame, summaryFrom, type SelfFrame } from '@/lib/self-data'
 import { HF_SPACE_DEFAULT, validSpaceId } from '@/lib/hf-generator'
+import { createClient } from '@/lib/supabase/client'
 
 // Your own data, drawn. Connects to the self-data hub on THIS computer (research-agents: python -m selfdata serve). Values and fixed words arrive over loopback
 // and stay in this page; the live picture is drawn here. "Paint with Qwen" sends only fixed words (e.g. "sleep below usual") to the Hugging Face Space.
@@ -63,7 +64,11 @@ export default function SelfData() {
     setNote(remove ? 'Deleting…' : 'Saving…')
     try {
       const day = new Date().toISOString().slice(0, 10)
-      const r = await fetch('/api/self/daily', remove ? { method: 'DELETE' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(summaryFrom(f!, day)) })
+      // the server checks this access token (sent only to RabbitOS, same origin) and lets only the owner through
+      const { data: { session } } = await createClient().auth.getSession()
+      if (!session) { setNote('Sign in first.'); return }
+      const auth = { Authorization: `Bearer ${session.access_token}` }
+      const r = await fetch('/api/self/daily', remove ? { method: 'DELETE', headers: auth } : { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(summaryFrom(f!, day)) })
       setNote(r.ok ? (remove ? 'Deleted.' : `Saved today's summary (${day}) to your account.`) : r.status === 403 ? 'Only the owner account can save these.' : r.status === 401 || r.redirected ? 'Sign in first.' : 'Could not save.')
     } catch { setNote('Could not reach the server.') }
   }
