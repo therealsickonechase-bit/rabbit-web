@@ -171,7 +171,8 @@ export class Mind {
 
   constructor(seed = 1) { this.rng = makeRng(seed); this.thought = 'I am just waking up to the room.' }
 
-  step(dt: number, inputs: MindInputs): MindSnapshot {
+  /** `bias` nudges the appeal of each intent (the avatar's own needs feed it); optional. */
+  step(dt: number, inputs: MindInputs, bias?: Partial<Record<Intent, number>>): MindSnapshot {
     this.clock += dt; this.since += dt
     const { affect: target, reasons } = targetAffect(inputs)
     this.reasons = reasons; this.simulated = inputs.eeg === null
@@ -185,7 +186,9 @@ export class Mind {
     const k = 1 - Math.exp(-dt / 6)                   // smoothing over about six seconds: moods do not jump
     for (const key of ['arousal', 'valence', 'stress', 'fatigue', 'energy'] as const) this.affect[key] += (goal[key] - this.affect[key]) * k
     if (this.clock >= this.nextDecision) {
-      const next = pickIntent(intentScores(this.affect, this.intent, this.since), this.rng)
+      const scores = intentScores(this.affect, this.intent, this.since)
+      if (bias) for (const k of INTENTS) scores[k] += bias[k] ?? 0
+      const next = pickIntent(scores, this.rng)
       if (next !== this.intent) { this.intent = next; this.since = 0 }
       this.thought = thoughtFor(this.intent, this.affect, this.reasons)
       this.nextDecision = this.clock + 5 + this.rng() * 9

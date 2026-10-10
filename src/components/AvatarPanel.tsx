@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { BUILDS, SKIN_TONES, createAvatar, type Avatar, type Build, type SkinTone } from '@/lib/avatar-body'
+import { BUILDS, SKIN_TONES, createAvatar, type Build, type Figure, type SkinTone } from '@/lib/avatar-body'
+import { MICHELLE_CREDIT, loadMichelle } from '@/lib/avatar-model'
 import { Mind, type MindInputs, type MindSnapshot } from '@/lib/avatar-mind'
+import { INNER_QUESTIONS, InnerLife, type InnerSnapshot } from '@/lib/avatar-inner'
 import { ARENA, STOOL, computePose, newWorld, stepWorld } from '@/lib/avatar-motion'
 import { SUGGESTED_QUESTIONS, answer, cleanQuestion, describeIntent, organSpot, type Answer, type AvatarContext } from '@/lib/avatar-qa'
 import { ORGANS, type OrganId } from '@/lib/body'
@@ -23,13 +25,15 @@ const sel = 'rounded border border-line bg-canvas px-1 py-0.5 text-xs'
 
 export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null; scenario: ScenarioId }) {
   const host = useRef<HTMLDivElement | null>(null)
-  const [build, setBuild] = useState<Build>('neutral')
+  const [build, setBuild] = useState<Build | 'michelle'>('neutral')
+  const [modelNote, setModelNote] = useState('')
   const [tone, setTone] = useState<SkinTone>('medium')
   const [mirror, setMirror] = useState(false)
   const [hormones, setHormones] = useState<'clock' | 'manual'>('clock')
   const [cort, setCort] = useState<Level>('typical')
   const [mel, setMel] = useState<Level>('typical')
   const [hud, setHud] = useState<MindSnapshot | null>(null)
+  const [inner, setInner] = useState<InnerSnapshot | null>(null)
   const [vitals, setVitals] = useState({ heart: 72, breath: 14 })
   const [msgs, setMsgs] = useState<Msg[]>([{ who: 'avatar', text: 'Hello. Ask me anything about my body or my mind: how I feel, why I am moving this way, my organs, my EEG or my hormones.' }])
   const [q, setQ] = useState('')
@@ -40,7 +44,7 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
 
   // everything the animation loop reads lives in refs, so it never restarts when the page re-renders
   const live$ = useRef(live), scenario$ = useRef(scenario), cfg = useRef({ mirror, hormones, cort, mel })
-  const snap = useRef<MindSnapshot | null>(null), ctx = useRef<AvatarContext | null>(null), focus = useRef<{ organ: OrganId; until: number } | null>(null)
+  const innerRef = useRef<InnerLife | null>(null), snap = useRef<MindSnapshot | null>(null), ctx = useRef<AvatarContext | null>(null), focus = useRef<{ organ: OrganId; until: number } | null>(null)
   useEffect(() => { live$.current = live; scenario$.current = scenario; cfg.current = { mirror, hormones, cort, mel } }, [live, scenario, mirror, hormones, cort, mel])
 
   useEffect(() => {
@@ -66,8 +70,9 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
     for (let i = 0; i < 4; i++) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.014, 0.44, 8), wood); const a = (i / 4) * Math.PI * 2 + 0.4; leg.position.set(Math.cos(a) * 0.14, 0.22, Math.sin(a) * 0.14); leg.castShadow = true; stool.add(leg) }
     stool.position.set(STOOL.x, 0, STOOL.z); scene.add(stool)
 
-    let avatar: Avatar = createAvatar(build, tone)
+    let avatar: Figure = createAvatar(build === 'michelle' ? 'neutral' : build, tone)
     scene.add(avatar.root)
+    let gone = false
     const marker = new THREE.Mesh(new THREE.SphereGeometry(0.03, 20, 16), new THREE.MeshBasicMaterial({ color: 0xe03131, transparent: true, opacity: 0.9, depthTest: false })); marker.renderOrder = 20; marker.visible = false
     const halo = new THREE.Mesh(new THREE.RingGeometry(0.04, 0.05, 32), new THREE.MeshBasicMaterial({ color: 0xe03131, transparent: true, opacity: 0.7, depthTest: false, side: THREE.DoubleSide })); halo.renderOrder = 20; marker.add(halo)
     avatar.root.add(marker)
@@ -79,10 +84,10 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
     const fit = () => { const w = el.clientWidth || 640, h = el.clientHeight || 480; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix() }
     fit(); const ro = new ResizeObserver(fit); ro.observe(el)
 
-    const mind = new Mind(Math.floor(Math.random() * 1e6)), world = newWorld(), rng = Math.random
+    const seed = Math.floor(Math.random() * 1e6), mind = new Mind(seed), life = new InnerLife(seed), world = newWorld(), rng = Math.random
+    innerRef.current = life
     let last = performance.now(), t = 0, hudAt = 0, raf = 0, exertion = 0
     const lastTarget = new THREE.Vector3(0, 0.95, 0), want = new THREE.Vector3()
-    const material = avatar.materials
 
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop)
@@ -97,7 +102,7 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
         eeg: idx && idx.channels > 0 ? { engagement: idx.engagement, thetaAlpha: idx.thetaAlpha, asymmetry: idx.frontalAsymmetry } : null,
         heartBpm: c.mirror && fresh?.ecg?.bpm ? fresh.ecg.bpm : null,
       }
-      const s = mind.step(dt, inputs)
+      const s = mind.step(dt, inputs, life.biases())
       snap.current = s
       const physio = physioAt(scenario$.current, t)
       const seizing = physio.phase === 'seizure'
@@ -110,6 +115,8 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
         intent, gait: s.gait, phase: world.phase, t, sit: world.sit, stretch: world.stretch, look: world.look, breathRpm, breathDepth: physio.lungs.depth * (0.8 + exertion * 0.7),
         fatigue: s.affect.fatigue, tremor: physio.muscle.tremor + (seizing ? 0.8 : 0), strengthL: Math.min(1, physio.muscle.strengthL), strengthR: Math.min(1, physio.muscle.strengthR),
       })
+      const heartNow = Math.round(physio.heart.bpm * (1 + exertion * 0.5 + (s.affect.arousal - 0.5) * 0.2))
+      const innerNow = life.step(dt, s, { t, exertion, heart: heartNow, scenario: scenario$.current, cortisol: lv.cortisol, melatonin: lv.melatonin })
       avatar.apply(pose)
       avatar.root.position.set(world.x, 0, world.z); avatar.root.rotation.y = world.heading
       avatar.tint(Math.min(1, s.affect.arousal * 0.5 + exertion * 0.8 + (lv.cortisol === 'high' ? 0.2 : 0)), Math.min(1, s.affect.fatigue * 0.8 + s.affect.stress * 0.2))
@@ -122,7 +129,7 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
       const f = focus.current
       const on = !!f && now < f.until
       const k = on ? 1 : 0
-      for (const m of [material.skin, material.shirt, material.shorts]) { const target = on ? 0.28 : 1; m.opacity += (target - m.opacity) * Math.min(1, dt * 6); m.transparent = m.opacity < 0.99; m.depthWrite = !m.transparent }
+      for (const m of avatar.xray) { const target = on ? 0.28 : 1; m.opacity += (target - m.opacity) * Math.min(1, dt * 6); m.transparent = m.opacity < 0.99; m.depthWrite = !m.transparent }
       marker.visible = on
       if (on && f) {
         const [x, y, z] = organSpot(f.organ); marker.position.set(x, y, z)
@@ -136,27 +143,39 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
       controls.target.add(delta); camera.position.add(delta); lastTarget.add(delta)
       controls.update()
       renderer.render(scene, camera)
-      if (now - hudAt > 300) { hudAt = now; setHud({ ...s, intent }); setVitals({ heart: Math.round(physio.heart.bpm * (1 + exertion * 0.5 + (s.affect.arousal - 0.5) * 0.2)), breath: Math.round(breathRpm) }) }
+      if (now - hudAt > 300) { hudAt = now; setHud({ ...s, intent }); setInner(innerNow); setVitals({ heart: heartNow, breath: Math.round(breathRpm) }) }
     }
     raf = requestAnimationFrame(loop)
 
+    // a loaded human model replaces the built-in body once it has downloaded; if it cannot, the built-in body stays
+    if (build === 'michelle') {
+      setTimeout(() => setModelNote('Loading the human model from GitHub…'), 0)
+      loadMichelle().then((m) => {
+        if (gone) { m.dispose(); return }
+        scene.remove(avatar.root); avatar.dispose(); avatar = m; scene.add(m.root); m.root.add(marker); setModelNote(MICHELLE_CREDIT)
+      }).catch((err: unknown) => { if (!gone) setModelNote(`Could not load the human model (${err instanceof Error ? err.message.slice(0, 80) : 'error'}); using the built-in body.`) })
+    } else setTimeout(() => setModelNote(''), 0)
+
     return () => {
+      gone = true
       cancelAnimationFrame(raf); ro.disconnect(); controls.dispose(); avatar.dispose(); marker.geometry.dispose(); halo.geometry.dispose(); renderer.dispose()
       el.removeChild(renderer.domElement)
-      avatar = null as unknown as Avatar
+      avatar = null as unknown as Figure
     }
   }, [build, tone])
 
   const ask = useCallback(async (text: string) => {
     const cleaned = cleanQuestion(text)
     if (!cleaned.ok) { setMsgs((m) => [...m, { who: 'avatar', text: cleaned.error }]); return }
-    const c = ctx.current
+    const c = ctx.current, life = innerRef.current
     setMsgs((m) => [...m, { who: 'you', text: cleaned.question }]); setQ('')
     if (!c) return
-    const local: Answer = answer(cleaned.question, c)
-    if (local.organ) focus.current = { organ: local.organ, until: performance.now() + 9000 }
-    let reply = local.text, note = local.evidence ? `evidence: ${local.evidence}` : 'from my body model'
-    if (claude && (local.topic === 'unknown' || local.topic === 'mind' || local.topic === 'help')) {
+    life?.hear(cleaned.question)
+    const intro = life?.introspect(cleaned.question) ?? null           // questions about its own mind are answered from its inner life first
+    const local: Answer = intro ? { text: intro.text, topic: intro.topic } : answer(cleaned.question, c)
+    if (local.organ) { focus.current = { organ: local.organ, until: performance.now() + 9000 }; life?.attendOrgan(ORGANS[local.organ].name) }
+    let reply = local.text, note = intro ? 'from my inner life: a simulation, not proof of consciousness' : local.evidence ? `evidence: ${local.evidence}` : 'from my body model'
+    if (claude && !intro && (local.topic === 'unknown' || local.topic === 'mind' || local.topic === 'help')) {
       setBusy(true)
       try {
         const history = msgs.slice(-6).map((m) => ({ role: m.who, text: m.text.slice(0, 1200) }))
@@ -185,7 +204,7 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
         its own simulated twin by default, or yours if you connect the bridge and choose &quot;mirror&quot;. Ask it questions instead of clicking on organs. It is a model, not a conscious being, and nothing it says is medical advice.
       </p>
       <div className="flex flex-wrap items-center gap-3 text-xs">
-        <label className="flex items-center gap-1">Body <select className={sel} value={build} onChange={(e) => setBuild(e.target.value as Build)}>{BUILDS.map((b) => <option key={b} value={b}>{b}</option>)}</select></label>
+        <label className="flex items-center gap-1">Body <select className={sel} value={build} onChange={(e) => setBuild(e.target.value as Build | 'michelle')}>{BUILDS.map((b) => <option key={b} value={b}>{b} (built in)</option>)}<option value="michelle">Michelle (human model, from GitHub)</option></select></label>
         <label className="flex items-center gap-1">Skin <select className={sel} value={tone} onChange={(e) => setTone(e.target.value as SkinTone)}>{(Object.keys(SKIN_TONES) as SkinTone[]).map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
         <label className="flex items-center gap-1"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} /> mirror my live signals {mirror && !live && <span className="text-muted">(bridge not connected: using the simulated twin)</span>}</label>
         <label className="flex items-center gap-1">Hormones <select className={sel} value={hormones} onChange={(e) => setHormones(e.target.value as 'clock' | 'manual')}><option value="clock">typical for the time of day</option><option value="manual">levels I choose</option></select></label>
@@ -200,7 +219,8 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
           <div ref={host} className="relative w-full h-[480px] rounded-md border border-line bg-white overflow-hidden" role="img" aria-label="A 3D human avatar walking in a white room">
             {nogl && <p className="absolute inset-0 grid place-items-center text-xs text-muted p-4 text-center">This browser could not start 3D graphics, so the avatar cannot be drawn. You can still ask it questions.</p>}
           </div>
-          <p className="text-xs text-muted">Drag to turn the view, scroll to zoom. The camera follows the avatar. Built in code; skin, face and clothes are stylised, not a scan of a real person.</p>
+          <p className="text-xs text-muted">Drag to turn the view, scroll to zoom. The camera follows the avatar. The built-in bodies are stylised figures made in code.</p>
+          {modelNote && <p className="text-xs text-muted">{modelNote}</p>}
         </div>
 
         <div className="space-y-3 min-w-0">
@@ -222,6 +242,17 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
                 <p className="text-muted mb-1">{hud.simulated ? 'Its own EEG (synthetic, follows its mood)' : 'EEG-style bands from its mood and your signals'}</p>
                 <div className="grid grid-cols-5 gap-1">{eegBars.map(([k, v]) => <div key={k} className="text-center"><span className="block h-12 rounded bg-canvas border border-line relative overflow-hidden"><span className="absolute bottom-0 left-0 right-0 bg-accent/70" style={{ height: `${Math.min(100, Math.round(v * 220))}%` }} /></span><span className="text-[10px] text-muted">{k}</span></div>)}</div>
               </div>
+            </div>
+          )}
+
+          {inner && (
+            <div className="rounded-md border border-line p-3 space-y-2 text-xs" aria-label="Inner life">
+              <p className="font-medium">Inner life <span className="font-normal text-muted">(a simulation of ideas from consciousness science: not proof that it is conscious)</span></p>
+              <p><span className="text-muted">Aware of: </span>{inner.aware ?? 'nothing stands out; its mind is quiet'}</p>
+              {inner.narration.length > 1 && <ul className="text-muted space-y-0.5 list-disc pl-4">{inner.narration.slice(1, 4).map((n, i) => <li key={i}>{n}</li>)}</ul>}
+              <div className="grid grid-cols-3 gap-x-3">{([['rest', inner.drives.rest, '#4263eb'], ['activity', inner.drives.activity, '#2f9e44'], ['curiosity', inner.drives.curiosity, '#e8590c']] as const).map(([k, v, col]) => <div key={k}><span className="text-muted">need: {k}</span>{bar(v, col)}</div>)}</div>
+              <p className="text-muted">{inner.expectation ? `Expects to ${describeIntent(inner.expectation.intent)} next (${Math.round(inner.expectation.confidence * 100)}% sure)` : 'Still learning its own habits'}{inner.predictionAccuracy !== null ? `; right about itself ${Math.round(inner.predictionAccuracy * 100)}% of the time` : ''}. {inner.memories} strong moments remembered.</p>
+              <div className="flex flex-wrap gap-1.5">{INNER_QUESTIONS.map((s) => <button key={s} className="text-[11px] rounded-full border border-line px-2 py-0.5 text-muted hover:text-fg hover:border-accent" onClick={() => void ask(s)}>{s}</button>)}</div>
             </div>
           )}
 

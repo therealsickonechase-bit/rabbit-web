@@ -378,12 +378,28 @@ export function makeMaterials(tone: SkinTone = 'medium'): AvatarMaterials {
   }
 }
 
+/** Euler angles (x, y, z in YXZ order) for every driven joint of a pose. Shared by the built-in body and by loaded models. */
+export function boneEulers(p: Pose): Partial<Record<BoneName, [number, number, number]>> {
+  return {
+    pelvis: [0, p.rootYaw, p.rootRoll],
+    spine: [p.spineFlex * 0.55, p.chestTwist * 0.4, 0], chest: [p.spineFlex * 0.45 + p.chestBreath * 0.012, p.chestTwist * 0.6, 0],
+    neck: [p.neckFlex * 0.55 + p.headPitch * 0.3, p.headYaw * 0.4, 0], head: [p.neckFlex * 0.45 + p.headPitch * 0.7, p.headYaw * 0.6, 0],
+    thighL: [-p.hipL, 0, -p.hipAbdL], thighR: [-p.hipR, 0, p.hipAbdR], shinL: [p.kneeL, 0, 0], shinR: [p.kneeR, 0, 0], footL: [p.ankleL, 0, 0], footR: [p.ankleR, 0, 0],
+    armL: [-p.shoulderL, 0, p.abdL * 0.9 - 0.05], armR: [-p.shoulderR, 0, -(p.abdR * 0.9 - 0.05)], foreL: [-p.elbowL, 0, 0], foreR: [-p.elbowR, 0, 0],
+  }
+}
+
 // ---- the assembled avatar -----------------------------------------------------------------------------------------------------------------
+/** What the panel needs from any figure, whether the built-in body or a loaded model. */
+export type Figure = Pick<Avatar, 'root' | 'apply' | 'tint' | 'dispose' | 'xray'>
+
 export interface Avatar {
   root: THREE.Group
   bones: Record<BoneName, THREE.Bone>
   world: Record<BoneName, THREE.Vector3>
   materials: AvatarMaterials
+  /** every material that should turn see-through for the x-ray view */
+  xray: THREE.Material[]
   face: Face
   /** apply joint angles; the head, eyes and eyelids follow too */
   apply(p: Pose): void
@@ -410,18 +426,11 @@ export function createAvatar(build: Build = 'neutral', tone: SkinTone = 'medium'
   const rot = (n: BoneName, x = 0, y = 0, z = 0) => { eul.set(x, y, z, 'YXZ'); q.setFromEuler(eul); bones[n].quaternion.copy(rest[n]).multiply(q) }
 
   const avatar: Avatar = {
-    root, bones, world, materials, face,
+    root, bones, world, materials, face, xray: [materials.skin, materials.shirt, materials.shorts],
     apply(p) {
       hips.position.y = p.rootY
-      rot('pelvis', 0, p.rootYaw, p.rootRoll)
-      rot('spine', p.spineFlex * 0.55, p.chestTwist * 0.4, 0); rot('chest', p.spineFlex * 0.45 + p.chestBreath * 0.012, p.chestTwist * 0.6, 0)
+      for (const [n, e] of Object.entries(boneEulers(p)) as [BoneName, [number, number, number]][]) rot(n, e[0], e[1], e[2])
       bones.chest.scale.set(1 + p.chestBreath * 0.012, 1, 1 + p.chestBreath * 0.016)
-      rot('neck', p.neckFlex * 0.55 + p.headPitch * 0.3, p.headYaw * 0.4, 0); rot('head', p.neckFlex * 0.45 + p.headPitch * 0.7, p.headYaw * 0.6, 0)
-      rot('thighL', -p.hipL, 0, -p.hipAbdL); rot('thighR', -p.hipR, 0, p.hipAbdR)
-      rot('shinL', p.kneeL, 0, 0); rot('shinR', p.kneeR, 0, 0)
-      rot('footL', p.ankleL, 0, 0); rot('footR', p.ankleR, 0, 0)
-      rot('armL', -p.shoulderL, 0, p.abdL * 0.9 - 0.05); rot('armR', -p.shoulderR, 0, -(p.abdR * 0.9 - 0.05))
-      rot('foreL', -p.elbowL, 0, 0); rot('foreR', -p.elbowR, 0, 0)
       for (const lid of [face.lidL, face.lidR]) lid.rotation.x = -0.55 + p.lid * 1.55
       for (const eye of [face.eyeL, face.eyeR]) eye.rotation.set(p.gazePitch, p.gazeYaw * 0.35, 0)
     },
