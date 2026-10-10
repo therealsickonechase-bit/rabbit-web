@@ -243,7 +243,7 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
         <LiveBridge onFrame={onLiveFrame} onBaseline={setBaseline} bufferRef={liveBuffer} />
       </section>
       <section className="bg-surface border border-line rounded-lg p-4" aria-label="Pictures and open files">
-        <CapturePanel controlRef={controlRef} lines={cardLines} scenario={scenario} system={system} organ={organ} />
+        <CapturePanel controlRef={controlRef} lines={cardLines} scenario={scenario} system={system} organ={organ} live={bridge} />
       </section>
     </div>
     </div>

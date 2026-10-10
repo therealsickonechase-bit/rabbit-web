@@ -1,13 +1,13 @@
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { ILLUSTRATION_STYLES, illustrationPrompt } from '@/lib/body-api'
+import { ILLUSTRATION_STYLES, LEVELS, RHYTHMS, illustrationPrompt } from '@/lib/body-api'
 import { ORGAN_IDS } from '@/lib/body'
 import { SCENARIO_IDS, SYSTEM_IDS } from '@/lib/neuro'
 
 // AI illustration of the chosen scenario, made with Cloudflare Workers AI (FLUX.1 schnell). Owner only.
-// The prompt is built on the server from the model alone (scenario, pathway, organ, style), so no free text and no live EEG, ECG or
-// EMG value is ever sent to the image model.
+// The prompt is built on the server from the model alone (scenario, pathway, organ, style) plus, only if you opt in, a few FIXED mood words
+// (for example "slow and drifting"). No free text and no EEG, ECG, EMG or hormone number is ever sent to the image model.
 
 const MODEL = '@cf/black-forest-labs/flux-1-schnell'
 const body = z.object({
@@ -15,6 +15,8 @@ const body = z.object({
   system: z.enum(['none', ...SYSTEM_IDS] as [string, ...string[]]).default('none'),
   organ: z.enum(ORGAN_IDS as [string, ...string[]]).nullable().default(null),
   style: z.enum(ILLUSTRATION_STYLES).default('textbook diagram'),
+  // optional, opt-in: only these fixed words, never numbers
+  mood: z.object({ arousal: z.enum(LEVELS), rhythm: z.enum(RHYTHMS), cortisol: z.enum(LEVELS), melatonin: z.enum(LEVELS) }).partial().strict().nullable().default(null),
 }).strict()
 
 // Best-effort spend guard that needs no database: a minimum gap and an hourly cap per Worker instance.
@@ -40,8 +42,8 @@ export async function POST(request: Request) {
 
   const ai = env.AI as Ai | undefined
   if (!ai) return no(503, 'Image generation is not available on this server.')
-  const { scenario, system, organ, style } = parsed.data
-  const prompt = illustrationPrompt(scenario as never, system as never, organ, style)
+  const { scenario, system, organ, style, mood } = parsed.data
+  const prompt = illustrationPrompt(scenario as never, system as never, organ, style, mood)
   recent.push(now)
   try {
     const out = await ai.run(MODEL, { prompt, steps: 4 })

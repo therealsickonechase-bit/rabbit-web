@@ -116,8 +116,57 @@ export function llmsTxt(origin: string) {
 export const ILLUSTRATION_STYLES = ['textbook diagram', 'clean line art', 'soft watercolor'] as const
 export type IllustrationStyle = (typeof ILLUSTRATION_STYLES)[number]
 
-/** Builds an abstract, non-graphic prompt from the model alone. No free text from the user and no live data ever enters it. */
-export function illustrationPrompt(scenario: ScenarioId, system: SystemId | 'none', organ: string | null, style: IllustrationStyle): string {
+// ---- optional mood: coarse words from live EEG and hormone context --------------------------------------------------------
+// Only these fixed words can ever reach the image model. They are chosen by thresholds on the client and re-checked on the server, so no
+// EEG, ECG, EMG or hormone number is sent. Hormone words come from the clock's typical pattern or from levels you pick yourself.
+export const LEVELS = ['low', 'typical', 'high'] as const
+export const RHYTHMS = ['delta', 'theta', 'alpha', 'beta', 'gamma'] as const
+export type Level = (typeof LEVELS)[number]
+export interface Mood { arousal?: Level; rhythm?: (typeof RHYTHMS)[number]; cortisol?: Level; melatonin?: Level }
+
+const RHYTHM_WORDS: Record<(typeof RHYTHMS)[number], string> = {
+  delta: 'slow broad swells', theta: 'dreamy layered ribbons', alpha: 'smooth wide flowing waves', beta: 'many fine fast ripples', gamma: 'sharp fine intricate detail',
+}
+
+/** Words for a mood. Unknown values are ignored, so a tampered request cannot add its own text. */
+export function moodWords(m: Mood | undefined | null): string[] {
+  if (!m) return []
+  const out: string[] = []
+  if (m.cortisol === 'high') out.push('warm amber and gold light')
+  else if (m.melatonin === 'high') out.push('deep indigo and violet light')
+  else if (m.cortisol === 'low' || m.melatonin === 'low' || m.cortisol === 'typical' || m.melatonin === 'typical') out.push('cool teal and soft blue light')
+  if (m.arousal === 'high') out.push('energetic and dynamic')
+  else if (m.arousal === 'low') out.push('slow and drifting')
+  if (m.rhythm && m.rhythm in RHYTHM_WORDS) out.push(RHYTHM_WORDS[m.rhythm])
+  return out
+}
+
+/** Typical adult daily pattern (cortisol in ug/dL, melatonin in pg/mL), the same shape the Python pipeline uses. A reference, not a measurement. */
+const CORTISOL_REF: [number, number][] = [[0, 2], [2, 1.5], [4, 3], [6, 9], [8, 14], [10, 11], [12, 8], [14, 6.5], [16, 5.5], [18, 4.5], [20, 3.5], [22, 2.5], [24, 2]]
+const MELATONIN_REF: [number, number][] = [[0, 50], [2, 62], [4, 55], [6, 25], [8, 6], [10, 3], [12, 2], [14, 2], [16, 2], [18, 3], [20, 8], [22, 30], [24, 50]]
+const interpAt = (table: [number, number][], hour: number) => {
+  const h = ((hour % 24) + 24) % 24
+  for (let i = 1; i < table.length; i++) if (h <= table[i][0]) { const [h0, v0] = table[i - 1], [h1, v1] = table[i]; return v0 + ((h - h0) / (h1 - h0)) * (v1 - v0) }
+  return table[table.length - 1][1]
+}
+/** Low, typical or high cortisol and melatonin for a clock hour, from the typical pattern. */
+export function referenceLevels(hour: number): { cortisol: Level; melatonin: Level } {
+  const c = interpAt(CORTISOL_REF, hour), m = interpAt(MELATONIN_REF, hour)
+  return { cortisol: c >= 9 ? 'high' : c <= 4 ? 'low' : 'typical', melatonin: m >= 25 ? 'high' : m <= 5 ? 'low' : 'typical' }
+}
+
+/** Thresholds that turn live EEG indices and hormone levels into a Mood. Rough, for art, not a reading of anyone's feelings. */
+export function moodFromInputs(i: { engagement: number | null; dominant: string | null }, cortisol: Level | null, melatonin: Level | null): Mood {
+  const m: Mood = {}
+  if (i.engagement !== null) m.arousal = i.engagement > 0.6 ? 'high' : i.engagement < 0.25 ? 'low' : 'typical'
+  if (i.dominant && (RHYTHMS as readonly string[]).includes(i.dominant)) m.rhythm = i.dominant as Mood['rhythm']
+  if (cortisol) m.cortisol = cortisol
+  if (melatonin) m.melatonin = melatonin
+  return m
+}
+
+/** Builds an abstract, non-graphic prompt from the model alone, plus the fixed mood words when the person opted in. No free text and no live number ever enters it. */
+export function illustrationPrompt(scenario: ScenarioId, system: SystemId | 'none', organ: string | null, style: IllustrationStyle, mood?: Mood | null): string {
   const parts: string[] = [`Educational medical illustration, ${style}, schematic human torso and brain, front view, calm muted colours on a plain dark background, labelled-diagram look without any text or letters`]
   if (system !== 'none') parts.push(`highlight the ${SYSTEM_INFO[system].name.split(' (')[0].toLowerCase()} pathway as glowing lines running from the brain through the spinal cord to the organs`)
   const scene: Record<ScenarioId, string> = {
@@ -130,6 +179,8 @@ export function illustrationPrompt(scenario: ScenarioId, system: SystemId | 'non
   }
   parts.push(scene[scenario])
   if (organ && organ in ORGANS) parts.push(`draw the ${ORGANS[organ as keyof typeof ORGANS].name.toLowerCase()} clearly and anatomically plausible`)
+  const words = moodWords(mood)
+  if (words.length) parts.push(`overall feel: ${words.join(', ')}`)
   parts.push('no blood, no gore, no faces, no text, no logos')
   return parts.join('. ').slice(0, 1900)
 }

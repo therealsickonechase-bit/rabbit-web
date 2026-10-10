@@ -2,7 +2,8 @@
 
 import { useState, type MutableRefObject } from 'react'
 import type { Brain3DControls } from '@/components/Brain3D'
-import { ILLUSTRATION_STYLES, type IllustrationStyle } from '@/lib/body-api'
+import { ILLUSTRATION_STYLES, moodFromInputs, referenceLevels, type IllustrationStyle, type Level, type Mood } from '@/lib/body-api'
+import { eegIndices, type LiveFrame } from '@/lib/live-signals'
 import type { OrganId } from '@/lib/body'
 import type { ScenarioId, SystemId } from '@/lib/neuro'
 
@@ -12,18 +13,23 @@ function download(blob: Blob, name: string) {
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
 
 /** Make pictures, clips, a 3D file and an AI illustration from the current view and data, and find the open data endpoints. */
-export default function CapturePanel({ controlRef, lines, scenario, system, organ }: {
+export default function CapturePanel({ controlRef, lines, scenario, system, organ, live }: {
   controlRef: MutableRefObject<Brain3DControls | null>
   /** the data card: first line is the title, then the key readings */
   lines: () => string[]
   scenario: ScenarioId
   system: SystemId | 'none'
   organ: OrganId | null
+  /** the newest frame from the local bridge, if connected */
+  live: LiveFrame | null
 }) {
   const [busy, setBusy] = useState<'shot' | 'clip' | 'glb' | 'ai' | null>(null)
   const [note, setNote] = useState('')
   const [style, setStyle] = useState<IllustrationStyle>('textbook diagram')
   const [art, setArt] = useState<{ src: string; prompt: string } | null>(null)
+  const [useMood, setUseMood] = useState(false)
+  const [cort, setCort] = useState<'clock' | Level>('clock')
+  const [mel, setMel] = useState<'clock' | Level>('clock')
 
   const shot = async () => {
     setBusy('shot'); setNote('')
@@ -40,10 +46,15 @@ export default function CapturePanel({ controlRef, lines, scenario, system, orga
     const b = await controlRef.current?.exportGlb(); setBusy(null)
     if (b) { download(b, `rabbitos-body-${stamp()}.glb`); setNote(`Saved ${(b.size / 1e6).toFixed(1)} MB glTF binary. Open it in Blender, three.js or any glTF viewer. Particles and labels are left out.`) } else setNote('Could not build the 3D file.')
   }
+  /** coarse words only: engagement and strongest band from the live EEG, hormone levels from the clock pattern or the levels you pick */
+  const moodNow = (): Mood => {
+    const now = new Date(), ref = referenceLevels(now.getHours() + now.getMinutes() / 60)
+    return moodFromInputs(eegIndices(live), cort === 'clock' ? ref.cortisol : cort, mel === 'clock' ? ref.melatonin : mel)
+  }
   const illustrate = async () => {
     setBusy('ai'); setNote('Generating with Cloudflare Workers AI… this takes a few seconds.'); setArt(null)
     try {
-      const r = await fetch('/api/brain/illustrate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scenario, system, organ, style }) })
+      const r = await fetch('/api/brain/illustrate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scenario, system, organ, style, mood: useMood ? moodNow() : null }) })
       const j = (await r.json()) as { image?: string; prompt?: string; error?: string }
       if (!r.ok || !j.image) setNote(j.error ?? 'The illustration could not be made.')
       else { setArt({ src: j.image, prompt: j.prompt ?? '' }); setNote('') }
@@ -68,7 +79,20 @@ export default function CapturePanel({ controlRef, lines, scenario, system, orga
         </select>
         <button className={btn} disabled={!!busy} onClick={illustrate}>Generate AI illustration</button>
       </div>
-      <p className="text-xs text-muted">Uses Cloudflare Workers AI (FLUX.1 schnell), which counts against your account&apos;s AI quota. Only the scenario, pathway and organ names are turned into a prompt on the server; your EEG, heart and muscle values are never sent.</p>
+      <label className="flex items-start gap-2 text-xs">
+        <input type="checkbox" className="mt-0.5" checked={useMood} onChange={(e) => setUseMood(e.target.checked)} />
+        <span>Let my live EEG and hormone context set the look. Only a few fixed words are sent (for example &quot;slow and drifting&quot; or &quot;warm amber light&quot;), never numbers.</span>
+      </label>
+      {useMood && (
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <label className="flex items-center gap-1">Cortisol
+            <select value={cort} onChange={(e) => setCort(e.target.value as 'clock' | Level)} className="rounded border border-line bg-canvas px-1 py-0.5"><option value="clock">typical for the time of day</option><option value="low">low</option><option value="typical">typical</option><option value="high">high</option></select></label>
+          <label className="flex items-center gap-1">Melatonin
+            <select value={mel} onChange={(e) => setMel(e.target.value as 'clock' | Level)} className="rounded border border-line bg-canvas px-1 py-0.5"><option value="clock">typical for the time of day</option><option value="low">low</option><option value="typical">typical</option><option value="high">high</option></select></label>
+          <span className="text-muted">{live?.eeg ? 'EEG: live from the bridge.' : 'No live EEG: only the hormone words are used.'} Hormone words come from the typical daily pattern unless you pick a level; they are not measured.</span>
+        </div>
+      )}
+      <p className="text-xs text-muted">Uses Cloudflare Workers AI (FLUX.1 schnell), which counts against your account&apos;s AI quota. Only the scenario, pathway and organ names, and the optional mood words above, are turned into a prompt on the server. Your EEG, heart, muscle and hormone numbers are never sent.</p>
       {note && <p className="text-xs text-muted" aria-live="polite">{note}</p>}
       {art && (
         <figure className="space-y-1">
