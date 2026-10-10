@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { LOBE_RGB, cerebellumGeometry, hemisphere, lobeAt, type Hemisphere, type Lobe } from '@/lib/brain-geometry'
 import { buildRoutes, nucleusPoint } from '@/lib/brain-paths'
 import { NUC_NAME, SCENARIOS, type ScenarioId, type SystemId } from '@/lib/neuro'
 import { createBody } from '@/lib/body-scene'
 import type { Physio } from '@/lib/body-physiology'
+import type { Baseline, LiveFrame } from '@/lib/live-signals'
 import { ORGANS, organStates, type OrganId } from '@/lib/body'
 
 export interface ElectrodeView {
@@ -22,6 +24,13 @@ export interface Layers {
   heat: boolean; lobes: boolean; scalp: boolean; arcs: boolean; labels: boolean; cereb: boolean
   /** the body: master switch, then each system on its own */
   body: boolean; skin: boolean; skeleton: boolean; organs: boolean; vessels: boolean; nerves: boolean; muscles: boolean
+}
+/** Things the page can ask the viewer to do: save a picture with a data card, record a clip, export the model. All run in the browser. */
+export interface Brain3DControls {
+  snapshot(lines: string[]): Promise<Blob | null>
+  /** records the live view with a data card for the given number of seconds; resolves with the WebM clip */
+  record(seconds: number, lines: () => string[]): Promise<Blob | null>
+  exportGlb(): Promise<Blob | null>
 }
 export type ViewName = 'home' | 'top' | 'front' | 'back' | 'left' | 'right' | 'body' | 'chest' | 'abdomen' | 'spine'
 export const DEFAULT_LAYERS: Layers = { heat: true, lobes: true, scalp: true, arcs: true, labels: true, cereb: true, body: true, skin: true, skeleton: true, organs: true, vessels: true, nerves: true, muscles: true }
@@ -49,6 +58,7 @@ interface Api {
   setSpin(s: boolean): void
   setScene(system: SystemId | 'none', scenario: ScenarioId): void
   setOrgan(organ: OrganId | null): void
+  setLive(frame: LiveFrame | null, base: Baseline): void
 }
 interface Props {
   electrodes: ElectrodeView[]
@@ -65,9 +75,13 @@ interface Props {
   onOrgan?: (organ: OrganId | null) => void
   /** the body's current vitals, about four times a second */
   onPhysio?: (p: Physio) => void
+  /** measured values from the local bridge, and the resting baseline they are compared with */
+  live?: LiveFrame | null
+  baseline?: Baseline
+  controlRef?: MutableRefObject<Brain3DControls | null>
 }
 
-export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin, links, layers = DEFAULT_LAYERS, view, system = 'none', scenario = 'healthy', organ = null, onOrgan, onPhysio }: Props) {
+export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin, links, layers = DEFAULT_LAYERS, view, system = 'none', scenario = 'healthy', organ = null, onOrgan, onPhysio, live = null, baseline, controlRef }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const tip = useRef<HTMLDivElement>(null)
   const api = useRef<Api | null>(null)
@@ -262,6 +276,7 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       setElectrodes, setLinks, setLayers: (l) => { L = l; applyLayers() }, setView, setSpin: (s) => { controls.autoRotate = s },
       setScene: (s, c) => { sys = s; scn = c; buildPaths(); recolor(false); body.setScenario(s, c); body.setStates(organStates(s, c), organSel) },
       setOrgan: (o) => { organSel = o; body.setStates(organStates(sys, scn), o) },
+      setLive: (f, b) => body.setLive(f, b),
     }
 
     // ---- interaction ---------------------------------------------------------------------------------------------
@@ -300,6 +315,51 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
     const mo = new MutationObserver(retheme); mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
     const mq = matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener('change', retheme)
 
+
+    // ---- picture, clip and 3D export: composite the WebGL view with a data card on a 2D canvas -----------------------------------------
+    const comp = document.createElement('canvas'), cctx = comp.getContext('2d')!
+    let pendingShot: { lines: string[]; done: (b: Blob | null) => void } | null = null
+    let recording: { lines: () => string[]; recorder: MediaRecorder; chunks: Blob[] } | null = null
+    const drawComposite = (lines: string[]) => {
+      const src = renderer.domElement, w = src.width, h = src.height
+      if (comp.width !== w || comp.height !== h) { comp.width = w; comp.height = h }
+      cctx.fillStyle = css('--canvas') || '#10241f'; cctx.fillRect(0, 0, w, h); cctx.drawImage(src, 0, 0)
+      const k = Math.max(1, Math.round(w / 900)), fs = 13 * k, pad = 10 * k
+      cctx.font = `600 ${fs}px system-ui, sans-serif`; cctx.textBaseline = 'top'
+      const shown = lines.slice(0, 14), width = Math.min(w - 2 * pad, Math.max(...shown.map((l) => cctx.measureText(l).width), 160) + 2 * pad)
+      const height = shown.length * (fs + 4 * k) + 2 * pad
+      cctx.fillStyle = 'rgba(8,16,14,0.72)'; cctx.fillRect(pad, h - height - pad, width, height)
+      shown.forEach((l, i) => { cctx.fillStyle = i === 0 ? '#ffe08a' : '#e9efe9'; cctx.fillText(l, pad * 2, h - height - pad + pad + i * (fs + 4 * k)) })
+      cctx.font = `500 ${11 * k}px system-ui, sans-serif`; cctx.textAlign = 'right'; cctx.fillStyle = 'rgba(233,239,233,0.7)'
+      cctx.fillText('RabbitOS research visualisation. Not a medical device. Not for diagnosis.', w - pad, h - 14 * k); cctx.textAlign = 'left'
+    }
+    const afterRender = () => {
+      if (pendingShot) { const job = pendingShot; pendingShot = null; drawComposite(job.lines); comp.toBlob((b) => job.done(b), 'image/png') }
+      if (recording) drawComposite(recording.lines())
+    }
+    if (controlRef) controlRef.current = {
+      snapshot: (lines) => new Promise((resolve) => { pendingShot = { lines, done: resolve } }),
+      record: (seconds, lines) => new Promise((resolve) => {
+        if (recording || typeof MediaRecorder === 'undefined') return resolve(null)
+        const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((m) => MediaRecorder.isTypeSupported(m))
+        drawComposite(lines())
+        const stream = comp.captureStream(30), recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : undefined), chunks: Blob[] = []
+        recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data) }
+        recorder.onstop = () => { recording = null; stream.getTracks().forEach((t) => t.stop()); resolve(new Blob(chunks, { type: mime ?? 'video/webm' })) }
+        recording = { lines, recorder, chunks }; recorder.start(250)
+        setTimeout(() => { if (recorder.state !== 'inactive') recorder.stop() }, Math.max(1, Math.min(60, seconds)) * 1000)
+      }),
+      exportGlb: () => new Promise((resolve) => {
+        const root = new THREE.Group(); root.name = 'RabbitOS'
+        const keep = (o: THREE.Object3D) => { const c = o.clone(true); const drop: THREE.Object3D[] = []; c.traverse((x) => { const m = x as THREE.Mesh & THREE.Line; if ((x as THREE.Sprite).isSprite || (x as THREE.InstancedMesh).isInstancedMesh || m.isLine) drop.push(x) }); drop.forEach((x) => x.parent?.remove(x)); return c }
+        const brain = new THREE.Group(); brain.name = 'brain'
+        for (const m of cortex) brain.add(m.clone()); brain.add(keep(cereb)); brain.add(stem.clone())
+        const bodyClone = keep(body.group); bodyClone.name = 'body'
+        root.add(brain, bodyClone)
+        new GLTFExporter().parse(root, (result) => resolve(new Blob([result as ArrayBuffer], { type: 'model/gltf-binary' })), () => resolve(null), { binary: true, onlyVisible: true })
+      }),
+    }
+
     let raf = 0, lastVitals = -1; const t0 = performance.now(); const sph = new THREE.Spherical()
     const tick = () => {
       raf = requestAnimationFrame(tick)
@@ -325,6 +385,7 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       lesions.children.forEach((o, i) => { const m = (o as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined; if (m && !(o as THREE.Sprite).isSprite) m.opacity = spiking && o.userData.focus ? 0.95 : (m.wireframe ? 0.5 : 0.35) + 0.12 * Math.sin(t * 3 + i) })
       labelsGroup.children.forEach((s) => { const d = camera.position.distanceTo(s.position); ((s as THREE.Sprite).material as THREE.SpriteMaterial).opacity = Math.max(0.25, Math.min(1, 1.4 - d * 0.16)) })
       renderer.render(scene, camera)
+      afterRender()
     }
     tick()
 
@@ -334,9 +395,10 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       controls.dispose()
       for (const g of [arcs, pulses, paths, lesions, labelsGroup]) disposeGroup(g)
       scene.traverse((o) => { const m = o as THREE.Mesh; m.geometry?.dispose?.(); const mt = m.material as THREE.Material | THREE.Material[] | undefined; (Array.isArray(mt) ? mt : mt ? [mt] : []).forEach((x) => x.dispose()) })
+      if (controlRef) controlRef.current = null
       body.dispose(); ringGeo.dispose(); renderer.dispose(); dom.remove(); api.current = null
     }
-  }, [])
+  }, [controlRef])
 
   useEffect(() => { api.current?.setElectrodes(electrodes, selected) }, [electrodes, selected])
   useEffect(() => { api.current?.setLinks(links) }, [links])
@@ -345,6 +407,7 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
   useEffect(() => { api.current?.setScene(system, scenario) }, [system, scenario])
   useEffect(() => { if (view) api.current?.setView(view.name) }, [view])
   useEffect(() => { api.current?.setOrgan(organ) }, [organ])
+  useEffect(() => { api.current?.setLive(live, baseline ?? { emg: {} }) }, [live, baseline])
 
   return (
     <div className="relative">

@@ -21,6 +21,8 @@ export interface Physio {
   /** signal strength on each pathway, 1 = normal, above 1 = surge, 0 = nothing gets through */
   cord: { motorFromLeftBrain: number; motorFromRightBrain: number; sensoryL: number; sensoryR: number; autonomic: number; vagal: number; phrenic: number }
   visual: { leftBrain: number; rightBrain: number }
+  /** set only while a live bridge supplies measured values; absent for the model's own illustrative numbers */
+  live?: { heart: boolean; muscle: boolean; breathing: boolean; eeg: boolean; source: string }
 }
 
 export const BASE: Physio = {
@@ -144,7 +146,7 @@ export function pathwayLevel(p: Physio, id: string): number {
 }
 
 // ---- readable summaries -------------------------------------------------------------------------------------------
-export interface Reading { label: string; value: string; note: string; evidence: Evidence; flag: 'normal' | 'raised' | 'lowered' | 'abnormal' }
+export interface Reading { label: string; value: string; note: string; evidence: Evidence; flag: 'normal' | 'raised' | 'lowered' | 'abnormal'; /** true when the value is measured by a connected bridge rather than modelled */ measured?: boolean }
 const flag = (v: number, lo: number, hi: number): Reading['flag'] => (v < lo ? 'lowered' : v > hi ? 'raised' : 'normal')
 
 /** The numbers shown on the vitals panel for the current moment. */
@@ -152,8 +154,8 @@ export function readings(p: Physio): Reading[] {
   const rhythm = p.heart.irregular > 0.3 ? 'irregular' : p.heart.irregular > 0.1 ? 'slightly irregular' : 'regular'
   const motor = Math.min(p.cord.motorFromLeftBrain, p.cord.motorFromRightBrain)
   return [
-    { label: 'Heart rate', value: `${Math.round(p.heart.bpm)} beats/min, ${rhythm}`, note: 'Resting adult range is 60-100.', evidence: 'established', flag: flag(p.heart.bpm, 60, 100) },
-    { label: 'Breathing', value: p.lungs.apnea > 0.5 ? 'paused (apnea)' : `${Math.round(p.lungs.rpm)} breaths/min`, note: 'Resting adult range is 12-20.', evidence: 'established', flag: p.lungs.apnea > 0.5 ? 'abnormal' : flag(p.lungs.rpm, 12, 20) },
+    { label: 'Heart rate', value: `${Math.round(p.heart.bpm)} beats/min, ${rhythm}`, note: p.live?.heart ? 'Measured from your ECG channel. Resting adult range is 60-100.' : 'Resting adult range is 60-100.', evidence: 'established', flag: flag(p.heart.bpm, 60, 100), measured: !!p.live?.heart },
+    { label: 'Breathing', value: p.lungs.apnea > 0.5 ? 'paused (apnea)' : `${Math.round(p.lungs.rpm)} breaths/min`, note: 'Resting adult range is 12-20.', evidence: 'established', flag: p.lungs.apnea > 0.5 ? 'abnormal' : flag(p.lungs.rpm, 12, 20), measured: !!p.live?.breathing },
     { label: 'Blood oxygen (illustrative)', value: `${Math.round(p.lungs.spo2)}%`, note: 'Usually 95-100% at rest.', evidence: 'supported', flag: flag(p.lungs.spo2, 95, 101) },
     { label: 'Diaphragm drive (phrenic nerve)', value: `${Math.round(p.cord.phrenic * 100)}%`, note: 'Carried by C3-C5.', evidence: 'established', flag: flag(p.cord.phrenic, 0.9, 1.2) },
     { label: 'Swallowing', value: `${Math.round(p.esophagus * 100)}% of normal`, note: 'Vagus and brain stem coordinate each swallow.', evidence: 'established', flag: flag(p.esophagus, 0.9, 2) },
@@ -162,7 +164,7 @@ export function readings(p: Physio): Reading[] {
     { label: 'Kidney blood flow', value: `${Math.round(p.kidneys * 100)}% of normal`, note: 'Sympathetic nerves narrow renal vessels.', evidence: 'supported', flag: flag(p.kidneys, 0.85, 1.2) },
     { label: 'Bladder control', value: `${Math.round(p.bladder.control * 100)}%`, note: 'Pontine and sacral pathways hold or release urine.', evidence: 'established', flag: flag(p.bladder.control, 0.85, 2) },
     { label: 'Muscle strength (left / right)', value: `${Math.round(p.muscle.strengthL * 100)}% / ${Math.round(p.muscle.strengthR * 100)}%`, note: 'Share of normal force.', evidence: 'established', flag: flag(Math.min(p.muscle.strengthL, p.muscle.strengthR), 0.85, 2) },
-    { label: 'Muscle tone', value: p.muscle.spasm > 0.5 ? 'convulsing' : `${p.muscle.tone.toFixed(1)} x normal`, note: 'Raised tone means stiffness (spasticity).', evidence: 'established', flag: flag(p.muscle.tone, 0.7, 1.3) },
+    { label: 'Muscle tone', value: p.muscle.spasm > 0.5 ? 'convulsing' : `${p.muscle.tone.toFixed(1)} x normal`, note: p.live?.muscle ? 'Measured from your EMG channels, relative to your resting baseline.' : 'Raised tone means stiffness (spasticity).', evidence: 'established', flag: flag(p.muscle.tone, 0.7, 1.3), measured: !!p.live?.muscle },
     { label: 'Motor pathways through the cord', value: `${Math.round(motor * 100)}% of normal`, note: 'Corticospinal tracts from each hemisphere.', evidence: 'established', flag: flag(motor, 0.9, 1.2) },
     { label: 'Sympathetic outflow (T1-L2)', value: `${Math.round(p.cord.autonomic * 100)}% of normal`, note: 'Fight-or-flight output to organs.', evidence: 'established', flag: flag(p.cord.autonomic, 0.8, 1.25) },
     { label: 'Vagus nerve tone', value: `${Math.round(p.cord.vagal * 100)}% of normal`, note: 'Rest-and-digest output and organ feedback.', evidence: 'established', flag: flag(p.cord.vagal, 0.85, 1.2) },

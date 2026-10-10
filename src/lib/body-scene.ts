@@ -10,6 +10,7 @@ import { V } from './body-geom.ts'
 import { buildNerves, type Pathway } from './body-nerves.ts'
 import { buildOrgans, type OrganPart } from './body-organs.ts'
 import { pathwayLevel, physioAt, type Physio } from './body-physiology.ts'
+import { applyLive, type Baseline, type LiveFrame } from './live-signals.ts'
 import { limbGeometry, pelvisGeometry, ribcageGeometry, spineGeometry, trunkShell } from './body-skeleton.ts'
 import type { ScenarioId, SystemId } from './neuro.ts'
 
@@ -22,6 +23,8 @@ export interface BodyScene {
   pickables: THREE.Object3D[]
   setStates(states: Record<OrganId, OrganState>, selected: OrganId | null): void
   setScenario(system: SystemId | 'none', scenario: ScenarioId): void
+  /** measured values from a connected bridge replace the model's heart, breathing and muscle numbers while the frame is fresh */
+  setLive(frame: LiveFrame | null, baseline: Baseline): void
   setLayers(l: BodyLayers): void
   retheme(fg: string, halo: string): void
   tick(t: number): void
@@ -196,6 +199,7 @@ export function createBody(fg: string, halo: string): BodyScene {
   // ---- state ---------------------------------------------------------------------------------------------------------------------------
   let states: Record<OrganId, OrganState> | null = null, picked: OrganId | null = null
   let scn: ScenarioId = 'healthy'
+  let liveFrame: LiveFrame | null = null, liveBase: Baseline = { emg: {} }
   let physio = physioAt('healthy', 0)
   const active = (o: OrganId) => !!states && states[o].level > 0
   const clock = { last: 0, beatT: 0, beatPeriod: 0.83, beatNo: 0, breathT: 0 }
@@ -219,6 +223,7 @@ export function createBody(fg: string, halo: string): BodyScene {
     group, pickables,
     setStates(s, selected) { states = s; picked = selected },
     setScenario(_system, scenario) { scn = scenario; rebuildLesions() },
+    setLive(frame, baseline) { liveFrame = frame; liveBase = baseline },
     setLayers(l) {
       layerGroups.skin.visible = l.skin; layerGroups.skeleton.visible = l.skeleton; layerGroups.organs.visible = l.organs; layerGroups.vessels.visible = l.vessels
       layerGroups.nerves.visible = l.nerves; layerGroups.muscles.visible = l.muscles; layerGroups.labels.visible = l.labels
@@ -227,7 +232,7 @@ export function createBody(fg: string, halo: string): BodyScene {
     physio: () => physio,
     tick(t) {
       const dt = Math.min(0.1, Math.max(0, t - clock.last)); clock.last = t
-      physio = physioAt(scn, t)
+      physio = applyLive(physioAt(scn, t), liveFrame, liveBase)
       const any = !!states && ORGAN_IDS.some((id) => states![id].level > 0)
 
       // ---- heart: its own rate and rhythm; atria then ventricles contract, a spark runs SA node -> AV node -> apex ------------------------

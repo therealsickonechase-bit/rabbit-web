@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Brain3D, { DEFAULT_LAYERS, rampColor, type ElectrodeView, type Layers, type ViewName } from '@/components/Brain3D'
+import Brain3D, { DEFAULT_LAYERS, rampColor, type Brain3DControls, type ElectrodeView, type Layers, type ViewName } from '@/components/Brain3D'
+import LiveBridge from '@/components/LiveBridge'
+import CapturePanel from '@/components/CapturePanel'
+import { eegIndices, type Baseline, type LiveFrame } from '@/lib/live-signals'
 import PathwayPanel from '@/components/PathwayPanel'
 import BodyPanel from '@/components/BodyPanel'
 import type { OrganId } from '@/lib/body'
@@ -38,6 +41,12 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
   const [organ, setOrgan] = useState<OrganId | null>(null)
   const [physio, setPhysio] = useState<Physio>(() => physioAt('healthy', 0))
   const physioRef = useRef<Physio>(physio)
+  const [bridge, setBridge] = useState<LiveFrame | null>(null)
+  const [baseline, setBaseline] = useState<Baseline>({ emg: {} })
+  const liveBuffer = useRef<LiveFrame[]>([])
+  const liveRef = useRef<LiveFrame | null>(null)
+  const controlRef = useRef<Brain3DControls | null>(null)
+  const onLiveFrame = useCallback((f: LiveFrame | null) => { liveRef.current = f; setBridge(f) }, [])
   const onPhysio = useCallback((p: Physio) => { physioRef.current = p; setPhysio(p) }, [])
 
   const poll = useCallback(async () => {
@@ -60,7 +69,14 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
     return () => { clearTimeout(t0); clearInterval(id) }
   }, [poll])
 
-  const latest = useMemo(() => latestByChannel(samples), [samples])
+  // while the local bridge is live its EEG frame drives the brain colours directly; otherwise the stored samples do
+  const liveSamples = useMemo<EegSample[] | null>(() => {
+    if (!bridge?.eeg) return null
+    const ts = new Date(bridge.t).toISOString(), out: EegSample[] = []
+    for (const [channel, bands] of Object.entries(bridge.eeg)) for (const [band, v] of Object.entries(bands)) if (typeof v === 'number') out.push({ channel, band, power: v, rel_power: v, ts })
+    return out.length ? out : null
+  }, [bridge])
+  const latest = useMemo(() => latestByChannel(liveSamples ?? samples), [liveSamples, samples])
   const names = useMemo(() => (latest.size ? [...latest.keys()] : CHANNELS_FALLBACK), [latest])
 
   const electrodes: ElectrodeView[] = useMemo(() => {
@@ -87,6 +103,17 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
     }
     return pairs.slice(0, 60)
   }, [electrodes, similar])
+
+  const cardLines = useCallback(() => {
+    const p = physioRef.current, f = liveRef.current, idx = eegIndices(f)
+    const title = [SCENARIO_INFO[scenario].name, system !== 'none' ? SYSTEM_INFO[system].name.split(' (')[0] : null].filter(Boolean).join(' + ')
+    const lines = [`RabbitOS  |  ${title}${scenario === 'epilepsy' ? `  |  ${p.phase}` : ''}`]
+    lines.push(`Heart ${Math.round(p.heart.bpm)}/min${p.heart.irregular > 0.3 ? ' irregular' : ''}${p.live?.heart ? ' (measured)' : ''}   Breathing ${p.lungs.apnea > 0.5 ? 'paused' : `${Math.round(p.lungs.rpm)}/min`}${p.live?.breathing ? ' (measured)' : ''}`)
+    lines.push(`Muscle strength L ${Math.round(p.muscle.strengthL * 100)}% / R ${Math.round(p.muscle.strengthR * 100)}%   tone ${p.muscle.tone.toFixed(1)}x${p.live?.muscle ? ' (measured)' : ''}`)
+    if (idx.channels) lines.push(`EEG strongest band ${idx.dominant}${idx.thetaAlpha !== null ? `   theta/alpha ${idx.thetaAlpha.toFixed(2)}` : ''}${idx.engagement !== null ? `   engagement ${idx.engagement.toFixed(2)}` : ''}`)
+    lines.push(p.live ? `Source: ${p.live.source} (local bridge) mixed with the illustrative model` : 'Source: illustrative model, not measurements')
+    return lines
+  }, [scenario, system])
 
   const sel = selected ? latest.get(selected) : undefined
   const region = selected ? regionOf(selected) : null
@@ -129,7 +156,7 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
           </label>
         </div>
 
-        <Brain3D electrodes={electrodes} selected={selected} onSelect={setSelected} onCortex={setLobe} spin={spin} links={links} layers={layers} view={view} system={system} scenario={scenario} organ={organ} onOrgan={setOrgan} onPhysio={onPhysio} />
+        <Brain3D electrodes={electrodes} selected={selected} onSelect={setSelected} onCortex={setLobe} spin={spin} links={links} layers={layers} view={view} system={system} scenario={scenario} organ={organ} onOrgan={setOrgan} onPhysio={onPhysio} live={bridge} baseline={baseline} controlRef={controlRef} />
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" role="group" aria-label="Camera view and layers">
           {(['home', 'top', 'front', 'back', 'left', 'right', 'body'] as const).map((v) => (
@@ -210,6 +237,15 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="Body">
       <BodyPanel system={system} scenario={scenario} organ={organ} onOrgan={setOrgan} onView={(v) => { setLayers((l) => ({ ...l, body: true })); setView({ name: v, nonce: Date.now() }) }} crisprGenes={crisprGenes} physio={physio} physioRef={physioRef} layers={layers} onLayers={setLayers} />
     </section>
+
+    <div className="grid lg:grid-cols-2 gap-4">
+      <section className="bg-surface border border-line rounded-lg p-4" aria-label="Live signals">
+        <LiveBridge onFrame={onLiveFrame} onBaseline={setBaseline} bufferRef={liveBuffer} />
+      </section>
+      <section className="bg-surface border border-line rounded-lg p-4" aria-label="Pictures and open files">
+        <CapturePanel controlRef={controlRef} lines={cardLines} scenario={scenario} system={system} organ={organ} />
+      </section>
+    </div>
     </div>
   )
 }
