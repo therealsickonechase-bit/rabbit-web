@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Brain3D, { DEFAULT_LAYERS, rampColor, type ElectrodeView, type Layers, type ViewName } from '@/components/Brain3D'
 import PathwayPanel from '@/components/PathwayPanel'
+import BodyPanel from '@/components/BodyPanel'
+import type { OrganId } from '@/lib/body'
 import { SCENARIO_IDS, SCENARIO_INFO, SYSTEM_IDS, SYSTEM_INFO, type ScenarioId, type SystemId } from '@/lib/neuro'
 import { BANDS, BAND_HZ, dominantBand, electrodePosition, latestByChannel, regionOf, type Band, type EegSample } from '@/lib/brain'
 
@@ -18,7 +20,7 @@ export interface ChemRef { name: string; unit: string; mean: number; sd: number;
 const CHANNELS_FALLBACK = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2']
 const hex = (c: { getHexString: () => string }) => `#${c.getHexString()}`
 
-export default function BrainExplorer({ initial, graph, chemicals }: { initial: EegSample[]; graph: GraphData; chemicals: ChemRef[] }) {
+export default function BrainExplorer({ initial, graph, chemicals, crisprGenes = [] }: { initial: EegSample[]; graph: GraphData; chemicals: ChemRef[]; crisprGenes?: string[] }) {
   const [samples, setSamples] = useState<EegSample[]>(initial)
   const [band, setBand] = useState<Band>('alpha')
   const [selected, setSelected] = useState<string | null>(null)
@@ -32,6 +34,7 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
   const [system, setSystem] = useState<SystemId | 'none'>('none')
   const [scenario, setScenario] = useState<ScenarioId>('healthy')
   const [lobe, setLobe] = useState<string | null>(null)
+  const [organ, setOrgan] = useState<OrganId | null>(null)
 
   const poll = useCallback(async () => {
     try {
@@ -121,14 +124,14 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
           </label>
         </div>
 
-        <Brain3D electrodes={electrodes} selected={selected} onSelect={setSelected} onCortex={setLobe} spin={spin} links={links} layers={layers} view={view} system={system} scenario={scenario} />
+        <Brain3D electrodes={electrodes} selected={selected} onSelect={setSelected} onCortex={setLobe} spin={spin} links={links} layers={layers} view={view} system={system} scenario={scenario} organ={organ} onOrgan={setOrgan} />
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" role="group" aria-label="Camera view and layers">
-          {(['home', 'top', 'front', 'back', 'left', 'right'] as const).map((v) => (
-            <button key={v} onClick={() => setView({ name: v, nonce: Date.now() })} className="rounded-full border border-line px-2.5 py-0.5 hover:border-accent hover:text-accent">{v === 'home' ? '3/4' : v}</button>
+          {(['home', 'top', 'front', 'back', 'left', 'right', 'body'] as const).map((v) => (
+            <button key={v} onClick={() => setView({ name: v, nonce: Date.now() })} className="rounded-full border border-line px-2.5 py-0.5 hover:border-accent hover:text-accent">{v === 'home' ? '3/4' : v === 'body' ? 'whole body' : v}</button>
           ))}
           <span className="mx-1 text-line">|</span>
-          {([['heat', 'cortex heat map'], ['lobes', 'lobes'], ['scalp', 'scalp'], ['arcs', 'network arcs'], ['labels', 'labels'], ['cereb', 'cerebellum']] as const).map(([k, label]) => (
+          {([['heat', 'cortex heat map'], ['lobes', 'lobes'], ['scalp', 'scalp'], ['arcs', 'network arcs'], ['labels', 'labels'], ['cereb', 'cerebellum'], ['body', 'body and organs']] as const).map(([k, label]) => (
             <label key={k} className="flex items-center gap-1"><input type="checkbox" checked={layers[k]} onChange={(e) => setLayers({ ...layers, [k]: e.target.checked })} /> {label}</label>
           ))}
           {lobe && <span className="ml-auto rounded border border-line px-2 py-0.5">{lobe} lobe</span>}
@@ -144,6 +147,9 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
           Schematic head and brain with electrodes at approximate international 10-20 positions. It is not an MRI-based model. The cortex colours are an estimate spread from the scalp electrodes, not located brain activity, and the arcs join electrodes with similar band levels, which is not measured connectivity.
         </p>
         <section className="bg-surface border border-line rounded-lg p-4"><PathwayPanel system={system} scenario={scenario} /></section>
+        <section className="bg-surface border border-line rounded-lg p-4" aria-label="Body">
+          <BodyPanel system={system} scenario={scenario} organ={organ} onOrgan={setOrgan} onShowBody={() => { setLayers((l) => ({ ...l, body: true })); setView({ name: 'body', nonce: Date.now() }) }} crisprGenes={crisprGenes} />
+        </section>
       </div>
 
       <aside className="space-y-4 text-sm" aria-live="polite">

@@ -33,6 +33,9 @@ export default async function BrainPage() {
     edges: links.edges.slice(0, 40).map((e) => ({ a: `${e.a.kind}:${e.a.name}`, b: `${e.b.kind}:${e.b.name}`, records: e.records })),
   }
 
+  // genes that have CRISPR guide candidates stored, so the body view can link them to the CRISPR Explorer
+  const crisprGenes = [...new Set(records.filter((r) => r.source === 'crispr_guide').map((r) => String((r.meta as Record<string, unknown> | null)?.gene ?? '')).filter(Boolean))]
+
   const initial = (eeg.data ?? []) as EegSample[]
   const streaming = new Set(initial.map((s) => s.channel)).size
   const eegAgents = (agents.data ?? []).filter((a) => a.kind === 'network_node' && a.node_id.startsWith('eeg-'))
@@ -54,7 +57,7 @@ export default async function BrainPage() {
         </div>
 
         <Card>
-          <BrainExplorer initial={initial} graph={graph} chemicals={chemicals} />
+          <BrainExplorer initial={initial} graph={graph} chemicals={chemicals} crisprGenes={crisprGenes} />
         </Card>
 
         <div className="grid lg:grid-cols-2 gap-6">

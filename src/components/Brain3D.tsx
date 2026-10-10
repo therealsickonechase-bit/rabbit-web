@@ -6,6 +6,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { LOBE_RGB, cerebellumGeometry, hemisphere, lobeAt, type Hemisphere, type Lobe } from '@/lib/brain-geometry'
 import { buildRoutes, nucleusPoint } from '@/lib/brain-paths'
 import { NUC_NAME, SCENARIOS, type ScenarioId, type SystemId } from '@/lib/neuro'
+import { createBody } from '@/lib/body-scene'
+import { ORGANS, organStates, type OrganId } from '@/lib/body'
 
 export interface ElectrodeView {
   name: string
@@ -15,9 +17,9 @@ export interface ElectrodeView {
   /** 0..1 relative power in the selected band, or null when no data */
   level: number | null
 }
-export interface Layers { heat: boolean; lobes: boolean; scalp: boolean; arcs: boolean; labels: boolean; cereb: boolean }
-export type ViewName = 'home' | 'top' | 'front' | 'back' | 'left' | 'right'
-export const DEFAULT_LAYERS: Layers = { heat: true, lobes: true, scalp: true, arcs: true, labels: true, cereb: true }
+export interface Layers { heat: boolean; lobes: boolean; scalp: boolean; arcs: boolean; labels: boolean; cereb: boolean; body: boolean }
+export type ViewName = 'home' | 'top' | 'front' | 'back' | 'left' | 'right' | 'body'
+export const DEFAULT_LAYERS: Layers = { heat: true, lobes: true, scalp: true, arcs: true, labels: true, cereb: true, body: true }
 
 const LOW = [59, 130, 246], MID = [246, 130, 31], HIGH = [239, 68, 68]
 const mix = (a: number[], b: number[], k: number) => a.map((x, i) => x + (b[i] - x) * k)
@@ -29,7 +31,7 @@ export function rampRgb(level: number | null): number[] {
 }
 export const rampColor = (level: number | null) => new THREE.Color(...rampRgb(level).map((v) => v / 255))
 
-const VIEWS: Record<ViewName, [number, number]> = { home: [0.75, 1.12], top: [0, 0.12], front: [0, 1.45], back: [Math.PI, 1.45], left: [-Math.PI / 2, 1.45], right: [Math.PI / 2, 1.45] }
+const VIEWS: Record<ViewName, [number, number]> = { home: [0.75, 1.12], top: [0, 0.12], front: [0, 1.45], back: [Math.PI, 1.45], left: [-Math.PI / 2, 1.45], right: [Math.PI / 2, 1.45], body: [0.35, 1.45] }
 const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#888'
 
 interface Api {
@@ -39,6 +41,7 @@ interface Api {
   setView(v: ViewName): void
   setSpin(s: boolean): void
   setScene(system: SystemId | 'none', scenario: ScenarioId): void
+  setOrgan(organ: OrganId | null): void
 }
 interface Props {
   electrodes: ElectrodeView[]
@@ -51,14 +54,16 @@ interface Props {
   view?: { name: ViewName; nonce: number }
   system?: SystemId | 'none'
   scenario?: ScenarioId
+  organ?: OrganId | null
+  onOrgan?: (organ: OrganId | null) => void
 }
 
-export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin, links, layers = DEFAULT_LAYERS, view, system = 'none', scenario = 'healthy' }: Props) {
+export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin, links, layers = DEFAULT_LAYERS, view, system = 'none', scenario = 'healthy', organ = null, onOrgan }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const tip = useRef<HTMLDivElement>(null)
   const api = useRef<Api | null>(null)
-  const cb = useRef({ onSelect, onCortex })
-  useEffect(() => { cb.current = { onSelect, onCortex } }, [onSelect, onCortex])
+  const cb = useRef({ onSelect, onCortex, onOrgan })
+  useEffect(() => { cb.current = { onSelect, onCortex, onOrgan } }, [onSelect, onCortex, onOrgan])
 
   useEffect(() => {
     const el = host.current
@@ -76,7 +81,7 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
     const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(-4, -3, 1); scene.add(fill)
 
     const controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true; controls.minDistance = 2.4; controls.maxDistance = 8; controls.enablePan = false; controls.autoRotateSpeed = 1.4
+    controls.enableDamping = true; controls.minDistance = 2.4; controls.maxDistance = 14; controls.enablePan = false; controls.autoRotateSpeed = 1.4
 
     // ---- the brain ---------------------------------------------------------------------------------------------
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0.02 })
@@ -99,6 +104,10 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       const ear = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), new THREE.MeshBasicMaterial({ color: 0x9aa0a6, transparent: true, opacity: 0.4 }))
       ear.scale.set(0.5, 1, 1.4); ear.position.set(s * 1.14, 0, -0.08); scalp.add(ear)
     }
+
+    // ---- the body (schematic, below the neck) --------------------------------------------------------------------
+    const body = createBody(css('--fg'), css('--surface')); scene.add(body.group)
+    let organSel: OrganId | null = null
 
     // ---- electrodes ----------------------------------------------------------------------------------------------
     const electrodesGroup = new THREE.Group(), labelsGroup = new THREE.Group(), stems = new THREE.Group(), arcs = new THREE.Group(), pulses = new THREE.Group(), paths = new THREE.Group(), lesions = new THREE.Group()
@@ -146,7 +155,7 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
     const target = new Float32Array(hemis[0].n * 3 * 2)
     const pathPulses: { curve: THREE.CatmullRomCurve3; dot: THREE.Mesh; t: number; sp: number }[] = []
     const arcPulses: { curve: THREE.QuadraticBezierCurve3; dot: THREE.Mesh; t: number; sp: number }[] = []
-    let tween: { th: number; ph: number; r: number } | null = null
+    let tween: { th: number; ph: number; r: number; tz: number } | null = null
 
     function recolor(snap: boolean) {
       const lv = [...elec.values()].filter((e) => e.lvl != null)
@@ -207,7 +216,7 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       }
     }
     function applyLayers() {
-      scalp.visible = L.scalp; labelsGroup.visible = L.labels; arcs.visible = L.arcs; pulses.visible = L.arcs; cereb.visible = L.cereb
+      scalp.visible = L.scalp; body.group.visible = L.body; body.setLabels(L.labels); labelsGroup.visible = L.labels; arcs.visible = L.arcs; pulses.visible = L.arcs; cereb.visible = L.cereb
       recolor(false)
     }
     function setLinks(pairs: [string, string][]) {
@@ -236,13 +245,14 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       }
       recolor(false)
     }
-    function setView(name: ViewName) { const [th, ph] = VIEWS[name]; tween = { th, ph, r: name === 'home' ? 4.4 : 4.2 } }
-    const sphToCam = (th: number, ph: number, r: number) => camera.position.set(r * Math.sin(ph) * Math.sin(th), r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph))
+    function setView(name: ViewName) { const [th, ph] = VIEWS[name]; tween = { th, ph, r: name === 'body' ? 12 : name === 'home' ? 4.4 : 4.2, tz: name === 'body' ? -2.8 : 0 } }
+    const sphToCam = (th: number, ph: number, r: number) => camera.position.set(controls.target.x + r * Math.sin(ph) * Math.sin(th), controls.target.y + r * Math.sin(ph) * Math.cos(th), controls.target.z + r * Math.cos(ph))
     sphToCam(...([...VIEWS.home, 4.4] as [number, number, number]))
 
     api.current = {
       setElectrodes, setLinks, setLayers: (l) => { L = l; applyLayers() }, setView, setSpin: (s) => { controls.autoRotate = s },
-      setScene: (s, c) => { sys = s; scn = c; buildPaths(); recolor(false) },
+      setScene: (s, c) => { sys = s; scn = c; buildPaths(); recolor(false); body.setStates(organStates(s, c), organSel) },
+      setOrgan: (o) => { organSel = o; body.setStates(organStates(sys, scn), o) },
     }
 
     // ---- interaction ---------------------------------------------------------------------------------------------
@@ -252,7 +262,9 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       ray.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), camera)
       const e = ray.intersectObjects(electrodesGroup.children, false)[0]
       if (e) return { type: 'electrode' as const, name: e.object.userData.name as string }
+      const o = L.body ? ray.intersectObjects(body.pickables, false)[0] : undefined
       const c = ray.intersectObjects(cortex, false)[0]
+      if (o && (!c || o.distance < c.distance)) return { type: 'organ' as const, organ: o.object.userData.organ as OrganId }
       return c ? { type: 'cortex' as const, lobe: lobeAt([c.point.x, c.point.y, c.point.z]) } : null
     }
     let down: { x: number; y: number } | null = null
@@ -260,22 +272,22 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
     const onClick = (e: MouseEvent) => {
       if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return        // that was a drag, not a click
       const h = pick(e); if (!h) return
-      if (h.type === 'electrode') cb.current.onSelect(h.name); else cb.current.onCortex?.(h.lobe)
+      if (h.type === 'electrode') cb.current.onSelect(h.name); else if (h.type === 'organ') cb.current.onOrgan?.(h.organ); else cb.current.onCortex?.(h.lobe)
     }
     const onMove = (e: PointerEvent) => {
       const t = tip.current; if (!t || e.buttons) { if (t) t.hidden = true; return }
       const h = pick(e), box = host.current!.getBoundingClientRect()
       if (!h) { t.hidden = true; renderer.domElement.style.cursor = 'grab'; return }
-      renderer.domElement.style.cursor = h.type === 'electrode' ? 'pointer' : 'grab'
+      renderer.domElement.style.cursor = h.type === 'electrode' || h.type === 'organ' ? 'pointer' : 'grab'
       t.hidden = false; t.style.left = `${Math.min(e.clientX - box.left + 12, box.width - 150)}px`; t.style.top = `${e.clientY - box.top + 12}px`
-      t.textContent = h.type === 'electrode' ? `${h.name} · ${current.find((x) => x.name === h.name)?.level != null ? Math.round((current.find((x) => x.name === h.name)!.level as number) * 100) + '%' : 'no data'}` : `${h.lobe} lobe`
+      t.textContent = h.type === 'organ' ? ORGANS[h.organ].name : h.type === 'electrode' ? `${h.name} · ${current.find((x) => x.name === h.name)?.level != null ? Math.round((current.find((x) => x.name === h.name)!.level as number) * 100) + '%' : 'no data'}` : `${h.lobe} lobe`
     }
     const dom = renderer.domElement
     dom.addEventListener('pointerdown', onDown); dom.addEventListener('click', onClick); dom.addEventListener('pointermove', onMove); dom.addEventListener('pointerleave', () => { if (tip.current) tip.current.hidden = true })
 
     const resize = () => { const w = el.clientWidth, h = el.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix() }
     const ro = new ResizeObserver(resize); ro.observe(el); resize()
-    const retheme = () => { makeLabels() }
+    const retheme = () => { makeLabels(); body.retheme(css('--fg'), css('--surface')) }
     const mo = new MutationObserver(retheme); mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
     const mq = matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener('change', retheme)
 
@@ -285,12 +297,16 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       if (document.hidden) return
       const t = (performance.now() - t0) / 1000
       if (tween) {
-        sph.setFromVector3(camera.position)
-        let dth = tween.th - Math.atan2(camera.position.x, camera.position.y); dth = Math.atan2(Math.sin(dth), Math.cos(dth))
-        const th = Math.atan2(camera.position.x, camera.position.y) + dth * 0.14, ph = sph.phi + (tween.ph - sph.phi) * 0.14, r = sph.radius + (tween.r - sph.radius) * 0.14
+        const off = camera.position.clone().sub(controls.target)
+        sph.setFromVector3(off)
+        const cur = Math.atan2(off.x, off.y)
+        let dth = tween.th - cur; dth = Math.atan2(Math.sin(dth), Math.cos(dth))
+        controls.target.z += (tween.tz - controls.target.z) * 0.14
+        const th = cur + dth * 0.14, ph = sph.phi + (tween.ph - sph.phi) * 0.14, r = sph.radius + (tween.r - sph.radius) * 0.14
         sphToCam(th, ph, r)
-        if (Math.abs(dth) < 0.005 && Math.abs(tween.ph - ph) < 0.005) tween = null
+        if (Math.abs(dth) < 0.005 && Math.abs(tween.ph - ph) < 0.005 && Math.abs(tween.tz - controls.target.z) < 0.01) tween = null
       }
+      body.tick(t)
       controls.update(); easeColors()
       for (const e of elec.values()) { const pulse = 1 + 0.12 * Math.sin(t * (1.6 + (e.lvl ?? 0) * 4) + e.name.length); e.mesh.scale.setScalar(e.base * pulse * (e.name === selected ? 1.35 : 1)); if (e.ring.visible) { e.ring.scale.setScalar(1.6 + 0.2 * Math.sin(t * 5)); e.ring.lookAt(camera.position) } }
       for (const p of arcPulses) { p.t = (p.t + p.sp * 0.016) % 1; p.dot.position.copy(p.curve.getPoint(p.t)) }
@@ -308,7 +324,7 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
       controls.dispose()
       for (const g of [arcs, pulses, paths, lesions, labelsGroup]) disposeGroup(g)
       scene.traverse((o) => { const m = o as THREE.Mesh; m.geometry?.dispose?.(); const mt = m.material as THREE.Material | THREE.Material[] | undefined; (Array.isArray(mt) ? mt : mt ? [mt] : []).forEach((x) => x.dispose()) })
-      ringGeo.dispose(); renderer.dispose(); dom.remove(); api.current = null
+      body.dispose(); ringGeo.dispose(); renderer.dispose(); dom.remove(); api.current = null
     }
   }, [])
 
@@ -318,11 +334,12 @@ export default function Brain3D({ electrodes, selected, onSelect, onCortex, spin
   useEffect(() => { api.current?.setSpin(spin) }, [spin])
   useEffect(() => { api.current?.setScene(system, scenario) }, [system, scenario])
   useEffect(() => { if (view) api.current?.setView(view.name) }, [view])
+  useEffect(() => { api.current?.setOrgan(organ) }, [organ])
 
   return (
     <div className="relative">
       <div ref={host} className="w-full h-[clamp(380px,64vh,620px)] rounded-md border border-line bg-canvas touch-none" role="img"
-        aria-label="Interactive 3D schematic of the brain with EEG electrodes coloured by band power. Drag to rotate, scroll or pinch to zoom, click an electrode for details." />
+        aria-label="Interactive 3D schematic of the brain with EEG electrodes coloured by band power, and a simplified body below it showing organs the brain reaches. Drag to rotate, scroll or pinch to zoom, click an electrode or an organ for details." />
       <div ref={tip} hidden className="absolute pointer-events-none bg-surface border border-line rounded px-2 py-1 text-xs shadow" />
     </div>
   )
