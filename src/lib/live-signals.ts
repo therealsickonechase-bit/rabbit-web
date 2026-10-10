@@ -22,6 +22,8 @@ export interface LiveFrame {
   /** RMS muscle activity in microvolts per channel label (for example "left_forearm") */
   emg?: Record<string, number>
   resp?: { rpm: number }
+  /** the brain state the bridge's EEG transformer read (needs torch on the bridge computer) */
+  state?: { label: 'eyes_open' | 'eyes_closed' | 'motor_imagery'; confidence: number; model: string }
 }
 
 const MAX_CHANNELS = 64, MAX_RR = 120, MAX_AGE_MS = 5000
@@ -70,6 +72,13 @@ export function parseLiveFrame(raw: unknown): LiveFrame | null {
     const rpm = r ? num(r.rpm, 0, 60) : null
     if (rpm === null) return null
     out.resp = { rpm }
+  }
+  if (o.state !== undefined) {
+    const st = o.state as Record<string, unknown> | null
+    const label = st && typeof st.label === 'string' && ['eyes_open', 'eyes_closed', 'motor_imagery'].includes(st.label) ? (st.label as 'eyes_open' | 'eyes_closed' | 'motor_imagery') : null
+    const conf = st ? num(st.confidence, 0, 1) : null
+    if (!label || conf === null) return null
+    out.state = { label, confidence: conf, model: typeof st!.model === 'string' && /^[\w .-]{1,20}$/.test(st!.model) ? st!.model : 'unknown' }
   }
   return out
 }

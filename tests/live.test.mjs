@@ -60,3 +60,13 @@ test('stale or missing live data leaves the model alone', () => {
   const noBaseline = applyLive(model, parseLiveFrame(good), base, now)
   assert.equal(noBaseline.muscle.tone, model.muscle.tone, 'without a calibrated baseline the muscle numbers stay modelled')
 })
+
+test('a brain state from the bridge is validated', () => {
+  const f = parseLiveFrame({ ...good, state: { label: 'eyes_closed', confidence: 0.91, model: 'transformer' } })
+  assert.deepEqual(f.state, { label: 'eyes_closed', confidence: 0.91, model: 'transformer' })
+  for (const bad of [{ label: 'dreaming', confidence: 0.5, model: 'x' }, { label: 'eyes_open', confidence: 2, model: 'x' }, { label: 'eyes_open' }, 'eyes_open', null]) {
+    assert.equal(parseLiveFrame({ ...good, state: bad }), null, JSON.stringify(bad))
+  }
+  assert.equal(parseLiveFrame({ ...good, state: { label: 'eyes_open', confidence: 0.4, model: '<script>' } }).state.model, 'unknown')
+  assert.equal(parseLiveFrame(good).state, undefined)
+})
