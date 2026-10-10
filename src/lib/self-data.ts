@@ -120,3 +120,16 @@ export function drawArt(ctx: CanvasRenderingContext2D, w: number, h: number, f: 
   ctx.fillStyle = '#f2f2f2'; ctx.beginPath(); ctx.arc(cx, cy, R * 0.07, 0, 7); ctx.fill()
   if (f.synthetic) { ctx.fillStyle = '#ebbe78'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('SYNTHETIC DEMO DATA', 12, h - 12) }
 }
+
+// ---- owner-only sync -------------------------------------------------------------------------------------------------------------------------------
+/** The only thing that can be saved to the owner's account: coarse per-dimension summaries and lab flag COUNTS. Built from the validated frame. */
+export interface SelfSummary { day: string; dims: { key: DimKey; level: LevelWord; value: number | null; trend: -1 | 0 | 1; n: number }[]; lab_flags: { in_range: number; high: number; low: number }; synthetic: boolean }
+
+export function summaryFrom(f: SelfFrame, day: string): SelfSummary {
+  return {
+    day,
+    dims: f.dims.map((d) => ({ key: d.key, level: f.words.levels[d.key], value: d.value === null ? null : Math.round(d.value * 1000) / 1000, trend: d.trend, n: Math.round(d.n) })),
+    lab_flags: { ...f.labs },
+    synthetic: f.synthetic,
+  }
+}

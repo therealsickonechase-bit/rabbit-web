@@ -36,3 +36,16 @@ test('freshness', () => {
   const f = parseSelfFrame(msg())
   assert.equal(isFreshSelf(f, f.t + 1000), true); assert.equal(isFreshSelf(f, f.t + 9000), false); assert.equal(isFreshSelf(null), false)
 })
+
+import { summarySchema } from '../src/lib/self-summary.ts'
+import { summaryFrom } from '../src/lib/self-data.ts'
+
+test('the saved summary is coarse and the server schema rejects anything extra', () => {
+  const s = summaryFrom(parseSelfFrame(msg()), '2026-10-10')
+  assert.equal(summarySchema.safeParse(s).success, true)
+  assert.deepEqual(Object.keys(s).sort(), ['day', 'dims', 'lab_flags', 'synthetic'])
+  assert.equal(summarySchema.safeParse({ ...s, lab_values: [{ test: 'Cortisol', value: 14 }] }).success, false)
+  assert.equal(summarySchema.safeParse({ ...s, lab_flags: { ...s.lab_flags, note: 'x' } }).success, false)
+  assert.equal(summarySchema.safeParse({ ...s, dims: [{ ...s.dims[0], raw: 6.2 }] }).success, false)
+  assert.equal(summarySchema.safeParse({ ...s, day: '2026-13-45' }).success, false)
+})
