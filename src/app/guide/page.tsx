@@ -57,13 +57,13 @@ export default function GuidePage() {
         <Section id="members" title="Part 1 · For members (no installation)">
           <Steps>
             <li>Go to <Link className="text-info underline" href="/signup">app.rabbitsoftware.io/signup</Link>. Sign-ups open when the owner switches them on; until then you will see a message instead of the form.</li>
-            <li>Enter your email and a password of <strong>at least 12 characters</strong>, tick the privacy box, and complete the Cloudflare check.</li>
-            <li>Open the confirmation email (from <em>accounts@mail.rabbitsoftware.io</em>; check spam), press the button on the page it opens, then sign in.</li>
+            <li>Enter your email, tick the privacy box, and complete the Cloudflare check. There is no password.</li>
+            <li>Open the sign-in email (from <em>accounts@mail.rabbitsoftware.io</em>; check spam) and press the button on the page it opens. To sign in later, enter your email on the sign-in page and use the new link we send.</li>
             <li>For Ask RabbitOS, open <strong>Settings</strong> and add your own Anthropic API key (create one at console.anthropic.com; the account needs credits). It is stored encrypted and used only for your questions and summaries.</li>
             <li>Open <strong>Ask RabbitOS</strong> and try: <em>“What do we have on BRCA1?”</em>. Open <strong>CRISPR Explorer</strong>, pick a guide and a deletion or insertion to see the sequence change.</li>
           </Steps>
           <P>
-            <strong>Forgot your password?</strong> Use “Forgot password” on the sign-in page. The email works once. Limits: 20 AI summaries and 40 questions per day per person.
+            <strong>No password to forget.</strong> Each sign-in link works once. Limits: 20 AI summaries and 40 questions per day per person.
           </P>
         </Section>
 

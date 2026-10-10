@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { recordContact } from '@/lib/contact-record'
 import { AuthShell, button } from '@/components/AuthShell'
 
 // Landing page for the link in our auth emails. It shows a button instead of consuming the token on
@@ -8,7 +9,7 @@ import { AuthShell, button } from '@/components/AuthShell'
 const TYPES = ['signup', 'invite', 'magiclink', 'recovery', 'email_change'] as const
 type ConfirmType = (typeof TYPES)[number]
 
-const NEXT_ALLOWED = new Set(['/', '/reset-password', '/research'])
+const NEXT_ALLOWED = new Set(['/', '/research'])
 const safeNext = (value: string) => (NEXT_ALLOWED.has(value) ? value : '/')
 
 async function confirm(formData: FormData) {
@@ -19,8 +20,20 @@ async function confirm(formData: FormData) {
   if (!tokenHash || !TYPES.includes(type)) redirect('/login?error=confirm')
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
+  const { data, error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
   if (error) redirect('/login?error=confirm')
+
+  // An account never stays without its encrypted contact record. The write is an upsert, so doing it on
+  // every sign-in is harmless and also repairs a record that failed to store the first time.
+  if (data.user?.id && data.user.email) {
+    try {
+      await recordContact(data.user.id, data.user.email)
+    } catch (e) {
+      console.error('contact record failed', e instanceof Error ? e.message : 'unknown')
+      await supabase.auth.signOut()
+      redirect('/login?error=failed')
+    }
+  }
   redirect(next)
 }
 
@@ -40,17 +53,13 @@ export default async function ConfirmPage({
     )
   }
 
-  const recovery = type === 'recovery'
   return (
-    <AuthShell
-      title={recovery ? 'Reset your password' : 'Confirm your email'}
-      subtitle={recovery ? 'Press the button to continue and choose a new password.' : 'Press the button to finish and sign in.'}
-    >
+    <AuthShell title="Sign in to RabbitOS" subtitle="Press the button to finish and sign in.">
       <form action={confirm}>
         <input type="hidden" name="token_hash" value={token_hash} />
         <input type="hidden" name="type" value={type} />
         <input type="hidden" name="next" value={next ?? '/'} />
-        <button className={button}>{recovery ? 'Continue' : 'Confirm and sign in'}</button>
+        <button className={button}>Confirm and sign in</button>
       </form>
     </AuthShell>
   )

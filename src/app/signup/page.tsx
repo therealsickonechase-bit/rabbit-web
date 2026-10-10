@@ -1,61 +1,39 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { recordContact } from '@/lib/contact-record'
 import { appUrl } from '@/lib/mail'
-import { EMAIL_SHAPE, MIN_PASSWORD, passwordProblem } from '@/lib/auth/password'
+import { EMAIL_SHAPE } from '@/lib/auth/email'
 import { AuthShell, Notice, authInput, button } from '@/components/AuthShell'
 import Turnstile, { captchaTokenFrom } from '@/components/Turnstile'
 
 async function signUp(formData: FormData) {
   'use server'
   const email = String(formData.get('email') ?? '').trim()
-  const password = String(formData.get('password') ?? '')
-  const confirm = String(formData.get('confirm') ?? '')
 
   if (!EMAIL_SHAPE.test(email)) redirect('/signup?error=email')
-  const problem = passwordProblem(password, confirm)
-  if (problem) redirect(`/signup?error=${problem}`)
   if (formData.get('agree') !== 'on') redirect('/signup?error=agree')
 
+  // Passwordless: the emailed link creates the account. The contact record is stored when the link is
+  // confirmed (see /auth/confirm), because the new account's id does not exist until then.
   const supabase = await createClient()
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signInWithOtp({
     email,
-    password,
-    options: { captchaToken: captchaTokenFrom(formData), emailRedirectTo: `${appUrl()}/auth/confirm` },
+    options: { shouldCreateUser: true, captchaToken: captchaTokenFrom(formData), emailRedirectTo: `${appUrl()}/auth/confirm` },
   })
 
   if (error) {
-    // Log the reason without the address. Supabase answers an already-registered address with the
-    // same success as a new one, so this form cannot be used to find out who has an account.
+    // Log the reason without the address. A known address gets the same success page as a new one,
+    // so this form cannot be used to find out who has an account.
     console.error('sign-up failed', error.status, error.code)
     const m = error.message.toLowerCase()
     const code = m.includes('captcha') ? 'captcha' : m.includes('not allowed') || m.includes('disabled') ? 'closed' : error.status === 429 ? 'rate' : 'failed'
     redirect(`/signup?error=${code}`)
-  }
-
-  // Supabase answers an already-registered address with the same success but no identities, so only a
-  // genuinely new account gets a record. If the record cannot be stored, the new account is removed again:
-  // an account never exists without its contact record.
-  const isNew = (data.user?.identities?.length ?? 0) > 0
-  if (isNew && data.user) {
-    try {
-      await recordContact(data.user.id, email)
-    } catch (e) {
-      console.error('contact record failed', e instanceof Error ? e.message : 'unknown')
-      await createAdminClient().auth.admin.deleteUser(data.user.id)
-      redirect('/signup?error=failed')
-    }
   }
   redirect('/signup?sent=1')
 }
 
 const ERRORS: Record<string, string> = {
   email: 'Enter a valid email address.',
-  weak: `Use at least ${MIN_PASSWORD} characters for your password.`,
-  long: 'That password is too long (72 bytes at most).',
-  mismatch: 'The two passwords do not match.',
   agree: 'Please confirm that you have read the privacy policy and the contact record notice.',
   captcha: 'Please complete the check and try again.',
   closed: 'Sign-up is not open yet.',
@@ -70,7 +48,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
     return (
       <AuthShell title="Check your email" footer={<Link href="/login" className="text-accent underline">Back to sign in</Link>}>
         <Notice tone="ok">
-          If that address can be registered, we have sent a link to confirm it. The link works once. It can take a few minutes to arrive, so look in your spam folder too.
+          If that address can be registered, we have sent a link to finish creating the account and sign in. The link works once. It can take a few minutes to arrive, so look in your spam folder too.
         </Notice>
       </AuthShell>
     )
@@ -90,15 +68,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
         <div>
           <label htmlFor="email" className="block text-xs font-medium mb-1">Your email address</label>
           <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" className={authInput} />
-          <p className="text-xs text-muted mt-1">We send one confirmation link to this address. Use an address you can open now.</p>
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-xs font-medium mb-1">Password (at least {MIN_PASSWORD} characters)</label>
-          <input id="password" name="password" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" className={authInput} />
-        </div>
-        <div>
-          <label htmlFor="confirm" className="block text-xs font-medium mb-1">Repeat password</label>
-          <input id="confirm" name="confirm" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" className={authInput} />
+          <p className="text-xs text-muted mt-1">We send one sign-in link to this address. No password needed. Use an address you can open now.</p>
         </div>
         <div className="rounded-md border border-line bg-canvas p-3 text-xs text-muted space-y-1">
           <p className="font-medium text-fg">Contact record</p>
