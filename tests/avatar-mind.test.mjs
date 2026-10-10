@@ -64,3 +64,11 @@ test('the running mind decides by itself, explains why, and stays inside its bou
   assert.ok(thoughtFor('run', snap.affect, ['my cortisol is high']).includes('cortisol'))
   assert.equal(new Mind(7).step(0.1, calm({ eeg: { engagement: 0.6, thetaAlpha: 1, asymmetry: 0 } })).simulated, false)
 })
+
+test('a person moving about nearby raises arousal and is named as a reason; an empty room does not', () => {
+  const base = targetAffect(calm()).affect.arousal
+  const busy = targetAffect(calm({ occupant: { present: true, motion: 0.9 } }))
+  assert.ok(busy.affect.arousal > base); assert.ok(busy.reasons.some((r) => /moving about nearby/.test(r)))
+  assert.ok(targetAffect(calm({ occupant: { present: true, motion: 0.05 } })).reasons.some((r) => /in the room with me/.test(r)))
+  assert.equal(targetAffect(calm({ occupant: { present: false, motion: 0 } })).affect.arousal <= base, true)
+})

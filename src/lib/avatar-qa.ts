@@ -23,6 +23,8 @@ export interface AvatarContext {
   /** 'simulated twin' unless a bridge supplies real signals */
   source: 'simulated twin' | 'live signals'
   eeg: Record<'delta' | 'theta' | 'alpha' | 'beta' | 'gamma', number>
+  /** WiFi sensing of the room, if the bridge is connected: a plain-words line and whether it is simulated */
+  wifi?: { line: string; simulated: boolean; source: string } | null
 }
 
 export interface Answer { text: string; topic: string; organ?: OrganId; evidence?: Evidence }
@@ -110,6 +112,10 @@ export function answer(question: string, c: AvatarContext): Answer {
   }
   if (has(q, ['eeg', 'brain wave', 'brainwave', 'alpha', 'beta', 'theta', 'delta', 'gamma', 'brain activity'])) {
     return { topic: 'eeg', evidence: 'exploratory', text: `My EEG shows ${eegLine(c)}. ${c.source === 'simulated twin' ? 'It is synthetic: generated from my mood (more alpha when calm, more beta when aroused, more theta and delta when tired), not recorded from anyone.' : 'It comes from the signals connected to this page.'} Mapping EEG to mood is a rough idea, not a reliable reading.` }
+  }
+  if (has(q, ['wifi', 'wi-fi', 'csi', 'ruview', 'sense me', 'sense you', 'anyone', 'someone', 'who is in', 'in the room', 'nearby', 'occupant', 'presence', 'can you sense', 'can you feel me'])) {
+    if (!c.wifi) return { topic: 'wifi', text: 'I am not connected to WiFi sensing right now, so I cannot tell whether anyone is in the room. If you run the RuView bridge and tick the WiFi box, I can feel whether someone is present and moving.' }
+    return { topic: 'wifi', evidence: 'exploratory', text: `${c.wifi.line}. ${c.wifi.simulated ? 'This visitor is simulated: no real person is being sensed. ' : 'With ordinary WiFi this is coarse: it tells me someone is there and roughly how much they move, not who they are. '}Breathing and heart rate from WiFi are experimental and unvalidated, so I treat them as a gentle hint.` }
   }
   if (has(q, ['cortisol', 'melatonin', 'hormone', 'hormones', 'stress hormone'])) {
     return { topic: 'hormones', evidence: 'established', text: `My cortisol is ${c.hormones.cortisol} and my melatonin ${c.hormones.melatonin} (${c.hormones.label}). Cortisol raises alertness and stress; melatonin makes me sleepy. ${c.hormones.melatonin === 'high' ? 'That is why I feel drowsy.' : c.hormones.cortisol === 'high' ? 'That is why I feel keyed up.' : 'Both are in a usual range, so they are not pushing me much.'}` }

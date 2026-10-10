@@ -72,3 +72,16 @@ test('it answers questions about attention, memory, needs, itself and consciousn
   assert.equal(inner.introspect('what is the capital of France'), null)
   assert.equal(verb('rest'), 'sit and rest'); assert.equal(verbIng('run'), 'running'); assert.equal(INTENTS.length, 9)
 })
+
+test('a person sensed by WiFi changes her mood, and arriving, leaving and moving are noticed and remembered', () => {
+  const mind = new Mind(3), inner = new InnerLife(3)
+  let snap
+  for (let t = 0; t < 60; t += 0.1) {
+    const present = t > 10 && t < 40, moving = t > 25 && t < 35
+    const m = mind.step(0.1, { ...calm, occupant: { present, motion: moving ? 0.8 : present ? 0.1 : 0 } }, inner.biases())
+    snap = inner.step(0.1, m, inputs(t, { occupant: { present, motion: moving ? 0.8 : present ? 0.1 : 0, simulated: true } }))
+  }
+  const texts = inner.episodes.map((e) => e.text).join(' ')
+  assert.match(texts, /come into the room/); assert.match(texts, /moving around|empty/); assert.match(texts, /simulated visitor/)
+  assert.ok(snap)
+})

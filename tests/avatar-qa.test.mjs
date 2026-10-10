@@ -58,3 +58,10 @@ test('organs sit inside the avatar torso on the right side: liver on the right, 
   assert.ok(organSpot('bladder')[1] < organSpot('kidneys')[1] && organSpot('kidneys')[1] < organSpot('heart')[1])
   for (const id of ['heart', 'liver', 'stomach', 'kidneys', 'spinalcord']) { const [x, , z] = organSpot(id); assert.ok(Math.abs(x) < 0.17 && Math.abs(z) < 0.12, `${id} inside the torso ${x},${z}`) }
 })
+
+test('WiFi questions: honest when not connected, and plain about limits when connected or simulated', () => {
+  assert.match(answer('can you sense me?', ctx()).text, /not connected to WiFi sensing/)
+  const real = answer('is anyone in the room?', ctx({ wifi: { line: 'WiFi sees someone in range, sitting or standing still', simulated: false, source: 'ruview:wifi' } }))
+  assert.match(real.text, /sees someone in range/); assert.match(real.text, /coarse/); assert.match(real.text, /unvalidated/); assert.equal(real.topic, 'wifi')
+  assert.match(answer('what does the wifi say', ctx({ wifi: { line: 'WiFi sees someone', simulated: true, source: 'bridge:simulated' } })).text, /simulated: no real person/)
+})

@@ -26,6 +26,8 @@ export interface InnerInputs {
   scenario: string
   cortisol: string
   melatonin: string
+  /** someone sensed nearby by WiFi, if connected */
+  occupant?: { present: boolean | null; motion: number | null; simulated: boolean } | null
 }
 
 export interface InnerSnapshot {
@@ -59,6 +61,8 @@ export class InnerLife {
   private lastMood = { a: 0.5, v: 0.2 }
   private lastScenario = ''
   private lastHormones = ''
+  private lastPresence: boolean | null | undefined = undefined
+  private movingNow = false
   private lastDriveShout = new Map<string, number>()
   private nextId = 1
   private clock = 0
@@ -129,6 +133,19 @@ export class InnerLife {
     const hormones = `${i.cortisol}/${i.melatonin}`
     if (this.lastHormones && hormones !== this.lastHormones) this.propose('novelty', `My hormones have shifted: cortisol is ${i.cortisol} and melatonin ${i.melatonin}.`, 0.6)
     this.lastHormones = hormones
+
+    // someone else in the room, felt through WiFi
+    const occ = i.occupant
+    if (!occ) { this.lastPresence = undefined; this.movingNow = false }
+    else {
+      const tag = occ.simulated ? ' (a simulated visitor)' : ''
+      if (this.lastPresence === undefined) this.propose('novelty', `I can feel the room through WiFi now.${tag}`, 0.7)
+      else if (occ.present !== this.lastPresence && occ.present !== null) this.propose('novelty', occ.present ? `I sense that someone has come into the room.${tag}` : `The room feels empty now.${tag}`, 0.78)
+      this.lastPresence = occ.present
+      const moving = occ.motion !== null && occ.motion > 0.5
+      if (moving && !this.movingNow) this.propose('novelty', `Someone nearby is moving around.${tag}`, 0.55)
+      this.movingNow = moving
+    }
 
     // drives that grow urgent speak up, but not constantly
     for (const [name, value, text] of [['rest', this.drives.rest, 'I really need to rest.'], ['activity', this.drives.activity, 'I have been still for too long; I want to move.'], ['curiosity', this.drives.curiosity, 'I am curious. I would like to look around or be asked something.']] as const) {

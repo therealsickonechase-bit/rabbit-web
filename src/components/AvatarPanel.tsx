@@ -15,6 +15,7 @@ import { levelsFrom, type HormoneSource } from '@/lib/hormone-context'
 import { eegIndices, isFresh, type LiveFrame } from '@/lib/live-signals'
 import type { Level } from '@/lib/body-api'
 import type { ScenarioId } from '@/lib/neuro'
+import { WIFI_BRIDGE_URL, describeWifi, isFreshWifi, occupantFrom, parseWifiFrame, type WifiFrame } from '@/lib/wifi-sensing'
 
 // A walking avatar with its own mind. It chooses by itself how to move (sit, stand, stroll, walk, pace, jog, run, stretch, look around) from its mood,
 // which comes from hormone levels, the time of day and, if you connect the bridge and choose "mirror", your own EEG and heart rate; otherwise from its own
@@ -22,6 +23,17 @@ import type { ScenarioId } from '@/lib/neuro'
 
 interface Msg { who: 'you' | 'avatar'; text: string; note?: string }
 const sel = 'rounded border border-line bg-canvas px-1 py-0.5 text-xs'
+
+const COCO_EDGES: [number, number][] = [[5, 6], [5, 7], [7, 9], [6, 8], [8, 10], [5, 11], [6, 12], [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [0, 1], [0, 2]]
+/** A small stick figure of the keypoints the sensing model gives (only drawn when the model provides them). */
+function WifiSkeleton({ pose }: { pose: { x: number; y: number; c: number }[] }) {
+  return (
+    <svg viewBox="0 0 100 100" className="h-20 w-20 rounded border border-line bg-white" role="img" aria-label="Body keypoints sensed by WiFi">
+      {COCO_EDGES.map(([a, b]) => <line key={`${a}-${b}`} x1={pose[a].x * 100} y1={pose[a].y * 100} x2={pose[b].x * 100} y2={pose[b].y * 100} stroke="#4263eb" strokeWidth="1.5" opacity={Math.min(pose[a].c, pose[b].c) < 0.2 ? 0.25 : 0.9} />)}
+      {pose.map((p, i) => <circle key={i} cx={p.x * 100} cy={p.y * 100} r="1.8" fill="#e8590c" opacity={p.c < 0.2 ? 0.3 : 1} />)}
+    </svg>
+  )
+}
 
 export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null; scenario: ScenarioId }) {
   const host = useRef<HTMLDivElement | null>(null)
@@ -37,15 +49,40 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
   const [vitals, setVitals] = useState({ heart: 72, breath: 14 })
   const [msgs, setMsgs] = useState<Msg[]>([{ who: 'avatar', text: 'Hello. Ask me anything about my body or my mind: how I feel, why I am moving this way, my organs, my EEG or my hormones.' }])
   const [q, setQ] = useState('')
+  const [wifiOn, setWifiOn] = useState(false)
+  const [wifi, setWifi] = useState<WifiFrame | null>(null)
+  const [wifiState, setWifiState] = useState<'off' | 'connecting' | 'live' | 'quiet'>('off')
   const [claude, setClaude] = useState(false)
   const [speak, setSpeak] = useState(false)
   const [busy, setBusy] = useState(false)
   const [nogl, setNogl] = useState(false)
 
   // everything the animation loop reads lives in refs, so it never restarts when the page re-renders
-  const live$ = useRef(live), scenario$ = useRef(scenario), cfg = useRef({ mirror, hormones, cort, mel })
+  const live$ = useRef(live), scenario$ = useRef(scenario), wifi$ = useRef<WifiFrame | null>(null), cfg = useRef({ mirror, hormones, cort, mel, wifiOn })
   const innerRef = useRef<InnerLife | null>(null), snap = useRef<MindSnapshot | null>(null), ctx = useRef<AvatarContext | null>(null), focus = useRef<{ organ: OrganId; until: number } | null>(null)
-  useEffect(() => { live$.current = live; scenario$.current = scenario; cfg.current = { mirror, hormones, cort, mel } }, [live, scenario, mirror, hormones, cort, mel])
+  useEffect(() => { live$.current = live; scenario$.current = scenario; cfg.current = { mirror, hormones, cort, mel, wifiOn } }, [live, scenario, mirror, hormones, cort, mel, wifiOn])
+
+  // WiFi sensing: frames from the bridge on this computer (loopback only). Each frame is validated; nothing is kept or sent anywhere.
+  useEffect(() => {
+    if (!wifiOn) { wifi$.current = null; return }
+    let ws: WebSocket | null = null, retry: ReturnType<typeof setTimeout> | null = null, stopped = false
+    const open = () => {
+      if (stopped) return
+      setWifiState('connecting')
+      try {
+        ws = new WebSocket(WIFI_BRIDGE_URL)
+        ws.onopen = () => setWifiState('quiet')
+        ws.onmessage = (e) => {
+          if (typeof e.data !== 'string' || e.data.length > 200_000) return
+          try { const f = parseWifiFrame(JSON.parse(e.data)); if (f) { const stamped = { ...f, t: Date.now() }; wifi$.current = stamped; setWifi(stamped); setWifiState('live') } } catch { /* ignore a malformed frame */ }
+        }
+        ws.onclose = () => { if (!stopped) { setWifiState('connecting'); retry = setTimeout(open, 3000) } }
+        ws.onerror = () => ws?.close()
+      } catch { retry = setTimeout(open, 3000) }
+    }
+    open()
+    return () => { stopped = true; if (retry) clearTimeout(retry); ws?.close(); wifi$.current = null; setWifiState('off'); setWifi(null) }
+  }, [wifiOn])
 
   useEffect(() => {
     const el = host.current
@@ -97,10 +134,13 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
       const src: HormoneSource = c.hormones === 'manual' ? { kind: 'manual', cortisol: c.cort, melatonin: c.mel } : { kind: 'clock' }
       const lv = levelsFrom(src, hour)
       const idx = c.mirror && fresh ? eegIndices(fresh) : null
+      const wf = c.wifiOn && isFreshWifi(wifi$.current, Date.now()) ? wifi$.current : null
+      const occ = occupantFrom(wf)
       const inputs: MindInputs = {
         hour, cortisol: lv.cortisol, melatonin: lv.melatonin,
         eeg: idx && idx.channels > 0 ? { engagement: idx.engagement, thetaAlpha: idx.thetaAlpha, asymmetry: idx.frontalAsymmetry } : null,
-        heartBpm: c.mirror && fresh?.ecg?.bpm ? fresh.ecg.bpm : null,
+        heartBpm: c.mirror && fresh?.ecg?.bpm ? fresh.ecg.bpm : occ?.heartBpm ?? null,
+        occupant: occ ? { present: occ.present, motion: occ.motion } : null,
       }
       const s = mind.step(dt, inputs, life.biases())
       snap.current = s
@@ -110,19 +150,21 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
       stepWorld(world, dt, intent, s.gait, rng)
       const moving = Math.hypot(world.x, world.z) >= 0 && s.gait.moving
       exertion += ((moving ? Math.min(1, s.gait.speed / 3.5) : 0) - exertion) * Math.min(1, dt * 0.6)
-      const breathRpm = physio.lungs.rpm * (1 + exertion * 0.9 + (s.affect.arousal - 0.5) * 0.2)
+      const ownBreath = physio.lungs.rpm * (1 + exertion * 0.9 + (s.affect.arousal - 0.5) * 0.2)
+      const breathRpm = occ?.breathingBpm ? ownBreath * 0.5 + Math.min(30, Math.max(6, occ.breathingBpm)) * 0.5 : ownBreath      // she breathes along with the person WiFi senses
       const pose = computePose({
         intent, gait: s.gait, phase: world.phase, t, sit: world.sit, stretch: world.stretch, look: world.look, breathRpm, breathDepth: physio.lungs.depth * (0.8 + exertion * 0.7),
         fatigue: s.affect.fatigue, tremor: physio.muscle.tremor + (seizing ? 0.8 : 0), strengthL: Math.min(1, physio.muscle.strengthL), strengthR: Math.min(1, physio.muscle.strengthR),
       })
       const heartNow = Math.round(physio.heart.bpm * (1 + exertion * 0.5 + (s.affect.arousal - 0.5) * 0.2))
-      const innerNow = life.step(dt, s, { t, exertion, heart: heartNow, scenario: scenario$.current, cortisol: lv.cortisol, melatonin: lv.melatonin })
+      const innerNow = life.step(dt, s, { t, exertion, heart: heartNow, scenario: scenario$.current, cortisol: lv.cortisol, melatonin: lv.melatonin, occupant: occ ? { present: occ.present, motion: occ.motion, simulated: occ.simulated } : null })
       avatar.apply(pose)
       avatar.root.position.set(world.x, 0, world.z); avatar.root.rotation.y = world.heading
       avatar.tint(Math.min(1, s.affect.arousal * 0.5 + exertion * 0.8 + (lv.cortisol === 'high' ? 0.2 : 0)), Math.min(1, s.affect.fatigue * 0.8 + s.affect.stress * 0.2))
       ctx.current = {
         affect: s.affect, emotion: s.emotion, intent, thought: s.thought, reasons: s.reasons, hormones: lv, physio, scenario: scenario$.current,
         source: idx ? 'live signals' : 'simulated twin', eeg: s.eeg,
+        wifi: wf && occ ? { line: describeWifi(wf), simulated: occ.simulated, source: occ.source } : null,
       }
 
       // x-ray: while an organ is being talked about, the skin turns see-through and a marker glows where it sits
@@ -207,12 +249,20 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
         <label className="flex items-center gap-1">Body <select className={sel} value={build} onChange={(e) => setBuild(e.target.value as Build | 'michelle')}>{BUILDS.map((b) => <option key={b} value={b}>{b} (built in)</option>)}<option value="michelle">Michelle (human model, from GitHub)</option></select></label>
         <label className="flex items-center gap-1">Skin <select className={sel} value={tone} onChange={(e) => setTone(e.target.value as SkinTone)}>{(Object.keys(SKIN_TONES) as SkinTone[]).map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
         <label className="flex items-center gap-1"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} /> mirror my live signals {mirror && !live && <span className="text-muted">(bridge not connected: using the simulated twin)</span>}</label>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={wifiOn} onChange={(e) => setWifiOn(e.target.checked)} /> feel the room through WiFi (RuView){wifiOn && <span className="text-muted"> {wifiState === 'live' ? (wifi?.simulated ? '· simulated visitor' : '· connected') : wifiState === 'connecting' ? '· waiting for the bridge on this computer…' : '· connected, no data yet'}</span>}</label>
         <label className="flex items-center gap-1">Hormones <select className={sel} value={hormones} onChange={(e) => setHormones(e.target.value as 'clock' | 'manual')}><option value="clock">typical for the time of day</option><option value="manual">levels I choose</option></select></label>
         {hormones === 'manual' && (<>
           <label className="flex items-center gap-1">Cortisol <select className={sel} value={cort} onChange={(e) => setCort(e.target.value as Level)}><option>low</option><option>typical</option><option>high</option></select></label>
           <label className="flex items-center gap-1">Melatonin <select className={sel} value={mel} onChange={(e) => setMel(e.target.value as Level)}><option>low</option><option>typical</option><option>high</option></select></label>
         </>)}
       </div>
+
+      {wifiOn && (
+        <div className="rounded-md border border-warn/40 px-3 py-2 text-xs space-y-1">
+          <p className="text-warn">WiFi sensing observes everyone within range of your router or sensor nodes, even through walls, without cameras. Use it only where everyone present knows and agrees. Everything stays on this computer.</p>
+          {wifi && wifiState === 'live' ? <div className="flex flex-wrap items-center gap-3"><span>{describeWifi(wifi)}{wifi.simulated ? ' (simulated visitor)' : ''}</span>{wifi.pose && <WifiSkeleton pose={wifi.pose} />}</div> : <p className="text-muted">Start the bridge on this computer: <code className="font-mono">start-wifisense.ps1</code> (or <code className="font-mono">-Simulate</code> to try it with a pretend visitor). See research-agents/docs/wifi-sensing.md.</p>}
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-4">
         <div className="space-y-2 min-w-0">

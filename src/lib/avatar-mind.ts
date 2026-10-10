@@ -19,6 +19,8 @@ export interface MindInputs {
   /** present only while real EEG is connected; null means the avatar is running on its own simulated twin */
   eeg: { engagement: number | null; thetaAlpha: number | null; asymmetry: number | null } | null
   heartBpm: number | null
+  /** a real person sensed in the room by WiFi (RuView), if connected; presence and motion only, never identity */
+  occupant?: { present: boolean | null; motion: number | null } | null
 }
 
 export interface Affect { arousal: number; valence: number; stress: number; fatigue: number; energy: number }
@@ -46,6 +48,10 @@ export function targetAffect(i: MindInputs): { affect: Affect; reasons: string[]
   }
   if (i.heartBpm !== null) arousal += clamp((i.heartBpm - 70) / 120, -0.15, 0.3)
 
+  if (i.occupant) {
+    if (i.occupant.present === true) { valence += 0.05; reasons.push(i.occupant.motion !== null && i.occupant.motion > 0.5 ? 'someone is moving about nearby' : 'someone is in the room with me') }
+    if (i.occupant.motion !== null) arousal += clamp((i.occupant.motion - 0.25) * 0.35, -0.08, 0.2)
+  }
   stress += Math.max(0, arousal - 0.7) * 0.5
   valence -= stress * 0.45
   fatigue = clamp(fatigue); stress = clamp(stress); arousal = clamp(arousal - fatigue * 0.25); valence = clamp(valence, -1, 1)
