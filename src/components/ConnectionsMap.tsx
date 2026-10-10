@@ -121,13 +121,16 @@ function GeneCard({ id, examples, papers, ask }: { id: string; examples: GeneExa
         if (!ids) return null
         const l = geneLinks(ids)
         return (
+          <div className="space-y-2">
+            <p className="text-xs">{ids.summary}</p>
           <p className="text-xs text-muted" title={ids.source}>
             {ids.name}, {ids.cytoband}. Also known as {ids.synonyms.slice(0, 4).join(', ')}. Records:{' '}
             <a className="underline" href={l.ncbi_gene} target="_blank" rel="noopener noreferrer">NCBI Gene {ids.ncbi_gene_id}</a>,{' '}
             <a className="underline" href={l.omim} target="_blank" rel="noopener noreferrer">OMIM {ids.omim}</a>,{' '}
             <a className="underline" href={l.ensembl} target="_blank" rel="noopener noreferrer">Ensembl</a>,{' '}
-            <a className="underline" href={l.uniprot} target="_blank" rel="noopener noreferrer">UniProt {ids.uniprot}</a>. Transcript {ids.refseq_transcript}.
+            <a className="underline" href={l.uniprot} target="_blank" rel="noopener noreferrer">UniProt {ids.uniprot}</a>. Transcript {ids.refseq_transcript}. Location: {ids.location}.
           </p>
+          </div>
         )
       })()}
       <div className="grid grid-cols-2 gap-2">

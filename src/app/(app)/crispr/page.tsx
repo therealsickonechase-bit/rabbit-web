@@ -1,3 +1,4 @@
+import { geneLinks, identifiersFor } from '@/lib/gene-ids'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireUser } from '@/lib/auth/session'
@@ -55,6 +56,30 @@ export default async function CrisprPage() {
           <Stat label="Preprints" value={lit.filter((l) => l.source === 'crispr_preprint').length} />
           <Stat label="Trials" value={lit.filter((l) => l.source === 'crispr_trial').length} sub="recruiting, cancer" />
         </div>
+
+        {[...byGene.keys()].some((g) => identifiersFor(g)) && (
+          <Card title="About the genes">
+            <ul className="space-y-3 text-sm">
+              {[...byGene.keys()].flatMap((g) => {
+                const ids = identifiersFor(g)
+                if (!ids) return []
+                const l = geneLinks(ids)
+                return [(
+                  <li key={g} className="space-y-1">
+                    <p><strong>{g}</strong> · {ids.name} · {ids.cytoband}</p>
+                    <p className="text-xs text-muted">{ids.summary}</p>
+                    <p className="text-xs text-muted">
+                      <a className="underline" href={l.ncbi_gene} target="_blank" rel="noopener noreferrer">NCBI Gene {ids.ncbi_gene_id}</a> ·{' '}
+                      <a className="underline" href={l.omim} target="_blank" rel="noopener noreferrer">OMIM {ids.omim}</a> ·{' '}
+                      <a className="underline" href={l.ensembl} target="_blank" rel="noopener noreferrer">Ensembl</a> ·{' '}
+                      <a className="underline" href={l.uniprot} target="_blank" rel="noopener noreferrer">UniProt {ids.uniprot}</a> · transcript {ids.refseq_transcript}
+                    </p>
+                  </li>
+                )]
+              })}
+            </ul>
+          </Card>
+        )}
 
         <Card title="Edit preview">
           <GuideEditor guides={choices} />
