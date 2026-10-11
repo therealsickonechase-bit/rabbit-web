@@ -12,11 +12,13 @@ async function sendLink(formData: FormData) {
   'use server'
   const email = String(formData.get('email') ?? '').trim()
   if (!EMAIL_SHAPE.test(email)) redirect('/login?error=email')
+  const captchaToken = captchaTokenFrom(formData)
+  if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) redirect('/login?error=captcha')
 
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true, captchaToken: captchaTokenFrom(formData), emailRedirectTo: `${appUrl()}/auth/confirm` },
+    options: { shouldCreateUser: true, captchaToken, emailRedirectTo: `${appUrl()}/auth/confirm` },
   })
   if (error) {
     console.error('sign-in link failed', error.status, error.code)
@@ -37,7 +39,7 @@ const MESSAGES: Record<string, string> = {
 
 const ERRORS: Record<string, string> = {
   email: 'Enter a valid email address.',
-  captcha: 'Please complete the check and try again.',
+  captcha: 'The security check was missing, expired or rejected. Complete a fresh check and try again. If it cannot load, allow challenges.cloudflare.com in your browser or network filters.',
   closed: 'Sign-in is not open yet.',
   rate: 'Too many attempts. Please wait a few minutes and try again.',
   failed: 'We could not send the link. Please try again.',
@@ -77,8 +79,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <a href="https://rabbitsoftware.io/privacy.html" className="text-accent underline" target="_blank" rel="noopener noreferrer">privacy policy</a>.
         </p>
         {problem && <Notice tone="bad">{problem}</Notice>}
-        <Turnstile />
-        <button className={button}>Email me a sign-in link</button>
+        <Turnstile buttonClass={button} />
       </form>
     </AuthShell>
   )

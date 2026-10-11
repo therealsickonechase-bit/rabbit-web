@@ -20,6 +20,21 @@ research; every agent write is signed and recorded in a hash-linked audit trail.
 
 ## Commands
 
+### Sign-in verification
+
+The passwordless login is shared by existing accounts and new public signups.
+Supabase verifies each Turnstile token; the application does not redeem it
+separately or bypass CAPTCHA. The submit button remains disabled until a fresh
+token is available and while a link request is pending. Tokens are cleared on
+expiry, challenge errors and submission, and the widget resets for a retry.
+The token is submitted through one React-owned hidden field rather than a
+third-party DOM field. No token or email is logged.
+
+If the security check fails to load, permit `challenges.cloudflare.com` and its
+challenge subdomains in your browser/network filters and use **Try again**.
+Receiving the "Check your email" page means the auth service accepted the
+request, not proof of inbox delivery. Email links are single-use.
+
 ### Hosted Qwen chat
 
 Ask RabbitOS and avatar open questions offer Cloudflare-hosted Qwen3 alongside
