@@ -16,7 +16,8 @@
     "start:vinext": "vite preview",
     "deploy:vinext": "vinext-cloudflare deploy",
     "schema:snapshot": "node scripts/snapshot-api-schema.mjs",
-    "schema:dump": "node scripts/dump-schema.mjs"
+    "schema:dump": "node scripts/dump-schema.mjs",
+    "postinstall": "node scripts/restore-eslint-docs.mjs"
   },
   "dependencies": {
     "@gradio/client": "^2.7.1",
