@@ -5,6 +5,7 @@ import { requireMember } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from '@/lib/secrets'
 import { DISCLAIMER, MODEL, buildPrompt, summarize } from '@/lib/summarize'
+import MeshTag from '@/components/MeshTag'
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, short } from '@/components/ui'
 
 const statusTone = { explored: 'ok', queued: 'info', dropped: 'muted' } as const
@@ -17,6 +18,7 @@ const SOURCE_LABEL: Record<string, string> = {
   europepmc: 'Europe PMC',
   nih_grant: 'NIH grants',
   clinvar: 'ClinVar',
+  ncbi_datasets: 'NCBI sequences',
   topic_summary: 'Topic summaries',
   crispr_guide: 'CRISPR guides',
   crispr_trial: 'CRISPR trials',
@@ -33,6 +35,7 @@ function detail(source: string, m: Record<string, unknown>) {
     : source === 'pubmed' || source === 'stjude' ? [s('journal'), s('pub_date')]
     : source === 'europepmc' ? [s('pub_year'), m.is_preprint ? 'preprint' : null]
     : source === 'nih_grant' ? [s('org'), s('fiscal_year') ? `FY${s('fiscal_year')}` : null]
+    : source === 'ncbi_datasets' ? [s('kind'), m.length ? `${m.length} ${(s('kind') ?? '').includes('protein') ? 'aa' : 'bp'}` : null]
     : source === 'clinvar' ? [s('classification'), s('review_status'), s('last_evaluated')]
     : []
   return parts.filter(Boolean).join(' · ') || '—'
@@ -200,7 +203,7 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
           <Table head={['Topic', 'Biomarker', 'Status', 'Found by', 'Added', 'AI summary']} empty="No topics yet. Run rabbit_sync.py to import them.">
             {topicRows.map((t) => (
               <tr key={t.id}>
-                <Td>{t.topic}</Td>
+                <Td>{t.topic}<MeshTag term={t.topic} /></Td>
                 <Td mono>{t.biomarker ?? '—'}</Td>
                 <Td><Badge tone={statusTone[t.status as keyof typeof statusTone]}>{t.status}</Badge></Td>
                 <Td mono>{short(t.discovered_by, 10)}</Td>

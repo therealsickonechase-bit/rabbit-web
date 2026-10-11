@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { guestState } from '@/lib/guest'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * Two roles:
@@ -42,4 +43,24 @@ export async function requireOwner() {
   const session = await getSessionRole()
   if (!session.isOwner) redirect('/research')
   return session.user
+}
+
+/**
+ * Read-only mirror of the owner's pages (Overview, Twin Atlas, Brain Network, Agents, Chain & Audit) for every signed-in account.
+ * The owner chose this. It is ON unless the environment variable GUEST_MIRROR is set to "off" (then non-owners are sent to Research again).
+ * Never mirrored: Members (accounts and contact records), the owner's stored EEG samples, the twin's name and date of birth, and every owner action (sealing batches, saving summaries, AI illustrations).
+ */
+export const guestMirrorOn = () => process.env.GUEST_MIRROR !== 'off'
+
+/** Signed-in user on a mirrored page: the owner always, anyone else while the mirror is on. */
+export async function requireViewer() {
+  const session = await getSessionRole()
+  if (!session.isOwner && !guestMirrorOn()) redirect('/research')
+  return session
+}
+
+/** The owner reads through their own session. A guest reads the same tables through the server (their own session cannot see owner-only rows), so each caller
+ *  must list the columns it needs and leave out anything private. */
+export async function viewerClient(isOwner: boolean) {
+  return isOwner ? await createClient() : createAdminClient()
 }

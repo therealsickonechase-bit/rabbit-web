@@ -4,7 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionRole, requireOwner } from '@/lib/auth/session'
 import AutoRefresh from '@/components/AutoRefresh'
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, short } from '@/components/ui'
-import { GENES, KINDS, KIND_LABEL, MAX_OPEN_PER_USER, MAX_PER_DAY, checkProposal, parseTaskParams, type Kind } from '@/lib/tasks'
+import { GENES, KINDS, KIND_LABEL, MAX_OPEN_PER_USER, MAX_PER_DAY, checkProposal, type Kind } from '@/lib/tasks'
+import { queueTask } from '@/lib/task-queue'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const tone = { queued: 'muted', claimed: 'info', proposed: 'warn', approved: 'ok', rejected: 'bad', failed: 'bad' } as const
@@ -30,19 +31,7 @@ async function createTask(formData: FormData) {
     kind === 'research_topic' ? { topic, ...(second ? { biomarker: second } : {}) }
     : kind === 'crispr_guides' ? { gene: second.toUpperCase(), top: 5 }
     : { query: topic }
-  const parsed = parseTaskParams(kind, raw)
-  if (!parsed.ok) redirect('/tasks?msg=invalid')
-
-  const admin = createAdminClient()
-  const open = await admin.from('agent_tasks').select('id', { count: 'exact', head: true }).eq('created_by', user.id).in('status', ['queued', 'claimed', 'proposed'])
-  if ((open.count ?? 0) >= MAX_OPEN_PER_USER) redirect('/tasks?msg=open')
-  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
-  const day = await admin.from('agent_tasks').select('id', { count: 'exact', head: true }).eq('created_by', user.id).gte('created_at', since)
-  if ((day.count ?? 0) >= MAX_PER_DAY) redirect('/tasks?msg=limit')
-
-  const ins = await admin.from('agent_tasks').insert({ created_by: user.id, kind: parsed.kind, params: parsed.params })
-  if (ins.error) redirect('/tasks?msg=invalid')
-  redirect('/tasks?msg=created')
+  redirect(`/tasks?msg=${await queueTask(user.id, kind, raw)}`)
 }
 
 async function review(formData: FormData) {

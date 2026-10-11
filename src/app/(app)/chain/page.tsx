@@ -2,8 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MAX_BATCH, MIN_BATCH, merkleRoot } from '@/lib/merkle'
-import { createClient } from '@/lib/supabase/server'
-import { requireOwner } from '@/lib/auth/session'
+import { requireOwner, requireViewer, viewerClient } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, Table, Td, short, when } from '@/components/ui'
 
 async function sealBatch() {
@@ -25,10 +24,10 @@ async function sealBatch() {
 }
 
 export default async function ChainPage({ searchParams }: { searchParams: Promise<{ chain?: string; sealed?: string }> }) {
-  await requireOwner()
+  const { isOwner } = await requireViewer()
   const { chain = 'network', sealed } = await searchParams
   const isMaxwell = chain === 'maxwell'
-  const sb = await createClient()
+  const sb = await viewerClient(isOwner)
 
   const [blocks, audit, genesis] = await Promise.all([
     sb
@@ -99,7 +98,7 @@ export default async function ChainPage({ searchParams }: { searchParams: Promis
         <Card
           title="Merkle batches"
           action={
-            <form action={sealBatch}>
+            !isOwner ? undefined : <form action={sealBatch}>
               <button className="text-xs rounded-md border border-line px-3 py-1 hover:border-accent hover:text-accent">Seal next batch ({pending.count ?? 0} waiting)</button>
             </form>
           }

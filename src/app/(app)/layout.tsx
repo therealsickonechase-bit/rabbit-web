@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getSessionRole } from '@/lib/auth/session'
+import { getSessionRole, guestMirrorOn } from '@/lib/auth/session'
 import { timeLeft } from '@/lib/guest'
 import Sidebar from '@/components/Sidebar'
 import AutoRefresh from '@/components/AutoRefresh'
@@ -17,6 +17,7 @@ const OWNER_NAV = [
   { href: '/dashboard', label: 'Overview' },
   { href: '/twin', label: 'Twin Atlas' },
   { href: '/brain', label: 'Brain Network' },
+  { href: '/connections', label: 'Chemistry & DNA' },
   { href: '/research', label: 'Research' },
   { href: '/ask', label: 'Ask RabbitOS' },
   { href: '/memory', label: 'Memory' },
@@ -25,6 +26,7 @@ const OWNER_NAV = [
   { href: '/tasks', label: 'Agent tasks' },
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
+  { href: '/downloads', label: 'Downloads' },
   { href: '/members', label: 'Members' },
   { href: '/guests', label: 'Guest passes' },
 ]
@@ -33,13 +35,22 @@ const GUEST_NAV = [
   { href: '/crispr', label: 'CRISPR Explorer' },
 ]
 const MEMBER_NAV = [
+  { href: '/dashboard', label: 'Overview' },
+  { href: '/twin', label: 'Twin Atlas' },
+  { href: '/brain', label: 'Brain Network' },
   { href: '/research', label: 'Research' },
   { href: '/ask', label: 'Ask RabbitOS' },
   { href: '/memory', label: 'Memory' },
   { href: '/crispr', label: 'CRISPR Explorer' },
+  { href: '/connections', label: 'Chemistry & DNA' },
   { href: '/collections', label: 'Collections' },
   { href: '/tasks', label: 'Agent tasks' },
+  { href: '/agents', label: 'Agents' },
+  { href: '/chain', label: 'Chain & Audit' },
+  { href: '/downloads', label: 'Downloads' },
 ]
+// the same pages as before the mirror was switched on
+const MEMBER_NAV_BASIC = MEMBER_NAV.filter((i) => !['/dashboard', '/twin', '/brain', '/agents', '/chain'].includes(i.href))
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isOwner, isGuest, guestUntil } = await getSessionRole()
@@ -53,7 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </p>
           <p className="text-xs text-muted">rabbitsoftware.io</p>
         </div>
-        <Sidebar items={isOwner ? OWNER_NAV : isGuest ? GUEST_NAV : MEMBER_NAV} />
+        <Sidebar items={isOwner ? OWNER_NAV : isGuest ? GUEST_NAV : guestMirrorOn() ? MEMBER_NAV : MEMBER_NAV_BASIC} />
       </aside>
 
       <div className="min-w-0">

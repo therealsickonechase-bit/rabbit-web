@@ -1,12 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
-import { requireOwner } from '@/lib/auth/session'
+import { requireViewer, viewerClient } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, Table, Td, ago, short } from '@/components/ui'
 
 const ONLINE_MS = 15 * 60 * 1000
 
 export default async function AgentsPage() {
-  await requireOwner()
-  const sb = await createClient()
+  const { isOwner } = await requireViewer()
+  const sb = await viewerClient(isOwner)
   const [agents, blocks, scores] = await Promise.all([
     sb.from('agents').select('*').order('last_seen_at', { ascending: false, nullsFirst: false }),
     sb.from('chain_blocks').select('node_id, das_score').limit(5000),

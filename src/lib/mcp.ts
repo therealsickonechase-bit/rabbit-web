@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { GENES, KINDS, parseTaskParams, type Kind } from './tasks.ts'
 import { keywords } from './ask.ts'
 import { PUBLIC_SOURCES } from './public-feed.ts'
+import { SECTIONS, bodyModelJson, bodyStateJson, parseStateQuery, type Section } from './body-api.ts'
 
 // RabbitOS MCP server (Model Context Protocol, streamable HTTP, JSON-RPC 2.0). Stateless and tiny on purpose.
 // Data access is injected (`Db`) so the protocol and the safety rules can be tested without a database.
@@ -73,6 +74,8 @@ const semanticArgs = z.object({ query: z.string().trim().min(3).max(200), limit:
 const idArgs = z.object({ id: z.string().min(1).max(200) }).strict()
 const guideArgs = z.object({ gene: z.enum(GENES).optional(), limit: z.number().int().min(1).max(30).default(10) }).strict()
 const none = z.object({}).strict()
+const bodyModelArgs = z.object({ section: z.enum(SECTIONS).default('overview') }).strict()
+const bodyStateArgs = z.object({ scenario: z.string().max(20).default('healthy'), system: z.string().max(20).default('none'), t: z.number().min(0).max(86400).default(0) }).strict()
 const proposeArgs = z.object({ kind: z.enum(KINDS), params: z.record(z.string(), z.unknown()) }).strict()
 
 export const TOOLS: Tool[] = [
@@ -118,6 +121,18 @@ export const TOOLS: Tool[] = [
     description: 'Counts of stored research records by source.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     run: async (_a: never, c) => ({ counts: await c.db.stats() }),
+  },
+  {
+    name: 'body_model', scope: 'read', schema: bodyModelArgs,
+    description: 'Open teaching data for how brain and spinal cord changes reach the organs: anatomical layout in cm, nerve routes, spinal-level supply, scenarios, chemical pathways, gene links, physiology. Pick a section (overview, organs, routes, supply, scenarios, systems, genes, layout, physiology, pathways). Every item has an evidence level; quote it. Illustrative, not medical advice.',
+    inputSchema: { type: 'object', properties: { section: { type: 'string', enum: [...SECTIONS] } }, additionalProperties: false },
+    run: async (a: z.infer<typeof bodyModelArgs>) => bodyModelJson(a.section as Section),
+  },
+  {
+    name: 'body_state', scope: 'read', schema: bodyStateArgs,
+    description: 'Computed illustrative body state for a scenario (healthy, stroke, tbi, occipital, alz, epilepsy), optional chemical pathway (dopamine, serotonin, norepinephrine, acetylcholine, thalamocortical, hpa) and time t in seconds (only epilepsy changes with t, an 18 second cycle). Returns heart rate and rhythm, breathing, muscle strength, pathway signal strengths and the organs involved.',
+    inputSchema: { type: 'object', properties: { scenario: { type: 'string' }, system: { type: 'string' }, t: { type: 'number', minimum: 0, maximum: 86400 } }, additionalProperties: false },
+    run: async (a: z.infer<typeof bodyStateArgs>) => { const q = parseStateQuery({ scenario: a.scenario, system: a.system, t: String(a.t) }); return q.ok ? bodyStateJson(q.system, q.scenario, q.t) : { error: q.error } },
   },
   {
     name: 'propose_task', scope: 'propose', schema: proposeArgs,

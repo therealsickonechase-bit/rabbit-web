@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { guestPathAllowed, guestState } from '@/lib/guest'
 
 // Pages anyone may open without being signed in (the account forms and the emailed-link landing page).
-const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/confirm', '/guide', '/guest']
+const PUBLIC_PATHS = ['/login', '/signup', '/auth/confirm', '/guide', '/downloads', '/guest']
 const isPublicPath = (path: string) => PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
 
 export async function proxy(request: NextRequest) {
@@ -35,7 +35,7 @@ export async function proxy(request: NextRequest) {
   // These endpoints authenticate with their own request signature, not a user session.
   if (path.startsWith('/api/ingest') || path.startsWith('/api/agent/') || path === '/api/mcp' || path.startsWith('/api/auth/send-email')) return supabaseResponse
   // Public, read-only feed for rabbitsoftware.io (public literature titles, counts and chain heads only).
-  if (path === '/api/public/research-feed' || path === '/api/public/proof') return supabaseResponse
+  if (path === '/api/public/research-feed' || path === '/api/public/proof' || path === '/api/health' || path.startsWith('/api/model/') || path === '/llms.txt') return supabaseResponse
 
   // Refresh session if expired
   const { data: { user } } = await supabase.auth.getUser()
