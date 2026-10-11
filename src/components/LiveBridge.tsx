@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
+import { useConnectionReport } from '@/components/ConnectionsContext'
 import { calibrateEmg, eegIndices, isFresh, parseLiveFrame, type Baseline, type LiveFrame } from '@/lib/live-signals'
 
 // Connects the page to the BrainFlow / OpenBCI bridge running on THIS computer (research-agents/local_bridge.py). The frames never leave
@@ -47,6 +48,11 @@ export default function LiveBridge({ onFrame, onBaseline, bufferRef }: {
   const last = useRef<LiveFrame | null>(null)
   const bad = useRef(0)
   const reconnect = useRef<(target: string) => void>(() => {})
+  useConnectionReport('openbci', {
+    status: status === 'quiet' ? 'stale' : status,
+    detail: latest ? `${latest.source}; ${Object.keys(latest.eeg ?? {}).length} EEG channels${latest.ecg?.bpm ? `; ECG ${Math.round(latest.ecg.bpm)} bpm` : ''}${latest.state ? `; brain state ${latest.state.label.replace('_', ' ')}` : ''}` : msg,
+    lastAt: latest?.t ?? null,
+  })
 
   const close = useCallback(() => {
     want.current = false

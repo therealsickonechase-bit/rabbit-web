@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useConnectionReport } from '@/components/ConnectionsContext'
 import { parseHormoneCsv, type HormoneSource } from '@/lib/hormone-context'
 import { HF_SPACE_DEFAULT, RESOLUTIONS, buildWords, describeWords, validSpaceId, type Built } from '@/lib/hf-generator'
 import { emgRatio, isFresh, type Baseline, type LiveFrame } from '@/lib/live-signals'
@@ -37,6 +38,8 @@ export default function HfGenerator({ live, baseline }: { live: LiveFrame | null
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const [shots, setShots] = useState<Shot[]>([])
+  const [lastShot, setLastShot] = useState<number | null>(null)
+  useConnectionReport('qwen', { status: busy ? 'connecting' : 'idle', detail: shots.length ? `${shots.length} picture${shots.length === 1 ? '' : 's'} painted this visit` : 'ready when you press paint', lastAt: lastShot })
   const liveRef = useRef(live), baseRef = useRef(baseline), autoCount = useRef(0), lastAt = useRef(0), clientRef = useRef<{ key: string; client: unknown } | null>(null)
   useEffect(() => { liveRef.current = live; baseRef.current = baseline }, [live, baseline])
   useEffect(() => {
@@ -66,7 +69,7 @@ export default function HfGenerator({ live, baseline }: { live: LiveFrame | null
       const res = await client.predict('/generate_from_state', { ...built.words })
       const img = res.data?.[0] as { url?: string; path?: string } | undefined
       if (!img?.url) throw new Error('The Space returned no image.')
-      lastAt.current = Date.now()
+      lastAt.current = Date.now(); setLastShot(Date.now())
       setShots((s) => [{ src: img.url as string, built, at: d.toLocaleTimeString() }, ...s].slice(0, MAX_HISTORY))
       setNote(f ? '' : 'No live bridge frame: the picture uses the hormone context and neutral EEG words.')
     } catch (e) {

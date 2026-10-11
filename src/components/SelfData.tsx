@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useConnectionReport } from '@/components/ConnectionsContext'
 import { DIMENSIONS, HUB_URL, buildPrompt, drawArt, isFreshSelf, parseSelfFrame, summaryFrom, type SelfFrame } from '@/lib/self-data'
 import { HF_SPACE_DEFAULT, validSpaceId } from '@/lib/hf-generator'
 import { createClient } from '@/lib/supabase/client'
@@ -22,6 +23,11 @@ export default function SelfData() {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const [shots, setShots] = useState<Shot[]>([])
+  useConnectionReport('selfdata', {
+    status: status === 'live' ? (frame ? 'live' : 'stale') : status,
+    detail: frame ? `${frame.dims.filter((d) => d.n > 0).length} of ${frame.dims.length} body systems have data${frame.synthetic ? '; SYNTHETIC demo data' : ''}; network in ${fmtRate(frame.inBps)}, out ${fmtRate(frame.outBps)}` : note,
+    lastAt: frame?.t ?? null,
+  })
   const ws = useRef<WebSocket | null>(null)
   const frameRef = useRef<SelfFrame | null>(null)
   const canvas = useRef<HTMLCanvasElement | null>(null)

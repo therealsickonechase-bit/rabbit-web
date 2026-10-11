@@ -1,5 +1,6 @@
 'use client'
 
+import { useConnectionReport } from '@/components/ConnectionsContext'
 import { useState, type MutableRefObject } from 'react'
 import type { Brain3DControls } from '@/components/Brain3D'
 import { ILLUSTRATION_STYLES, moodFromInputs, referenceLevels, type IllustrationStyle, type Level, type Mood } from '@/lib/body-api'
@@ -51,13 +52,15 @@ export default function CapturePanel({ controlRef, lines, scenario, system, orga
     const now = new Date(), ref = referenceLevels(now.getHours() + now.getMinutes() / 60)
     return moodFromInputs(eegIndices(live), cort === 'clock' ? ref.cortisol : cort, mel === 'clock' ? ref.melatonin : mel)
   }
+  const [aiAt, setAiAt] = useState<number | null>(null)
+  useConnectionReport('workersai', { status: busy === 'ai' ? 'connecting' : 'idle', detail: aiAt ? 'made an illustration this visit' : 'ready when you press generate (owner only)', lastAt: aiAt })
   const illustrate = async () => {
     setBusy('ai'); setNote('Generating with Cloudflare Workers AI… this takes a few seconds.'); setArt(null)
     try {
       const r = await fetch('/api/brain/illustrate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scenario, system, organ, style, mood: useMood ? moodNow() : null }) })
       const j = (await r.json()) as { image?: string; prompt?: string; error?: string }
       if (!r.ok || !j.image) setNote(j.error ?? 'The illustration could not be made.')
-      else { setArt({ src: j.image, prompt: j.prompt ?? '' }); setNote('') }
+      else { setArt({ src: j.image, prompt: j.prompt ?? '' }); setNote(''); setAiAt(Date.now()) }
     } catch { setNote('Could not reach the server.') }
     setBusy(null)
   }

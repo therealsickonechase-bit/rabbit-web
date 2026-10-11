@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { useConnectionReport } from '@/components/ConnectionsContext'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { BUILDS, SKIN_TONES, createAvatar, type Build, type Figure, type SkinTone } from '@/lib/avatar-body'
 import { MICHELLE_CREDIT, loadMichelle } from '@/lib/avatar-model'
@@ -53,9 +54,17 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
   const [wifi, setWifi] = useState<WifiFrame | null>(null)
   const [wifiState, setWifiState] = useState<'off' | 'connecting' | 'live' | 'quiet'>('off')
   const [claude, setClaude] = useState(false)
+  const [claudeAt, setClaudeAt] = useState<number | null>(null)
   const [speak, setSpeak] = useState(false)
   const [busy, setBusy] = useState(false)
   const [nogl, setNogl] = useState(false)
+
+  useConnectionReport('wifi', {
+    status: !wifiOn ? 'off' : wifiState === 'live' ? 'live' : wifiState === 'quiet' ? 'stale' : wifiState === 'connecting' ? 'connecting' : 'off',
+    detail: wifiOn && wifi ? `${describeWifi(wifi)}${wifi.simulated ? ' (simulated visitor)' : ''}` : wifiOn ? 'waiting for the bridge on this computer' : '',
+    lastAt: wifi?.t ?? null,
+  })
+  useConnectionReport('claude', { status: !claude ? 'off' : busy ? 'connecting' : 'idle', detail: claude ? (claudeAt ? 'on; answered an open question this visit' : 'on; used only for open questions') : '', lastAt: claudeAt })
 
   // everything the animation loop reads lives in refs, so it never restarts when the page re-renders
   const live$ = useRef(live), scenario$ = useRef(scenario), wifi$ = useRef<WifiFrame | null>(null), cfg = useRef({ mirror, hormones, cort, mel, wifiOn })
@@ -226,7 +235,7 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
           body: JSON.stringify({ question: cleaned.question, history, state: { emotion: c.emotion, intent: c.intent, scenario: c.scenario, source: c.source, cortisol: c.hormones.cortisol, melatonin: c.hormones.melatonin } }),
         })
         const j = (await r.json().catch(() => ({}))) as { answer?: string; error?: string }
-        if (r.ok && j.answer) { reply = j.answer; note = 'Claude, using your key; a model, not advice' }
+        if (r.ok && j.answer) { reply = j.answer; note = 'Claude, using your key; a model, not advice'; setClaudeAt(Date.now()) }
         else note = `${j.error ?? 'Claude could not answer'}; showing my built-in answer`
       } catch { note = 'Could not reach Claude; showing my built-in answer' }
       setBusy(false)

@@ -6,6 +6,8 @@ import LiveBridge from '@/components/LiveBridge'
 import CapturePanel from '@/components/CapturePanel'
 import HfGenerator from '@/components/HfGenerator'
 import SelfData from '@/components/SelfData'
+import ConnectionsPanel from '@/components/ConnectionsPanel'
+import { ConnectionsProvider } from '@/components/ConnectionsContext'
 import AvatarPanel from '@/components/AvatarPanel'
 import { eegIndices, type Baseline, type LiveFrame } from '@/lib/live-signals'
 import PathwayPanel from '@/components/PathwayPanel'
@@ -127,6 +129,7 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
   const age = lastAt && now ? Math.max(0, Math.round((now - new Date(lastAt).getTime()) / 1000)) : null
 
   return (
+    <ConnectionsProvider>
     <div className="space-y-4">
     <div className="grid xl:grid-cols-[1fr_340px] gap-4">
       <div className="space-y-3 min-w-0">
@@ -262,6 +265,11 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="My data portrait">
       <SelfData />
     </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Connections">
+      <ConnectionsPanel />
+    </section>
     </div>
+    </ConnectionsProvider>
   )
 }
