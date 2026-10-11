@@ -36,7 +36,7 @@ function WifiSkeleton({ pose }: { pose: { x: number; y: number; c: number }[] })
   )
 }
 
-export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null; scenario: ScenarioId }) {
+export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame | null; scenario: ScenarioId; scene?: string | null }) {
   const host = useRef<HTMLDivElement | null>(null)
   const [build, setBuild] = useState<Build | 'michelle'>('neutral')
   const [modelNote, setModelNote] = useState('')
@@ -70,6 +70,9 @@ export default function AvatarPanel({ live, scenario }: { live: LiveFrame | null
   const live$ = useRef(live), scenario$ = useRef(scenario), wifi$ = useRef<WifiFrame | null>(null), cfg = useRef({ mirror, hormones, cort, mel, wifiOn })
   const innerRef = useRef<InnerLife | null>(null), snap = useRef<MindSnapshot | null>(null), ctx = useRef<AvatarContext | null>(null), focus = useRef<{ organ: OrganId; until: number } | null>(null)
   useEffect(() => { live$.current = live; scenario$.current = scenario; cfg.current = { mirror, hormones, cort, mel, wifiOn } }, [live, scenario, mirror, hormones, cort, mel, wifiOn])
+
+  // a scene the wormhole matched (approved words only) enters her working memory as something she noticed
+  useEffect(() => { if (scene) innerRef.current?.notice(scene, 0.75) }, [scene])
 
   // WiFi sensing: frames from the bridge on this computer (loopback only). Each frame is validated; nothing is kept or sent anywhere.
   useEffect(() => {

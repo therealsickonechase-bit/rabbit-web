@@ -8,6 +8,7 @@ import HfGenerator from '@/components/HfGenerator'
 import SelfData from '@/components/SelfData'
 import ConnectionsPanel from '@/components/ConnectionsPanel'
 import TwinNetworkPanel from '@/components/TwinNetworkPanel'
+import WormholePanel from '@/components/WormholePanel'
 import { ConnectionsProvider } from '@/components/ConnectionsContext'
 import AvatarPanel from '@/components/AvatarPanel'
 import { eegIndices, type Baseline, type LiveFrame } from '@/lib/live-signals'
@@ -48,6 +49,7 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
   const [physio, setPhysio] = useState<Physio>(() => physioAt('healthy', 0))
   const physioRef = useRef<Physio>(physio)
   const [bridge, setBridge] = useState<LiveFrame | null>(null)
+  const [wormholeScene, setWormholeScene] = useState<string | null>(null)
   const [baseline, setBaseline] = useState<Baseline>({ emg: {} })
   const liveBuffer = useRef<LiveFrame[]>([])
   const liveRef = useRef<LiveFrame | null>(null)
@@ -256,7 +258,7 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
     </div>
 
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="Walking avatar">
-      <AvatarPanel live={bridge} scenario={scenario} />
+      <AvatarPanel live={bridge} scenario={scenario} scene={wormholeScene} />
     </section>
 
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="Qwen-Image generator">
@@ -265,6 +267,10 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
 
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="My data portrait">
       <SelfData />
+    </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Wormhole">
+      <WormholePanel live={bridge} onScene={setWormholeScene} />
     </section>
 
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="Twin network prototype">
