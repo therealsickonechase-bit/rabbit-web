@@ -2,13 +2,13 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireUser } from '@/lib/auth/session'
+import { requireMember } from '@/lib/auth/session'
 import { MAX_ACTIVE_KEYS, generateKey, hashKey } from '@/lib/mcp'
 
 export type CreateState = { key?: string; name?: string; error?: string }
 
 export async function createKey(_prev: CreateState, formData: FormData): Promise<CreateState> {
-  const user = await requireUser()
+  const user = await requireMember()
   const name = String(formData.get('name') ?? '').trim().slice(0, 60)
   if (!name) return { error: 'Give the key a name, for example "Claude Desktop".' }
   const scopes = formData.get('propose') ? ['read', 'propose'] : ['read']
@@ -25,7 +25,7 @@ export async function createKey(_prev: CreateState, formData: FormData): Promise
 }
 
 export async function revokeKey(formData: FormData) {
-  const user = await requireUser()
+  const user = await requireMember()
   const id = String(formData.get('key') ?? '')
   if (!/^[0-9a-f-]{36}$/i.test(id)) return
   await createAdminClient().from('api_keys').update({ revoked_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id).is('revoked_at', null)
