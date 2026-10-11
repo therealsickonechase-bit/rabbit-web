@@ -6,12 +6,15 @@ import { summarize } from '@/lib/summarize'
 import { AVATAR_ASK_LIMITS, buildAvatarSystem, cleanQuestion } from '@/lib/avatar-qa'
 import { INTENTS } from '@/lib/avatar-mind'
 import { SCENARIO_IDS } from '@/lib/neuro'
+import { askQwen, QwenError, QWEN_MODEL } from '@/lib/qwen'
 
 // Optional free conversation with the avatar, answered by Claude with the SIGNED-IN PERSON'S OWN Anthropic key (the one saved in Settings).
 // What is sent to Anthropic: the question the person typed, the last few lines of this chat, and the avatar's state as WORDS (mood, activity, hormone levels,
 // scenario). No EEG, heart or hormone numbers and nothing from the person's data portrait ever goes in. The built-in answers (no AI service) do not use this route.
 
 const body = z.object({
+  provider: z.enum(['anthropic', 'qwen']).default('anthropic'),
+  consent: z.boolean().default(false),
   question: z.string(),
   state: z.object({
     emotion: z.string().max(24), intent: z.enum(INTENTS), scenario: z.enum(SCENARIO_IDS as [string, ...string[]]),
@@ -35,12 +38,14 @@ export async function POST(request: Request) {
   if (!parsed.success) return no(400, 'That request was not understood.')
   const q = cleanQuestion(parsed.data.question)
   if (!q.ok) return no(400, q.error)
+  const useQwen = parsed.data.provider === 'qwen'
+  if (useQwen && !parsed.data.consent) return no(400, 'Approve sending this message to hosted Qwen first.')
 
   const now = Date.now(), list = (hits.get(user.id) ?? []).filter((t) => now - t < 3600_000)
   if (list.length >= HOURLY_CAP) return no(429, 'Hourly limit for avatar conversations reached. Try again later.')
 
   const { data: settings } = await createAdminClient().from('user_settings').select('anthropic_key_enc').eq('user_id', user.id).maybeSingle()
-  if (!settings?.anthropic_key_enc) return no(409, 'Add your Anthropic key in Settings to chat freely. The built-in answers still work.')
+  if (!useQwen && !settings?.anthropic_key_enc) return no(409, 'Add your Anthropic key in Settings to chat freely. The built-in answers still work.')
 
   list.push(now); hits.set(user.id, list)
   const s = parsed.data.state
@@ -49,10 +54,15 @@ export async function POST(request: Request) {
   const prompt = `${chat ? `Conversation so far:\n${chat}\n\n` : ''}Person: ${q.question}\nAvatar:`
 
   try {
-    const text = await summarize(await decryptSecret(settings.anthropic_key_enc), prompt, system, 400)
-    return Response.json({ answer: text.trim().slice(0, 1500) }, { headers: { 'Cache-Control': 'no-store' } })
+    const text = useQwen ? await askQwen(prompt, system, 400)
+      : await summarize(await decryptSecret(settings!.anthropic_key_enc), prompt, system, 400)
+    return Response.json({ answer: text.trim().slice(0, 1500), model: useQwen ? QWEN_MODEL : 'Claude' }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (e) {
     const m = e instanceof Error ? e.message : ''
+    if (useQwen) {
+      console.error(JSON.stringify({ event: 'avatar_qwen_failed', type: e instanceof Error ? e.name : 'Error' }))
+      return no(e instanceof QwenError ? e.status : 502, e instanceof QwenError ? e.message : 'Hosted Qwen could not answer. No other provider was contacted.')
+    }
     if (/credit balance/i.test(m)) return no(402, 'Your Anthropic account has no credits.')
     if (/Anthropic API 40[13]/.test(m)) return no(401, 'Anthropic rejected your saved key. Replace it in Settings.')
     if (/Anthropic API 429/.test(m)) return no(429, 'Anthropic is rate limiting this key. Wait a minute.')

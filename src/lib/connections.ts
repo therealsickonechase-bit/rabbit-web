@@ -2,7 +2,7 @@
 // anything leaves this computer because of it, and how to start it. Pure functions and fixed metadata, tested; the components report live status into it.
 
 export type ConnStatus = 'off' | 'connecting' | 'live' | 'stale' | 'idle' | 'error'
-export type ConnId = 'openbci' | 'selfdata' | 'wormhole' | 'wifi' | 'relay' | 'qwen' | 'workersai' | 'claude' | 'server' | 'supabase'
+export type ConnId = 'openbci' | 'selfdata' | 'wormhole' | 'wifi' | 'relay' | 'qwen' | 'qwenchat' | 'workersai' | 'claude' | 'server' | 'supabase'
 
 export interface ConnMeta {
   id: ConnId
@@ -56,7 +56,12 @@ export const CONNECTIONS: ConnMeta[] = [
   {
     id: 'claude', name: 'Claude conversation (your own key)', where: 'RabbitOS server, then Anthropic, with the key saved in your Settings',
     uses: 'Lets the avatar hold a free conversation about open questions.',
-    leaves: 'The question you type, the last few chat lines, and the avatar’s state as words (mood, activity, hormone levels, scenario).', start: 'Tick "also let Claude answer open questions" under the avatar',
+    leaves: 'The question you type, the last few chat lines, and the avatar’s state as words (mood, activity, hormone levels, scenario).', start: 'Choose Claude as the open-question provider under the avatar',
+  },
+  {
+    id: 'qwenchat', name: 'Hosted Qwen3 conversation', where: 'RabbitOS server, then Cloudflare Workers AI through the shared Qwen gateway',
+    uses: 'Answers avatar open questions; built-in body and introspection answers remain local.',
+    leaves: 'Only your approved question, recent conversation and state words. No raw EEG, wearable or lab values. Hosted inference is separate from local Ollama.', start: 'Choose Hosted Qwen3 and approve each open question under the avatar',
   },
   {
     id: 'server', name: 'RabbitOS server and database', where: 'app.rabbitsoftware.io (Cloudflare Worker, Supabase)',

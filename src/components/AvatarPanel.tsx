@@ -53,7 +53,9 @@ export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame
   const [wifiOn, setWifiOn] = useState(false)
   const [wifi, setWifi] = useState<WifiFrame | null>(null)
   const [wifiState, setWifiState] = useState<'off' | 'connecting' | 'live' | 'quiet'>('off')
-  const [claude, setClaude] = useState(false)
+  const [chatProvider, setChatProvider] = useState<'builtin' | 'anthropic' | 'qwen'>('builtin')
+  const [qwenConsent, setQwenConsent] = useState(false)
+  const [qwenAt, setQwenAt] = useState<number | null>(null)
   const [claudeAt, setClaudeAt] = useState<number | null>(null)
   const [speak, setSpeak] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -64,7 +66,8 @@ export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame
     detail: wifiOn && wifi ? `${describeWifi(wifi)}${wifi.simulated ? ' (simulated visitor)' : ''}` : wifiOn ? 'waiting for the bridge on this computer' : '',
     lastAt: wifi?.t ?? null,
   })
-  useConnectionReport('claude', { status: !claude ? 'off' : busy ? 'connecting' : 'idle', detail: claude ? (claudeAt ? 'on; answered an open question this visit' : 'on; used only for open questions') : '', lastAt: claudeAt })
+  useConnectionReport('claude', { status: chatProvider !== 'anthropic' ? 'off' : busy ? 'connecting' : 'idle', detail: chatProvider === 'anthropic' ? (claudeAt ? 'on; answered an open question this visit' : 'on; used only for open questions') : '', lastAt: claudeAt })
+  useConnectionReport('qwenchat', { status: chatProvider !== 'qwen' ? 'off' : busy ? 'connecting' : 'idle', detail: chatProvider === 'qwen' ? 'Cloudflare-hosted; consent required for each open question' : '', lastAt: qwenAt })
 
   // everything the animation loop reads lives in refs, so it never restarts when the page re-renders
   const live$ = useRef(live), scenario$ = useRef(scenario), wifi$ = useRef<WifiFrame | null>(null), cfg = useRef({ mirror, hormones, cort, mel, wifiOn })
@@ -219,33 +222,51 @@ export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame
   }, [build, tone])
 
   const ask = useCallback(async (text: string) => {
+    if (busy) return
     const cleaned = cleanQuestion(text)
     if (!cleaned.ok) { setMsgs((m) => [...m, { who: 'avatar', text: cleaned.error }]); return }
     const c = ctx.current, life = innerRef.current
-    setMsgs((m) => [...m, { who: 'you', text: cleaned.question }]); setQ('')
     if (!c) return
     life?.hear(cleaned.question)
     const intro = life?.introspect(cleaned.question) ?? null           // questions about its own mind are answered from its inner life first
     const local: Answer = intro ? { text: intro.text, topic: intro.topic } : answer(cleaned.question, c)
+    const openQuestion = !intro && (local.topic === 'unknown' || local.topic === 'mind' || local.topic === 'help')
+    if (chatProvider === 'qwen' && openQuestion && !qwenConsent) {
+      setMsgs((m) => [...m, { who: 'avatar', text: 'Approve sending this open question to hosted Qwen, then ask again. Nothing was sent.' }])
+      return
+    }
+    setMsgs((m) => [...m, { who: 'you', text: cleaned.question }]); setQ('')
+    setQwenConsent(false)
     if (local.organ) { focus.current = { organ: local.organ, until: performance.now() + 9000 }; life?.attendOrgan(ORGANS[local.organ].name) }
     let reply = local.text, note = intro ? 'from my inner life: a simulation, not proof of consciousness' : local.evidence ? `evidence: ${local.evidence}` : 'from my body model'
-    if (claude && !intro && (local.topic === 'unknown' || local.topic === 'mind' || local.topic === 'help')) {
+    if (chatProvider !== 'builtin' && openQuestion) {
       setBusy(true)
       try {
         const history = msgs.slice(-6).map((m) => ({ role: m.who, text: m.text.slice(0, 1200) }))
         const r = await fetch('/api/avatar/ask', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: cleaned.question, history, state: { emotion: c.emotion, intent: c.intent, scenario: c.scenario, source: c.source, cortisol: c.hormones.cortisol, melatonin: c.hormones.melatonin } }),
+          signal: AbortSignal.timeout(120_000),
+          body: JSON.stringify({ provider: chatProvider, consent: chatProvider === 'qwen' && qwenConsent, question: cleaned.question, history, state: { emotion: c.emotion, intent: c.intent, scenario: c.scenario, source: c.source, cortisol: c.hormones.cortisol, melatonin: c.hormones.melatonin } }),
         })
         const j = (await r.json().catch(() => ({}))) as { answer?: string; error?: string }
-        if (r.ok && j.answer) { reply = j.answer; note = 'Claude, using your key; a model, not advice'; setClaudeAt(Date.now()) }
-        else note = `${j.error ?? 'Claude could not answer'}; showing my built-in answer`
-      } catch { note = 'Could not reach Claude; showing my built-in answer' }
+        if (r.ok && j.answer) {
+          reply = j.answer
+          note = chatProvider === 'qwen' ? 'Cloudflare-hosted Qwen3; a model, not advice' : 'Claude, using your key; a model, not advice'
+          if (chatProvider === 'qwen') setQwenAt(Date.now())
+          else setClaudeAt(Date.now())
+        } else {
+          reply = chatProvider === 'qwen' ? (j.error || 'Hosted Qwen could not answer.') : reply
+          note = chatProvider === 'qwen' ? 'Hosted request failed; no other provider was contacted' : `${j.error ?? 'Claude could not answer'}; showing my built-in answer`
+        }
+      } catch {
+        if (chatProvider === 'qwen') reply = 'Could not reach hosted Qwen. Retry later with fresh consent.'
+        note = chatProvider === 'qwen' ? 'No other provider was contacted' : 'Could not reach Claude; showing my built-in answer'
+      }
       setBusy(false)
     }
     setMsgs((m) => [...m, { who: 'avatar', text: reply, note }])
     if (speak && 'speechSynthesis' in window) { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(reply.slice(0, 600))) }
-  }, [claude, msgs, speak])
+  }, [chatProvider, qwenConsent, busy, msgs, speak])
 
   const eegBars = hud ? (Object.entries(hud.eeg) as [string, number][]) : []
   const bar = (v: number, color: string) => <span className="block h-1.5 rounded-full" style={{ width: `${Math.round(v * 100)}%`, background: color }} />
@@ -329,11 +350,20 @@ export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame
             </div>
             <div className="flex flex-wrap gap-1.5">{SUGGESTED_QUESTIONS.map((s) => <button key={s} className="text-[11px] rounded-full border border-line px-2 py-0.5 text-muted hover:text-fg hover:border-accent" onClick={() => void ask(s)}>{s}</button>)}</div>
             <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void ask(q) }}>
-              <input value={q} onChange={(e) => setQ(e.target.value)} maxLength={400} placeholder="Ask the avatar anything about its body or mind…" aria-label="Ask the avatar" className="flex-1 rounded border border-line bg-canvas px-2 py-1 text-xs" />
+              <input value={q} disabled={busy} onChange={(e) => { setQ(e.target.value); setQwenConsent(false) }} maxLength={400} placeholder="Ask the avatar anything about its body or mind…" aria-label="Ask the avatar" className="flex-1 rounded border border-line bg-canvas px-2 py-1 text-xs" />
               <button className={btn} disabled={busy || !q.trim()}>{busy ? '…' : 'Ask'}</button>
             </form>
             <div className="flex flex-wrap gap-4 text-[11px] text-muted">
-              <label className="flex items-center gap-1"><input type="checkbox" checked={claude} onChange={(e) => setClaude(e.target.checked)} /> also let Claude answer open questions (your own key in Settings; only fixed words about its state are sent)</label>
+              <label className="flex items-center gap-1">Open-question provider <select disabled={busy} value={chatProvider} onChange={(e) => {
+                const value = e.target.value
+                if (value !== 'builtin' && value !== 'anthropic' && value !== 'qwen') return
+                setChatProvider(value); setMsgs([]); setQ(''); setQwenConsent(false)
+              }}>
+                <option value="builtin">Built-in body model (local)</option>
+                <option value="anthropic">Claude (your key in Settings)</option>
+                <option value="qwen">Hosted Qwen3 / Cloudflare</option>
+              </select></label>
+              {chatProvider === 'qwen' && <label className="flex items-center gap-1"><input type="checkbox" disabled={busy} checked={qwenConsent} onChange={(e) => setQwenConsent(e.target.checked)} /> For this message, I approve sending my question, recent chat and avatar state words to Cloudflare-hosted Qwen. No personal health data or automatic provider fallback.</label>}
               <label className="flex items-center gap-1"><input type="checkbox" checked={speak} onChange={(e) => setSpeak(e.target.checked)} /> speak the answers</label>
             </div>
           </div>

@@ -20,6 +20,27 @@ research; every agent write is signed and recorded in a hash-linked audit trail.
 
 ## Commands
 
+### Hosted Qwen chat
+
+Ask RabbitOS and avatar open questions offer Cloudflare-hosted Qwen3 alongside
+the existing personal-key Claude option. Qwen uses the fixed shared gateway
+in `rabbitsoftware-cloudflare/workers/qwen`; no local Ollama installation or
+personal provider key is needed. Signed-in access is still required. Approve
+each message and never include private health data. Qwen failures do not call
+Claude automatically. Built-in avatar body/introspection answers remain local.
+
+Ask RabbitOS stores approved questions and answers in account-owned threads
+and records the model used; avatar conversations stay in the current tab.
+The shared gateway enforces daily/hourly attempt quotas (including failed
+attempts). RabbitOS server requests share their outbound-IP quota, in addition
+to the console's existing limits. No schema migration is required.
+
+```powershell
+node --test tests\qwen.test.mjs tests\ask.test.mjs tests\avatar-qa.test.mjs tests\connections.test.mjs
+npx tsc --noEmit
+npm run build:vinext
+```
+
 ```powershell
 npm install
 npm run dev            # http://localhost:3000 (needs .env.local, see below)
