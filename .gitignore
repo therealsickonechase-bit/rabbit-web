@@ -46,3 +46,7 @@ next-env.d.ts
 
 # local Workers secrets
 .dev.vars*
+
+# local tools and editor workspace (not part of the app)
+/gprobe/
+/supabase/rabbit-web.code-workspace
