@@ -88,6 +88,8 @@ export class InnerLife {
     this.propose('question', `Someone asked me: "${question.slice(0, 90)}"`, 0.95)
     this.drives.curiosity = clamp(this.drives.curiosity - 0.25)
   }
+  /** Something worth noticing happened outside the avatar (for example a message from another twin). */
+  notice(text: string, salience = 0.7) { this.propose('novelty', text.slice(0, 160), salience) }
   /** Attention was drawn to an organ (for example by a question about it). */
   attendOrgan(name: string) { this.propose('organ', `My attention moves to my ${name.toLowerCase()}.`, 0.8) }
 

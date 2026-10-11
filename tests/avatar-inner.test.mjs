@@ -85,3 +85,13 @@ test('a person sensed by WiFi changes her mood, and arriving, leaving and moving
   assert.match(texts, /come into the room/); assert.match(texts, /moving around|empty/); assert.match(texts, /simulated visitor/)
   assert.ok(snap)
 })
+
+test('something noticed from outside (another twin) can take her attention and is remembered', () => {
+  const inner = new InnerLife(2), mind = new Mind(2)
+  for (let t = 0; t < 5; t += 0.1) inner.step(0.1, mind.step(0.1, calm, inner.biases()), inputs(t))
+  inner.notice('Twin B told me: I feel anxious and I am pacing.', 0.8)
+  let snap
+  for (let t = 5; t < 12; t += 0.1) snap = inner.step(0.1, mind.step(0.1, calm, inner.biases()), inputs(t))
+  assert.ok(snap.narration.some((n) => /Twin B told me/.test(n)))
+  assert.ok(inner.episodes.some((e) => /Twin B told me/.test(e.text)))
+})

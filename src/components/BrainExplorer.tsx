@@ -7,6 +7,7 @@ import CapturePanel from '@/components/CapturePanel'
 import HfGenerator from '@/components/HfGenerator'
 import SelfData from '@/components/SelfData'
 import ConnectionsPanel from '@/components/ConnectionsPanel'
+import TwinNetworkPanel from '@/components/TwinNetworkPanel'
 import { ConnectionsProvider } from '@/components/ConnectionsContext'
 import AvatarPanel from '@/components/AvatarPanel'
 import { eegIndices, type Baseline, type LiveFrame } from '@/lib/live-signals'
@@ -264,6 +265,10 @@ export default function BrainExplorer({ initial, graph, chemicals, crisprGenes =
 
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="My data portrait">
       <SelfData />
+    </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Twin network prototype">
+      <TwinNetworkPanel />
     </section>
 
     <section className="bg-surface border border-line rounded-lg p-4" aria-label="Connections">
