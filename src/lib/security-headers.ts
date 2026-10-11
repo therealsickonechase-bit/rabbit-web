@@ -1,10 +1,10 @@
 // Security headers for every response the console sends. Pure data, tested in tests/security-headers.test.mjs; next.config.ts applies it.
 //
-// Enforced now: HSTS, nosniff, no framing, referrer policy, permissions policy.
-// Content-Security-Policy is sent as Report-Only first: the app uses inline scripts (the page payload), Supabase, Hugging Face, GitHub,
-// Cloudflare Turnstile and WebSockets to services on the visitor's own computer, and the signed-in pages cannot be exercised automatically,
-// so violations are shown in the browser console instead of breaking anything. When the console is quiet while using Brain Network, sign-in
-// and the guide, rename 'Content-Security-Policy-Report-Only' to 'Content-Security-Policy' (see CSP_HEADER).
+// Enforced everywhere: HSTS, nosniff, no framing, referrer policy, permissions policy.
+// Content-Security-Policy: ENFORCED on the public pages (ENFORCED_CSP_PATHS), which were loaded in a real browser and produced no violations,
+// and Report-Only everywhere else: the signed-in pages use inline scripts, Supabase, Hugging Face, GitHub and WebSockets to services on the
+// visitor's own computer and cannot be exercised automatically, so violations are shown in the browser console instead of breaking anything.
+// When the console stays quiet while using Brain Network, add the remaining paths to ENFORCED_CSP_PATHS or switch CSP_HEADER.
 
 export interface HeaderRule { key: string; value: string }
 
@@ -12,7 +12,8 @@ export interface HeaderRule { key: string; value: string }
 export const CSP_DIRECTIVES: Record<string, string[]> = {
   'default-src': ["'self'"],
   // inline scripts: the page payload; Turnstile: the sign-in check; wasm-unsafe-eval: WebAssembly (3D and signal processing)
-  'script-src': ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", 'https://challenges.cloudflare.com'],
+  // static.cloudflareinsights.com: Cloudflare Web Analytics, which Cloudflare adds to every page (found by loading the live pages in a browser)
+  'script-src': ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", 'https://challenges.cloudflare.com', 'https://static.cloudflareinsights.com'],
   'style-src': ["'self'", "'unsafe-inline'"],
   // illustrations arrive as data: URLs, pictures from the Hugging Face Space as https, exports as blob:
   'img-src': ["'self'", 'data:', 'blob:', 'https:'],
@@ -25,6 +26,7 @@ export const CSP_DIRECTIVES: Record<string, string[]> = {
     'https://raw.githubusercontent.com',                       // the Michelle avatar model
     'ws://127.0.0.1:*', 'ws://localhost:*',                    // EEG bridge, data hub, WiFi bridge, twin relay on this computer
     'wss:',                                                    // a twin relay behind TLS
+    'https://cloudflareinsights.com',                          // where the Web Analytics beacon reports
   ],
   'frame-src': ['https://challenges.cloudflare.com'],
   'worker-src': ["'self'", 'blob:'],
@@ -39,6 +41,9 @@ export const cspValue = (d: Record<string, string[]> = CSP_DIRECTIVES) => Object
 /** Report-Only for now. Change to 'Content-Security-Policy' once the browser console shows no violations. */
 export const CSP_HEADER = 'Content-Security-Policy-Report-Only'
 
+/** Public pages where the CSP is enforced (not just reported). Each was loaded in a headless browser with no violations. */
+export const ENFORCED_CSP_PATHS = ['/login', '/signup', '/guide', '/guest', '/auth/confirm']
+
 export const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()'
 
 export function securityHeaders(): HeaderRule[] {
@@ -50,6 +55,14 @@ export function securityHeaders(): HeaderRule[] {
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     { key: 'Permissions-Policy', value: PERMISSIONS_POLICY },
     { key: CSP_HEADER, value: cspValue() },
+  ]
+}
+
+/** What next.config.ts applies: everything everywhere, plus the enforced CSP on the public pages. (Both CSP headers can be present on those pages; they carry the same policy.) */
+export function nextHeaderRules(): { source: string; headers: HeaderRule[] }[] {
+  return [
+    { source: '/:path*', headers: securityHeaders() },
+    ...ENFORCED_CSP_PATHS.map((source) => ({ source, headers: [{ key: 'Content-Security-Policy', value: cspValue() }] })),
   ]
 }
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { CSP_DIRECTIVES, CSP_HEADER, cspValue, securityHeaders, staticHeadersFile } from '../src/lib/security-headers.ts'
+import { CSP_DIRECTIVES, CSP_HEADER, ENFORCED_CSP_PATHS, cspValue, nextHeaderRules, securityHeaders, staticHeadersFile } from '../src/lib/security-headers.ts'
 
 const get = (name) => securityHeaders().find((h) => h.key === name)?.value
 
@@ -28,7 +28,8 @@ test('the CSP blocks plugins, framing and foreign form posts, and never allows a
   assert.match(csp, /form-action 'self'/)
   const scripts = CSP_DIRECTIVES['script-src']
   assert.ok(!scripts.includes('*') && !scripts.includes('https:') && !scripts.includes("'unsafe-eval'"))
-  assert.deepEqual(scripts.filter((s) => s.startsWith('http')), ['https://challenges.cloudflare.com'])
+  // the only third-party script hosts: the sign-in check and Cloudflare's own analytics
+  assert.deepEqual(scripts.filter((s) => s.startsWith('http')), ['https://challenges.cloudflare.com', 'https://static.cloudflareinsights.com'])
 })
 
 test('the CSP still allows what the features need', () => {
@@ -39,10 +40,22 @@ test('the CSP still allows what the features need', () => {
   assert.ok(!cspValue().includes('upgrade-insecure-requests'))      // would break ws://127.0.0.1 from an https page
 })
 
-test('the CSP is report-only until deliberately switched', () => {
+test('the CSP is report-only everywhere and enforced only on the listed public pages', () => {
   assert.equal(CSP_HEADER, 'Content-Security-Policy-Report-Only')
   assert.ok(get('Content-Security-Policy-Report-Only'))
-  assert.equal(get('Content-Security-Policy'), undefined)
+  assert.equal(get('Content-Security-Policy'), undefined)             // never enforced by the catch-all rule
+  const rules = nextHeaderRules()
+  assert.equal(rules[0].source, '/:path*')
+  const enforced = rules.slice(1)
+  assert.deepEqual(enforced.map((r) => r.source), ENFORCED_CSP_PATHS)
+  for (const r of enforced) { assert.equal(r.headers.length, 1); assert.equal(r.headers[0].key, 'Content-Security-Policy'); assert.equal(r.headers[0].value, cspValue()) }
+  // the signed-in pages stay report-only until they are exercised
+  for (const p of ['/', '/brain', '/downloads', '/twin', '/settings', '/api/health']) assert.ok(!ENFORCED_CSP_PATHS.includes(p), p)
+})
+
+test('the CSP allows Cloudflare Web Analytics, which Cloudflare injects into every page (found with a real browser)', () => {
+  assert.ok(CSP_DIRECTIVES['script-src'].includes('https://static.cloudflareinsights.com'))
+  assert.ok(CSP_DIRECTIVES['connect-src'].includes('https://cloudflareinsights.com'))
 })
 
 test('public/_headers is in step with the definition', () => {
