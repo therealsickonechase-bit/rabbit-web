@@ -53,10 +53,12 @@ test('signup email links to our confirm page with an encoded token and no raw HT
   assert.ok(!mail.html.includes('"<d'), 'quotes must be escaped in the HTML')
 })
 
-test('recovery email sends people to the reset-password page after confirming', () => {
+test('recovery email just signs the person in (there are no passwords and no reset-password page)', () => {
   const mail = renderAuthEmail({ type: 'recovery', appUrl: 'https://app.rabbitsoftware.io/console', tokenHash: 'x' })
-  assert.ok(mail.text.includes('https://app.rabbitsoftware.io/console/auth/confirm?token_hash=x&type=recovery&next=%2Freset-password'))
-  assert.match(mail.html, /Reset password/)
+  assert.ok(mail.text.includes('https://app.rabbitsoftware.io/console/auth/confirm?token_hash=x&type=recovery&next=%2F'))
+  assert.ok(!mail.text.includes('reset-password'))
+  assert.match(mail.html, /Sign in/)
+  assert.ok(!/Reset password/i.test(mail.html))
 })
 
 test('reauthentication email shows the code and no link', () => {
