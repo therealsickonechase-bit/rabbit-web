@@ -5,7 +5,7 @@ import { HF_SPACE_DEFAULT, validSpaceId } from '@/lib/hf-generator'
 import { eegIndices, isFresh, type LiveFrame } from '@/lib/live-signals'
 import { HUB_URL } from '@/lib/self-data'
 import {
-  DEFAULT_WEIGHTS, HORMONES, ProvenanceLog, RATINGS, affectFromBands, buildScene, confidence, match, minutesOf, parseMoments, refine, scenePrompt,
+  DEFAULT_WEIGHTS, HORMONES, ProvenanceLog, RATINGS, affectFromEeg, buildScene, confidence, match, minutesOf, parseMoments, parseRefinement, refine, scenePrompt,
   type Hormone, type Level3, type Moment, type Rating, type Refinement, type StateVector,
 } from '@/lib/wormhole'
 
@@ -15,7 +15,8 @@ import {
 // when you press "Paint this scene", a short prompt made only of approved words.
 
 const LOCAL = /^ws:\/\/(127\.0\.0\.1|localhost|\[::1\]):(\d{4,5})\/?$/
-type Pick = 'unknown' | 'low' | 'medium' | 'high'
+const STORE_KEY = 'rabbitos-wormhole-v1'
+type Pick ='unknown' | 'low' | 'medium' | 'high'
 const RATING_VALUE: Record<Exclude<Pick, 'unknown'>, number> = { low: 0.15, medium: 0.5, high: 0.85 }
 const STATE_LABEL: Record<string, string> = { none: 'no reconstruction', weak: 'weak', plausible: 'plausible', strong: 'strong' }
 
@@ -28,6 +29,8 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
   const [horm, setHorm] = useState<Record<Hormone, 'unknown' | Level3>>({ cortisol: 'unknown', melatonin: 'unknown' })
   const [useEeg, setUseEeg] = useState(true)
   const [useTime, setUseTime] = useState(true)
+  const [useDay, setUseDay] = useState(true)
+  const [today, setToday] = useState<Record<string, Level3>>({})
   const [words, setWords] = useState<string[]>([])
   const [word, setWord] = useState('')
   const [ref, setRef] = useState<Refinement>({ weights: DEFAULT_WEIGHTS, boosts: {} })
@@ -47,6 +50,29 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
     setLog((l) => [...l, { seq: e.seq, kind: e.kind, detail: e.detail, hash: e.hash }].slice(-30))
   }, [])
 
+  // weights, boosts and the provenance log are kept in this browser only, so a closed tab does not forget the feedback. A saved log whose chain does not verify is discarded.
+  const loaded = useRef(false)
+  useEffect(() => {
+    void (async () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') as { ref?: unknown; log?: unknown } | null
+        if (saved) {
+          setRef(parseRefinement(saved.ref))
+          if (await prov.current.restore(saved.log)) setLog(prov.current.entries.slice(-30).map((e) => ({ seq: e.seq, kind: e.kind, detail: e.detail, hash: e.hash })))
+        }
+      } catch { /* storage unavailable or damaged: start fresh */ }
+      loaded.current = true
+    })()
+  }, [])
+  useEffect(() => {
+    if (!loaded.current) return
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ ref, log: prov.current.entries.slice(-200) })) } catch { /* storage unavailable */ }
+  }, [ref, log])
+  const forget = () => {
+    try { localStorage.removeItem(STORE_KEY) } catch { /* ignore */ }
+    prov.current = new ProvenanceLog(); setLog([]); setLogOk(''); setRef({ weights: DEFAULT_WEIGHTS, boosts: {} })
+  }
+
   const disconnect = () => { ws.current?.close(); ws.current = null; setStatus('off') }
   const connect = () => {
     if (!LOCAL.test(url)) { setNote('The hub address must be on this computer, like ws://127.0.0.1:8766.'); return }
@@ -56,7 +82,7 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
       s.onopen = () => setStatus('live')
       s.onmessage = (e) => {
         if (typeof e.data !== 'string' || e.data.length > 400_000) return
-        try { const m = parseMoments(JSON.parse(e.data)); if (m) { setMoments(m.moments); setApproved(m.approved) } } catch { /* not a moments message */ }
+        try { const m = parseMoments(JSON.parse(e.data)); if (m) { setMoments(m.moments); setApproved(m.approved); setToday(m.today) } } catch { /* not a moments message */ }
       }
       s.onerror = () => { setStatus('error'); setNote('Could not reach the hub. Start it with: python -m selfdata serve') }
       s.onclose = () => setStatus((st) => (st === 'error' ? st : 'off'))
@@ -65,23 +91,23 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
   useEffect(() => () => ws.current?.close(), [])
 
   // the present, as far as it is known: unknown parts are left out of the comparison
-  const eegArousal = useMemo(() => {
+  const eegAffect = useMemo(() => {
     if (!useEeg || !isFresh(live, clock) || !live.eeg) return null
     const idx = eegIndices(live)
     if (!idx.channels) return null
     const sum = { delta: 0, theta: 0, alpha: 0, beta: 0, gamma: 0 }; let n = 0
     for (const bands of Object.values(live.eeg)) { if (!(['delta', 'theta', 'alpha', 'beta', 'gamma'] as const).every((b) => typeof bands[b] === 'number')) continue; for (const b of Object.keys(sum) as (keyof typeof sum)[]) sum[b] += bands[b]!; n++ }
-    return n ? affectFromBands({ delta: sum.delta / n, theta: sum.theta / n, alpha: sum.alpha / n, beta: sum.beta / n, gamma: sum.gamma / n }).arousal ?? null : null
+    return n ? affectFromEeg({ delta: sum.delta / n, theta: sum.theta / n, alpha: sum.alpha / n, beta: sum.beta / n, gamma: sum.gamma / n }, idx) : null
   }, [live, useEeg, clock])
 
   const state: StateVector = useMemo(() => {
     const ratings: StateVector['ratings'] = {}
     for (const k of RATINGS) if (feel[k] !== 'unknown') ratings[k] = RATING_VALUE[feel[k] as Exclude<Pick, 'unknown'>]
-    if (feel.arousal === 'unknown' && eegArousal !== null) ratings.arousal = eegArousal
+    if (eegAffect) for (const k of RATINGS) if (feel[k] === 'unknown' && eegAffect[k] !== undefined) ratings[k] = eegAffect[k]      // what you say outranks what the EEG suggests
     const hormones: StateVector['hormones'] = {}
     for (const k of HORMONES) if (horm[k] !== 'unknown') hormones[k] = horm[k] as Level3
-    return { ratings, minutes: useTime ? minutesOf(new Date(clock)) : null, hormones, day: {}, guidance: words }
-  }, [feel, horm, eegArousal, useTime, words, clock])
+    return { ratings, minutes: useTime ? minutesOf(new Date(clock)) : null, hormones, day: useDay ? today : {}, guidance: words }
+  }, [feel, horm, eegAffect, useTime, useDay, today, words, clock])
 
   const matches = useMemo(() => match(state, moments, ref.weights, ref.boosts, 5), [state, moments, ref])
   const conf = useMemo(() => confidence(matches, moments.length), [matches, moments.length])
@@ -136,8 +162,9 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
       <div className="grid md:grid-cols-2 gap-4 text-xs">
         <div className="space-y-2">
           <p className="font-medium">Right now</p>
-          <label className="flex items-center gap-1"><input type="checkbox" checked={useEeg} onChange={(e) => setUseEeg(e.target.checked)} />Use live EEG for arousal {eegArousal !== null ? <span className="text-muted">(bridge live, rough indicator)</span> : <span className="text-muted">(no live EEG)</span>}</label>
+          <label className="flex items-center gap-1"><input type="checkbox" checked={useEeg} onChange={(e) => setUseEeg(e.target.checked)} />Use live EEG for arousal {eegAffect ? <span className="text-muted">(bridge live; arousal, energy and a faint valence hint, all rough)</span> : <span className="text-muted">(no live EEG)</span>}</label>
           <label className="flex items-center gap-1"><input type="checkbox" checked={useTime} onChange={(e) => setUseTime(e.target.checked)} />Use the time of day</label>
+          <label className="flex items-center gap-1"><input type="checkbox" checked={useDay} onChange={(e) => setUseDay(e.target.checked)} />Use how my body metrics read lately {Object.keys(today).length ? <span className="text-muted">({Object.entries(today).map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`).slice(0, 4).join(', ')})</span> : <span className="text-muted">(none from the hub yet)</span>}</label>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1">
             {RATINGS.map((k) => (
               <label key={k} className="flex items-center justify-between gap-2 capitalize">{k}
@@ -188,7 +215,7 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
         <div className="mt-2 space-y-1">
           <button className={btn} onClick={() => void verify()}>Verify chain</button> <span className="text-muted">{logOk}</span>
           <ul className="font-mono space-y-0.5">{log.map((e) => <li key={e.seq}>{e.seq} {e.kind} {e.hash.slice(0, 10)} <span className="text-muted">{e.detail}</span></li>)}</ul>
-          <p className="text-muted">Ids, counts and approved words only. Kept in this tab; closing it clears it.</p>
+          <p className="text-muted">Ids, counts and approved words only. Saved in this browser (with your feedback weights) so it survives closing the tab. <button className="underline" onClick={forget}>Forget it all</button></p>
         </div>
       </details>
     </section>

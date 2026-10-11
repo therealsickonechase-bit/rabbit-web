@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { DEFAULT_WEIGHTS, ProvenanceLog, affectFromBands, buildScene, confidence, match, parseMoments, refine, scenePrompt } from '../src/lib/wormhole.ts'
+import { DEFAULT_WEIGHTS, ProvenanceLog, affectFromBands, affectFromEeg, buildScene, confidence, match, parseMoments, parseRefinement, refine, scenePrompt } from '../src/lib/wormhole.ts'
 
 const mk = (id, over = {}) => ({ id, date: '2026-03-01', time: '08:00', title: 'T ' + id, tags: [], ratings: {}, hormones: {}, day: {}, ...over })
 const lake = mk('m1', { time: '08:10', tags: ['lake', 'sunrise', 'calm'], ratings: { arousal: 0.3, valence: 0.8 }, hormones: { cortisol: 'low', melatonin: 'high' }, day: { sleep_hours: 'high' } })
@@ -87,6 +87,43 @@ test('EEG bands give a rough arousal and nothing when empty', () => {
   assert.ok(affectFromBands({ delta: 0.1, theta: 0.1, alpha: 0.1, beta: 0.5, gamma: 0.2 }).arousal > 0.7)
   assert.ok(affectFromBands({ delta: 0.4, theta: 0.2, alpha: 0.35, beta: 0.05, gamma: 0 }).arousal < 0.2)
   assert.deepEqual(affectFromBands({ delta: 0, theta: 0, alpha: 0, beta: 0, gamma: 0 }), {})
+})
+
+test('richer EEG features stay in range and valence is only a faint hint', () => {
+  const b = { delta: 0.1, theta: 0.1, alpha: 0.2, beta: 0.4, gamma: 0.2 }
+  const a = affectFromEeg(b, { engagement: 1.3, frontalAsymmetry: 5 })
+  assert.equal(a.energy, 1)
+  assert.ok(a.valence <= 0.7 && a.valence >= 0.3)
+  assert.equal(affectFromEeg(b, { engagement: null, frontalAsymmetry: null }).valence, undefined)
+})
+
+test('today comes from the hub message and is sanitised', () => {
+  const r = parseMoments({ v: 1, type: 'moments', moments: [], approved: [], today: { date: '2026-10-09', day: { sleep_hours: 'low', 'bad!': 'high', hrv_ms: 'huge' } } })
+  assert.deepEqual(r.today, { sleep_hours: 'low' })
+  assert.deepEqual(parseMoments({ v: 1, type: 'moments', moments: [] }).today, {})
+})
+
+test('saved weights are sanitised and renormalised', () => {
+  const r = parseRefinement({ weights: { affect: 5, time: 'x', tags: -1 }, boosts: { m1: 9, bad: 0.1, m2: -9 } })
+  assert.ok(Math.abs(Object.values(r.weights).reduce((a, b) => a + b, 0) - 1) < 1e-9)
+  assert.deepEqual(r.boosts, { m1: 0.2, m2: -0.2 })
+  assert.deepEqual(parseRefinement(null).weights, DEFAULT_WEIGHTS)
+})
+
+test('a saved log restores only if its chain verifies', async () => {
+  const a = new ProvenanceLog()
+  await a.append('query', 'one', 1); await a.append('scene', 'two', 2)
+  const saved = JSON.parse(JSON.stringify(a.entries))
+  const b = new ProvenanceLog()
+  assert.equal(await b.restore(saved), true)
+  assert.equal(b.entries.length, 2)
+  await b.append('feedback', 'three', 3)
+  assert.equal(await b.verify(), null)
+  saved[0].detail = 'edited'
+  const c = new ProvenanceLog()
+  assert.equal(await c.restore(saved), false)
+  assert.equal(c.entries.length, 0)
+  assert.equal(await c.restore('nope'), false)
 })
 
 test('provenance log chains and detects tampering', async () => {

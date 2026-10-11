@@ -42,7 +42,13 @@ const LEVEL_INDEX: Record<Level3, number> = { low: 0, typical: 1, high: 2 }
 const WORD_RX = /^[a-z][a-z\- ]{0,23}$/
 
 // ---- parsing the hub's `moments` message --------------------------------------------------------------------------------------------------
-export function parseMoments(raw: unknown): { moments: Moment[]; approved: string[] } | null {
+const parseDay = (v: unknown): Record<string, Level3> => {
+  const day: Record<string, Level3> = {}
+  for (const [k, x] of Object.entries((v ?? {}) as Record<string, unknown>).slice(0, 24)) if (isLevel(x) && /^[a-z_]{1,32}$/.test(k)) day[k] = x
+  return day
+}
+
+export function parseMoments(raw: unknown): { moments: Moment[]; approved: string[]; today: Record<string, Level3> } | null {
   if (!raw || typeof raw !== 'object') return null
   const m = raw as Record<string, unknown>
   if (m.v !== 1 || m.type !== 'moments' || !Array.isArray(m.moments)) return null
@@ -53,8 +59,7 @@ export function parseMoments(raw: unknown): { moments: Moment[]; approved: strin
     for (const k of RATINGS) { const v = (r.ratings as Record<string, unknown> | undefined)?.[k]; if (isNum(v)) ratings[k] = clamp(v) }
     const hormones: Moment['hormones'] = {}
     for (const k of HORMONES) { const v = (r.hormones as Record<string, unknown> | undefined)?.[k]; if (isLevel(v)) hormones[k] = v }
-    const day: Moment['day'] = {}
-    for (const [k, v] of Object.entries((r.day ?? {}) as Record<string, unknown>).slice(0, 24)) if (isLevel(v) && /^[a-z_]{1,32}$/.test(k)) day[k] = v
+    const day = parseDay(r.day)
     moments.push({
       id: r.id.slice(0, 16), date: r.date, time: typeof r.time === 'string' && /^\d{2}:\d{2}$/.test(r.time) ? r.time : '',
       title: typeof r.title === 'string' ? r.title.slice(0, 120) : '',
@@ -63,7 +68,7 @@ export function parseMoments(raw: unknown): { moments: Moment[]; approved: strin
     })
   }
   const approved = (Array.isArray(m.approved) ? m.approved : []).filter((t): t is string => typeof t === 'string' && WORD_RX.test(t)).slice(0, 500)
-  return { moments, approved }
+  return { moments, approved, today: parseDay((m.today as { day?: unknown } | undefined)?.day) }
 }
 
 // ---- turning live signals into a state ----------------------------------------------------------------------------------------------------
@@ -73,6 +78,15 @@ export function affectFromBands(b: { delta: number; theta: number; alpha: number
   const total = fast + slow
   if (total <= 0) return {}
   return { arousal: clamp(fast / total) }
+}
+
+/** Rougher still, and weakly founded: engagement (beta over alpha+theta) as energy, and frontal alpha asymmetry (F4 vs F3) as a hint of approach versus withdrawal for valence.
+ *  The asymmetry link to mood is contested in the research, so valence is only offered when both frontal channels exist and is pulled toward the middle. */
+export function affectFromEeg(b: { delta: number; theta: number; alpha: number; beta: number; gamma: number }, ix: { engagement: number | null; frontalAsymmetry: number | null }): Partial<Record<Rating, number>> {
+  const out = affectFromBands(b)
+  if (ix.engagement !== null && Number.isFinite(ix.engagement)) out.energy = clamp(ix.engagement / 1.2)
+  if (ix.frontalAsymmetry !== null && Number.isFinite(ix.frontalAsymmetry)) out.valence = clamp(0.5 + ix.frontalAsymmetry * 0.2, 0.3, 0.7)
+  return out
 }
 
 export const minutesOf = (d: Date) => d.getHours() * 60 + d.getMinutes()
@@ -131,6 +145,18 @@ export function confidence(matches: Match[], candidates: number): Confidence {
 // ---- learning from feedback --------------------------------------------------------------------------------------------------------------
 export interface Refinement { weights: Weights; boosts: Record<string, number> }
 
+/** Read saved weights and boosts back, ignoring anything malformed. */
+export function parseRefinement(raw: unknown): Refinement {
+  const r = (raw ?? {}) as { weights?: Record<string, unknown>; boosts?: Record<string, unknown> }
+  const w = { ...DEFAULT_WEIGHTS }
+  for (const c of COMPONENTS) { const v = r.weights?.[c]; if (isNum(v)) w[c] = clamp(v, 0.02, 1) }
+  const total = COMPONENTS.reduce((a, c) => a + w[c], 0)
+  for (const c of COMPONENTS) w[c] /= total
+  const boosts: Record<string, number> = {}
+  for (const [k, v] of Object.entries(r.boosts ?? {}).slice(0, 500)) if (/^m\d{1,9}$/.test(k) && isNum(v)) boosts[k] = clamp(v, -0.2, 0.2)
+  return { weights: w, boosts }
+}
+
 /** A thumbs up makes the components that agreed with that moment count a little more, and the moment a little more likely; a thumbs down does the reverse. */
 export function refine(prev: Refinement, m: Match, good: boolean): Refinement {
   const sign = good ? 1 : -1
@@ -185,6 +211,16 @@ export class ProvenanceLog {
     const e = { ...body, hash: await sha256(canonical(body)) }
     this.entries.push(e)
     return e
+  }
+  /** Load saved entries; returns false (and keeps the log empty) if the saved chain does not verify. */
+  async restore(saved: unknown): Promise<boolean> {
+    if (!Array.isArray(saved) || saved.length > 500) return false
+    const ok = saved.every((e) => e && isNum(e.seq) && isNum(e.ts) && typeof e.kind === 'string' && typeof e.detail === 'string' && typeof e.prev === 'string' && typeof e.hash === 'string')
+    if (!ok) return false
+    const keep = this.entries
+    this.entries = saved as ProvenanceEntry[]
+    if ((await this.verify()) !== null) { this.entries = keep; return false }
+    return true
   }
   async verify(): Promise<number | null> {
     let prev = '0'.repeat(64)
