@@ -177,7 +177,7 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <input value={url} onChange={(e) => setUrl(e.target.value)} spellCheck={false} className="rounded border border-line bg-canvas px-2 py-1 font-mono w-56" aria-label="Hub address" />
         {status === 'live' || status === 'connecting' ? <button className={btn} onClick={disconnect}>Disconnect</button> : <button className={btn} onClick={connect}>Connect to my hub</button>}
-        <span className="text-muted">{status === 'live' ? `Connected. ${moments.length ? `${moments.length} logged moments.` : 'Waiting for your moments (sent every 15 s).'}` : status === 'connecting' ? 'Connecting\u2026' : status === 'error' ? 'Not reachable.' : 'Not connected.'}</span>
+        <span className="text-muted">{status === 'live' ? `Connected. ${moments.length ? `${moments.length} logged moments.` : 'Waiting for your moments (sent within a second of connecting).'}` : status === 'connecting' ? 'Connecting\u2026' : status === 'error' ? 'Not reachable.' : 'Not connected.'}</span>
       </div>
       <div className="grid md:grid-cols-2 gap-4 text-xs">
         <div className="space-y-2">
