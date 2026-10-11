@@ -1,11 +1,18 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { corsHeaders } from '@/lib/public-feed'
+import { PUBLIC_ORIGINS, corsHeaders } from '@/lib/public-feed'
+import { edgeCached } from '@/lib/edge-cache'
 import { merkleProof } from '@/lib/merkle'
 
 // Public inclusion proof: shows that one audit entry's hash belongs to a sealed batch whose root can be published
 // elsewhere. Reveals only the entry hash and sibling hashes, nothing about what the entry contains.
 // Verify offline: rebuild with leaf = SHA-256(0x00 || entry_hash as text), node = SHA-256(0x01 || left || right).
 export async function GET(request: Request) {
+  const origin = request.headers.get('origin')
+  // sealed proofs never change: kept at the edge for 10 minutes, separately for each allowed website (src/lib/edge-cache.ts)
+  return edgeCached(request, origin && PUBLIC_ORIGINS.includes(origin) ? origin : '', 600, () => build(request))
+}
+
+async function build(request: Request) {
   const cors = corsHeaders(request.headers.get('origin'))
   const seqParam = new URL(request.url).searchParams.get('seq') ?? ''
   if (!/^\d{1,9}$/.test(seqParam)) return Response.json({ error: 'seq must be a whole number' }, { status: 400, headers: cors })

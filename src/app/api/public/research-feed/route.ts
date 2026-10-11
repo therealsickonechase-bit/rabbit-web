@@ -1,9 +1,16 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { PUBLIC_SOURCES, corsHeaders } from '@/lib/public-feed'
+import { PUBLIC_ORIGINS, PUBLIC_SOURCES, corsHeaders } from '@/lib/public-feed'
+import { edgeCached } from '@/lib/edge-cache'
 
 // Read-only and cacheable. Anyone may call it; it exposes only public literature titles/links, counts, and chain heads.
 export async function GET(request: Request) {
-  const cors = corsHeaders(request.headers.get('origin'))
+  const origin = request.headers.get('origin')
+  // kept for 5 minutes at the edge, separately for each allowed website (see src/lib/edge-cache.ts)
+  return edgeCached(request, origin && PUBLIC_ORIGINS.includes(origin) ? origin : '', 300, () => build(origin))
+}
+
+async function build(origin: string | null) {
+  const cors = corsHeaders(origin)
   const sb = createAdminClient()
 
   const counts: Record<string, number> = {}
