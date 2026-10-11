@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HF_SPACE_DEFAULT, validSpaceId } from '@/lib/hf-generator'
 import { eegIndices, isFresh, type LiveFrame } from '@/lib/live-signals'
 import { HUB_URL } from '@/lib/self-data'
+import type { SharedScene } from '@/lib/twin-net'
 import {
   DEFAULT_WEIGHTS, HORMONES, ProvenanceLog, RATINGS, affectFromEeg, buildScene, confidence, match, minutesOf, parseMoments, parseRefinement, refine, scenePrompt,
   type Hormone, type Level3, type Moment, type Rating, type Refinement, type StateVector,
@@ -20,7 +21,11 @@ type Pick ='unknown' | 'low' | 'medium' | 'high'
 const RATING_VALUE: Record<Exclude<Pick, 'unknown'>, number> = { low: 0.15, medium: 0.5, high: 0.85 }
 const STATE_LABEL: Record<string, string> = { none: 'no reconstruction', weak: 'weak', plausible: 'plausible', strong: 'strong' }
 
-export default function WormholePanel({ live, onScene }: { live: LiveFrame | null; onScene?: (sentence: string | null) => void }) {
+function download(name: string, text: string) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+}
+
+export default function WormholePanel({ live, onScene }: { live: LiveFrame | null; onScene?: (scene: SharedScene | null) => void }) {
   const [url, setUrl] = useState(HUB_URL)
   const [status, setStatus] = useState<'off' | 'connecting' | 'live' | 'error'>('off')
   const [moments, setMoments] = useState<Moment[]>([])
@@ -113,6 +118,22 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
   const conf = useMemo(() => confidence(matches, moments.length), [matches, moments.length])
   const scene = useMemo(() => buildScene(state, matches, conf, approved), [state, matches, conf, approved])
   const prompt = scenePrompt(scene)
+  const sharedScene: SharedScene = { words: scene.words, mood: scene.mood, confidence: conf.state }
+
+  // save to, and load from, files on this computer (the same shapes the local agents read)
+  const saveState = () => download('wormhole-state.json', JSON.stringify({ v: 1, type: 'rabbitos-wormhole', ref, log: prov.current.entries }, null, 1))
+  const saveScene = () => { if (scene.words.length) download('wormhole-scene.json', JSON.stringify({ from: 'wormhole', scene: sharedScene, t: Math.floor(Date.now() / 1000) })) }
+  const loadState = async (file: File | undefined) => {
+    if (!file) return
+    if (file.size > 1_000_000) { setNote('That file is too large to be a wormhole state.'); return }
+    try {
+      const saved = JSON.parse(await file.text()) as { type?: unknown; ref?: unknown; log?: unknown }
+      if (saved.type !== 'rabbitos-wormhole') { setNote('That is not a wormhole state file.'); return }
+      setRef(parseRefinement(saved.ref))
+      if (saved.log !== undefined && !(await prov.current.restore(saved.log))) { setNote('Weights loaded, but the saved log failed its hash check and was ignored.'); return }
+      setLog(prov.current.entries.slice(-30).map((e) => ({ seq: e.seq, kind: e.kind, detail: e.detail, hash: e.hash }))); setNote('Loaded.')
+    } catch { setNote('Could not read that file.') }
+  }
 
   const toggleWord = (w: string) => setWords((ws0) => (ws0.includes(w) ? ws0.filter((x) => x !== w) : [...ws0, w].slice(0, 8)))
   const addWord = () => { const w = word.trim().toLowerCase(); if (!approved.includes(w)) { setNote(`"${w}" is not an approved word. Add it with: python -m selfdata approve-words ${w}`); return } setNote(''); toggleWord(w); setWord('') }
@@ -122,8 +143,7 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
     await record('feedback', `${good ? 'good' : 'poor'} match on ${m.moment.id}; weights adjusted`)
   }
   const applyScene = async () => {
-    const sentence = scene.words.length ? `I picture ${scene.words.slice(0, 5).join(', ')}.` : null
-    onScene?.(sentence)
+    onScene?.(scene.words.length ? sharedScene : null)
     await record('scene', `${conf.state} confidence; words: ${scene.words.join(' ') || 'none'}; moment ${scene.momentId ?? 'none'}`)
   }
   const paint = async () => {
@@ -157,7 +177,7 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <input value={url} onChange={(e) => setUrl(e.target.value)} spellCheck={false} className="rounded border border-line bg-canvas px-2 py-1 font-mono w-56" aria-label="Hub address" />
         {status === 'live' || status === 'connecting' ? <button className={btn} onClick={disconnect}>Disconnect</button> : <button className={btn} onClick={connect}>Connect to my hub</button>}
-        <span className="text-muted">{status === 'live' ? `Connected. ${moments.length ? `${moments.length} logged moments.` : 'Waiting for your moments (sent every 15 s).'}` : status === 'connecting' ? 'Connectingâ€¦' : status === 'error' ? 'Not reachable.' : 'Not connected.'}</span>
+        <span className="text-muted">{status === 'live' ? `Connected. ${moments.length ? `${moments.length} logged moments.` : 'Waiting for your moments (sent every 15 s).'}` : status === 'connecting' ? 'Connecting\u2026' : status === 'error' ? 'Not reachable.' : 'Not connected.'}</span>
       </div>
       <div className="grid md:grid-cols-2 gap-4 text-xs">
         <div className="space-y-2">
@@ -190,8 +210,8 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
               : <ul className="space-y-1.5">{matches.map((m) => (
                 <li key={m.moment.id} className="rounded border border-line p-2">
                   <div className="flex items-center justify-between gap-2"><span><strong>{m.moment.title || 'Untitled'}</strong> <span className="text-muted">{m.moment.date}{m.moment.time ? ` ${m.moment.time}` : ''}</span></span><span className="font-mono">{Math.round(m.score * 100)}%</span></div>
-                  <p className="text-muted">{m.moment.tags.join(', ') || 'no tags'} Â· compared on {Object.keys(m.components).join(', ')}</p>
-                  <div className="mt-1 flex gap-1"><button className={btn} onClick={() => void rate(m, true)} aria-label="Good match">ðŸ‘</button><button className={btn} onClick={() => void rate(m, false)} aria-label="Poor match">ðŸ‘Ž</button></div>
+                  <p className="text-muted">{m.moment.tags.join(', ') || 'no tags'} &middot; compared on {Object.keys(m.components).join(', ')}</p>
+                  <div className="mt-1 flex gap-1"><button className={btn} onClick={() => void rate(m, true)} aria-label="Good match">{'\u{1F44D}'}</button><button className={btn} onClick={() => void rate(m, false)} aria-label="Poor match">{'\u{1F44E}'}</button></div>
                 </li>))}</ul>}
           <p><span className="font-medium">Reconstruction: {STATE_LABEL[conf.state]}</span> <span className="text-muted">({Math.round(conf.value * 100)}%). {conf.why}.</span></p>
           <p className="text-muted">Weights now: {Object.entries(ref.weights).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(', ')}</p>
@@ -203,7 +223,13 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
         <div className="flex flex-wrap items-center gap-2">
           <button className={btn} onClick={() => void applyScene()} disabled={!scene.words.length}>Use this scene (tell her)</button>
           <input value={space} onChange={(e) => setSpace(e.target.value)} className="rounded border border-line bg-canvas px-2 py-1 font-mono w-56" aria-label="Hugging Face Space" />
-          <button className={btn} onClick={() => void paint()} disabled={!prompt || busy}>{busy ? 'Paintingâ€¦' : 'Paint this scene'}</button>
+          <button className={btn} onClick={() => void paint()} disabled={!prompt || busy}>{busy ? 'Painting\u2026' : 'Paint this scene'}</button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className={btn} onClick={saveScene} disabled={!scene.words.length}>Save scene to a file</button>
+          <button className={btn} onClick={saveState}>Save weights and log to a file</button>
+          <label className={`${btn} cursor-pointer`}>Load a saved state<input type="file" accept="application/json,.json" className="sr-only" onChange={(e) => { void loadState(e.target.files?.[0]); e.target.value = '' }} /></label>
+          <span className="text-muted">Share the scene with other twins and agents from the Twin network panel.</span>
         </div>
         {prompt && <p className="text-muted">Sent to the image model: &ldquo;{prompt}&rdquo;</p>}
         {note && <p className="text-muted">{note}</p>}

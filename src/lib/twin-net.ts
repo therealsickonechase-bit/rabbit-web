@@ -7,18 +7,33 @@
 // (ECDSA P-256, ECDH P-256, HKDF, AES-GCM, SHA-256). It has not been security-audited and is not a finished protocol. A self-signed card proves that a message
 // came from the holder of that key, not who the holder is in the real world.
 
-export const CAPABILITIES = ['status', 'presence', 'vitals', 'memory', 'question'] as const
+export const CAPABILITIES = ['status', 'presence', 'vitals', 'memory', 'question', 'scene'] as const
 export type Capability = (typeof CAPABILITIES)[number]
 export type Decision = 'allow' | 'ask' | 'deny'
 export type Policy = Record<Capability, Decision>
 
-export const DEFAULT_POLICY: Policy = { status: 'allow', presence: 'ask', vitals: 'deny', memory: 'ask', question: 'allow' }
+export const DEFAULT_POLICY: Policy = { status: 'allow', presence: 'ask', vitals: 'deny', memory: 'ask', question: 'allow', scene: 'ask' }
 export const CAPABILITY_TEXT: Record<Capability, string> = {
   status: 'my mood word, what I am doing and what I am aware of',
   presence: 'whether I sense someone in my room, and whether they move',
   vitals: 'level words for my arousal, energy, stress and tiredness (never numbers)',
   memory: 'a few strong moments I remember, in words',
   question: 'an answer about myself when asked',
+  scene: 'a scene to picture, as a few words',
+}
+
+export const CONFIDENCE_WORDS = ['none', 'weak', 'plausible', 'strong'] as const
+export const MAX_SCENE_WORDS = 8
+export interface SharedScene { words: string[]; mood: string; confidence: (typeof CONFIDENCE_WORDS)[number] }
+const wordOk = (w: unknown): w is string => typeof w === 'string' && /^[a-z][a-z\- ]{0,23}$/.test(w)
+
+/** A scene shared by a peer, reduced to what is safe to act on: up to 8 lowercase words, a mood word and a confidence word. Null if no words remain. */
+export function cleanScene(payload: unknown): SharedScene | null {
+  const p = payload as { words?: unknown; mood?: unknown; confidence?: unknown } | null
+  if (!p || typeof p !== 'object' || !Array.isArray(p.words)) return null
+  const words = [...new Set(p.words.filter(wordOk))].slice(0, MAX_SCENE_WORDS)
+  if (!words.length) return null
+  return { words, mood: wordOk(p.mood) ? p.mood : '', confidence: (CONFIDENCE_WORDS as readonly unknown[]).includes(p.confidence) ? (p.confidence as SharedScene['confidence']) : 'none' }
 }
 
 const enc = new TextEncoder(), dec = new TextDecoder()
@@ -91,8 +106,8 @@ export class Ledger {
 }
 
 // ---- envelopes ---------------------------------------------------------------------------------------------------------------------------
-export type MsgType = 'status.request' | 'presence.request' | 'vitals.request' | 'memory.request' | 'question.ask' | 'response' | 'denied'
-const REQUEST_CAPABILITY: Record<string, Capability> = { 'status.request': 'status', 'presence.request': 'presence', 'vitals.request': 'vitals', 'memory.request': 'memory', 'question.ask': 'question' }
+export type MsgType = 'status.request' | 'presence.request' | 'vitals.request' | 'memory.request' | 'question.ask' | 'scene.share' | 'response' | 'denied'
+const REQUEST_CAPABILITY: Record<string, Capability> = { 'status.request': 'status', 'presence.request': 'presence', 'vitals.request': 'vitals', 'memory.request': 'memory', 'question.ask': 'question', 'scene.share': 'scene' }
 export interface Header { v: 1; id: string; from: string; to: string; type: MsgType; ts: number; seq: number; re?: string }
 export interface Envelope { h: Header; iv: string; ct: string; sig: string }
 
@@ -105,6 +120,8 @@ export interface StateProvider {
   answer(question: string): string
   /** the twin notices something said to it or learned from a peer */
   notice?(text: string): void
+  /** a peer shared a scene (words only, already cleaned); act on it and return a few words for the sender */
+  scene?(scene: SharedScene, sender: string): string
 }
 export const noDigits = (v: unknown): boolean => !/\d/.test(JSON.stringify(v))
 
@@ -187,7 +204,7 @@ export class TwinNode {
       if (decision === 'ask') {
         const id = `p${++this.counter}`
         this.pending.push({ id, from: env.h.from, capability, type: env.h.type, payload, envelope: env })
-        this.state.notice?.(`${peer.card.name} is asking for ${CAPABILITY_TEXT[capability]}. I will decide.`)
+        this.state.notice?.(capability === 'scene' ? `${peer.card.name} wants to share a scene with me. I will decide.` : `${peer.card.name} is asking for ${CAPABILITY_TEXT[capability]}. I will decide.`)
         return done('asked', env.h.type, { pendingId: id, capability })
       }
       return await this.answerRequest(env, capability, payload)
@@ -195,14 +212,20 @@ export class TwinNode {
   }
 
   private async answerRequest(env: Envelope, capability: Capability, payload: unknown): Promise<Handled> {
-    const out = this.collect(capability, payload)
+    const out = this.collect(capability, payload, env.h.from)
     const r = await this.seal(env.h.from, 'response', out, env.h.id)
     await this.ledger.append({ ts: this.clock(), from: env.h.to, to: env.h.from, kind: `${env.h.type}`, outcome: 'answered', envelope: (await sha256(canonical(env))).slice(0, 16) })
     return { outcome: 'answered', response: r, capability }
   }
 
-  private collect(capability: Capability, payload: unknown): unknown {
+  private collect(capability: Capability, payload: unknown, from: string): unknown {
     switch (capability) {
+      case 'scene': {
+        const sc = cleanScene(payload)
+        if (!sc) return { received: 'nothing usable' }
+        const sender = this.peers.get(from)?.card.name ?? 'a peer'
+        return { received: (this.state.scene ? this.state.scene(sc, sender) : 'scene noted').slice(0, 60) }
+      }
       case 'status': return this.state.status()
       case 'presence': return this.state.presence()
       case 'vitals': return this.state.vitals()
@@ -229,6 +252,7 @@ function summarise(p: unknown): string {
   if (!p || typeof p !== 'object') return String(p)
   const o = p as Record<string, unknown>
   if (typeof o.answer === 'string') return o.answer
+  if (typeof o.received === 'string') return `it replied: ${o.received}`
   if (Array.isArray(o.moments)) return (o.moments as string[]).join(' ')
   if (typeof o.emotion === 'string') return `I feel ${o.emotion} and I am ${o.intent}.`
   if ('someone' in o) return o.someone ? 'someone is in the room' : o.someone === false ? 'the room is empty' : 'I cannot tell if anyone is there'

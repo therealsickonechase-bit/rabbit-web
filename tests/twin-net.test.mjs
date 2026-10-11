@@ -117,5 +117,31 @@ test('the provenance ledger verifies, and any edit to any entry is found', async
   ledger.entries[2] = { ...ledger.entries[2], outcome: 'denied-by-policy' }; assert.equal(await ledger.verify(), 2)
   ledger.entries[2] = { ...ledger.entries[2], outcome: 'delivered' }
   ledger.entries.splice(1, 1); assert.equal(await ledger.verify(), 1)
-  assert.equal(canonical({ b: 1, a: [2, { d: 1, c: 2 }] }), '{"a":[2,{"c":2,"d":1}],"b":1}'); assert.deepEqual(DEFAULT_POLICY, { status: 'allow', presence: 'ask', vitals: 'deny', memory: 'ask', question: 'allow' })
+  assert.equal(canonical({ b: 1, a: [2, { d: 1, c: 2 }] }), '{"a":[2,{"c":2,"d":1}],"b":1}'); assert.deepEqual(DEFAULT_POLICY, { status: 'allow', presence: 'ask', vitals: 'deny', memory: 'ask', question: 'allow', scene: 'ask' })
+})
+
+test('a shared scene asks first, is cleaned to words, reaches the twin, and the sender hears a few words back', async () => {
+  const got = []
+  const { a, b, pa, pb, ledger } = await pair(undefined, {}, { scene: (sc, from) => { got.push([from, sc]); return 'scene noted' } })
+  const sent = { words: ['forest', 'calm', 'Forest', 'x'.repeat(40), 'sun-rise'], mood: 'calm', confidence: 'strong' }
+  const first = await b.receive(await a.request(b.me.id, 'scene.share', sent))
+  assert.equal(first.outcome, 'asked'); assert.deepEqual(got, [])
+  assert.match(pb.seen.join(' '), /wants to share a scene/)
+  const res = await b.resolve(first.pendingId, true)
+  assert.equal(res.outcome, 'answered')
+  assert.deepEqual(got, [['Twin A', { words: ['forest', 'calm', 'sun-rise'], mood: 'calm', confidence: 'strong' }]])
+  assert.equal((await a.receive(res.response)).outcome, 'delivered'); assert.match(pa.seen.join(' '), /it replied: scene noted/)
+  assert.equal(await ledger.verify(), null)
+  assert.equal(DEFAULT_POLICY.scene, 'ask'); assert.ok(CAPABILITIES.includes('scene'))
+})
+
+test('a scene with numbers is refused before sending, and an unusable one is not passed on', async () => {
+  const got = []
+  const { a, b } = await pair(undefined, {}, { scene: (sc) => { got.push(sc); return 'x' } })
+  await assert.rejects(() => a.request(b.me.id, 'scene.share', { words: ['forest'], confidence: '0.9' }), /numbers/)
+  b.policyFor(a.me.id).scene = 'allow'
+  const r = await b.receive(await a.request(b.me.id, 'scene.share', { words: ['BAD', 'Worse'] }))
+  assert.equal(r.outcome, 'answered'); assert.deepEqual(got, [])
+  b.policyFor(a.me.id).scene = 'deny'
+  assert.equal((await b.receive(await a.request(b.me.id, 'scene.share', { words: ['forest'] }))).outcome, 'denied-by-policy')
 })

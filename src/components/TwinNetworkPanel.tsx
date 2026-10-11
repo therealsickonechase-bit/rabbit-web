@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { InnerLife, verbIng } from '@/lib/avatar-inner'
 import { Mind, type MindInputs } from '@/lib/avatar-mind'
-import { CAPABILITIES, CAPABILITY_TEXT, Ledger, TwinNode, createIdentity, verifyCard, type Capability, type Card, type Decision, type Envelope, type Handled, type MsgType, type Outcome, type StateProvider } from '@/lib/twin-net'
+import { CAPABILITIES, CAPABILITY_TEXT, Ledger, TwinNode, createIdentity, verifyCard, type Capability, type Card, type Decision, type Envelope, type Handled, type MsgType, type Outcome, type SharedScene, type StateProvider } from '@/lib/twin-net'
 import { checkRelayUrl, connectRelay, type RelayLink } from '@/lib/twin-relay'
 
 // A prototype of the twin network: two twins with their own minds, memory and (simulated) sensors, talking through a signed and encrypted agent-to-agent layer,
@@ -31,10 +31,11 @@ function provider(sim: Sim): StateProvider {
     memory: () => sim.inner.episodes.slice(-3).map((e) => noDigits(e.text)),
     answer: (q) => noDigits(sim.inner.introspect(q)?.text ?? `I feel ${sim.mind.snapshot().emotion} and I am ${verbIng(sim.mind.snapshot().intent)}. That is all I can say about that.`),
     notice: (t) => { sim.notes.unshift(t); sim.notes.length = Math.min(sim.notes.length, 6); sim.inner.notice(t) },
+    scene: (sc, sender) => { const t = `${sender} pictures ${sc.words.join(', ')}.`; sim.notes.unshift(t); sim.notes.length = Math.min(sim.notes.length, 6); sim.inner.notice(t); return 'scene noted' },
   }
 }
 
-export default function TwinNetworkPanel() {
+export default function TwinNetworkPanel({ scene }: { scene?: SharedScene | null }) {
   const [net, setNet] = useState<Net | null>(null)
   const netRef = useRef<Net | null>(null)
   const [tick, setTick] = useState(0)
@@ -172,6 +173,7 @@ export default function TwinNetworkPanel() {
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-muted">Ask {other.me.name}:</span>
           {(['status.request', 'presence.request', 'vitals.request', 'memory.request'] as const).map((t) => <button key={t} className={btn} disabled={busy} onClick={() => void deliver(who, t)}>{t.split('.')[0]}</button>)}
+          <button className={btn} disabled={busy || !scene} title={scene ? `Share: ${scene.words.join(', ')}` : 'Use a scene in the Wormhole panel first'} onClick={() => scene && void deliver(who, 'scene.share', scene)}>share wormhole scene</button>
         </div>
         <form className="flex gap-1.5" onSubmit={(e) => { e.preventDefault(); void deliver(who, 'question.ask', { question: question.slice(0, 200) }) }}>
           <input className="flex-1 min-w-0 rounded border border-line bg-canvas px-2 py-1" value={question} onChange={(e) => setQuestion(e.target.value)} aria-label={`Question from ${me.me.name}`} maxLength={200} />
@@ -208,7 +210,8 @@ export default function TwinNetworkPanel() {
         {remotes.map((c) => (
           <div key={c.id} className="flex flex-wrap items-center gap-1.5 rounded border border-line p-2"><span><strong>{c.name}</strong> <span className="font-mono text-muted">{c.id}</span></span>
             <span className="text-muted">Ask:</span>{(['status.request', 'presence.request', 'vitals.request', 'memory.request'] as const).map((t) => <button key={t} className={btn} disabled={relayState !== 'live'} onClick={() => void askRemote(c.id, t)}>{t.split('.')[0]}</button>)}
-            <button className={btn} disabled={relayState !== 'live'} onClick={() => void askRemote(c.id, 'question.ask', { question: question.slice(0, 200) })}>question</button></div>
+            <button className={btn} disabled={relayState !== 'live'} onClick={() => void askRemote(c.id, 'question.ask', { question: question.slice(0, 200) })}>question</button>
+            <button className={btn} disabled={relayState !== 'live' || !scene} title={scene ? `Share: ${scene.words.join(', ')}` : 'Use a scene in the Wormhole panel first'} onClick={() => scene && void askRemote(c.id, 'scene.share', scene)}>share scene</button></div>
         ))}
       </details>
       <div className="flex flex-wrap items-center gap-3 text-xs">
