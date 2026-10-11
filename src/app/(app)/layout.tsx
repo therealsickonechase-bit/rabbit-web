@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getSessionRole, guestMirrorOn } from '@/lib/auth/session'
+import { timeLeft } from '@/lib/guest'
 import Sidebar from '@/components/Sidebar'
 import AutoRefresh from '@/components/AutoRefresh'
 
@@ -27,6 +28,11 @@ const OWNER_NAV = [
   { href: '/chain', label: 'Chain & Audit' },
   { href: '/downloads', label: 'Downloads' },
   { href: '/members', label: 'Members' },
+  { href: '/guests', label: 'Guest passes' },
+]
+const GUEST_NAV = [
+  { href: '/research', label: 'Research' },
+  { href: '/crispr', label: 'CRISPR Explorer' },
 ]
 const MEMBER_NAV = [
   { href: '/dashboard', label: 'Overview' },
@@ -47,7 +53,7 @@ const MEMBER_NAV = [
 const MEMBER_NAV_BASIC = MEMBER_NAV.filter((i) => !['/dashboard', '/twin', '/brain', '/agents', '/chain'].includes(i.href))
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, isOwner } = await getSessionRole()
+  const { user, isOwner, isGuest, guestUntil } = await getSessionRole()
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[220px_1fr]">
@@ -58,7 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </p>
           <p className="text-xs text-muted">rabbitsoftware.io</p>
         </div>
-        <Sidebar items={isOwner ? OWNER_NAV : guestMirrorOn() ? MEMBER_NAV : MEMBER_NAV_BASIC} />
+        <Sidebar items={isOwner ? OWNER_NAV : isGuest ? GUEST_NAV : guestMirrorOn() ? MEMBER_NAV : MEMBER_NAV_BASIC} />
       </aside>
 
       <div className="min-w-0">
@@ -66,10 +72,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <AutoRefresh intervalMs={30_000} />
           <div className="flex items-center gap-3 text-sm">
             <span className="text-muted hidden sm:inline">{user?.email}</span>
-            <span className="text-xs rounded border border-line px-2 py-0.5 text-muted">{isOwner ? 'Owner' : 'Member'}</span>
-            <Link href="/keys" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">API keys</Link>
+            <span className="text-xs rounded border border-line px-2 py-0.5 text-muted">{isOwner ? 'Owner' : isGuest ? `Guest · ${timeLeft(guestUntil)}` : 'Member'}</span>
+            {!isGuest && <Link href="/keys" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">API keys</Link>}
             <Link href="/guide" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Guide</Link>
-            <Link href="/settings" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Settings</Link>
+            {!isGuest && <Link href="/settings" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Settings</Link>}
             <form action={signOut}>
               <button className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Sign out</button>
             </form>

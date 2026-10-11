@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireUser } from '@/lib/auth/session'
+import { requireMember } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, ago } from '@/components/ui'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -16,7 +16,7 @@ async function ownCollection(userId: string, id: string) {
 
 async function createCollection(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const name = String(formData.get('name') ?? '').trim().slice(0, 80)
   if (!name) redirect('/collections')
   const admin = createAdminClient()
@@ -29,7 +29,7 @@ async function createCollection(formData: FormData) {
 
 async function deleteCollection(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const id = await ownCollection(user.id, String(formData.get('collection') ?? ''))
   if (id) await createAdminClient().from('collections').delete().eq('id', id)
   redirect('/collections')
@@ -37,7 +37,7 @@ async function deleteCollection(formData: FormData) {
 
 async function removeItem(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const id = await ownCollection(user.id, String(formData.get('collection') ?? ''))
   const record = String(formData.get('record') ?? '')
   if (id) await createAdminClient().from('collection_items').delete().eq('collection_id', id).eq('record_id', record)
@@ -46,7 +46,7 @@ async function removeItem(formData: FormData) {
 
 async function addNote(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const id = await ownCollection(user.id, String(formData.get('collection') ?? ''))
   const body = String(formData.get('body') ?? '').trim().slice(0, 5000)
   const record = String(formData.get('record') ?? '') || null
@@ -58,7 +58,7 @@ async function addNote(formData: FormData) {
 
 async function deleteNote(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const note = String(formData.get('note') ?? '')
   if (UUID.test(note)) await createAdminClient().from('notes').delete().eq('id', note).eq('user_id', user.id)
   redirect(`/collections?c=${String(formData.get('collection') ?? '')}`)
@@ -71,7 +71,7 @@ const NOTICE: Record<string, string> = {
 
 export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ c?: string; msg?: string }> }) {
   const { c, msg } = await searchParams
-  await requireUser()
+  await requireMember()
   const sb = await createClient()
 
   const [cols, items] = await Promise.all([

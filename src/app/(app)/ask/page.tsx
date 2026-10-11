@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireUser } from '@/lib/auth/session'
+import { requireMember } from '@/lib/auth/session'
 import { decryptSecret } from '@/lib/secrets'
 import { MODEL, summarize } from '@/lib/summarize'
 import { ASK_DISCLAIMER, ASK_SYSTEM, buildAskPrompt, citedIds, keywords, orFilter, type AskRecord } from '@/lib/ask'
@@ -23,7 +23,7 @@ const NOTICE: Record<string, string> = {
 
 async function ask(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const question = String(formData.get('question') ?? '').trim().slice(0, 1000)
   const given = String(formData.get('thread') ?? '')
   const back = (code: string, thread?: string): never => redirect(`/ask?${thread ? `t=${thread}&` : ''}msg=${code}`)
@@ -95,7 +95,7 @@ async function ask(formData: FormData) {
 
 async function deleteThread(formData: FormData) {
   'use server'
-  const user = await requireUser()
+  const user = await requireMember()
   const id = String(formData.get('thread') ?? '')
   if (UUID.test(id)) await createAdminClient().from('chat_threads').delete().eq('id', id).eq('user_id', user.id)
   redirect('/ask')
@@ -103,7 +103,7 @@ async function deleteThread(formData: FormData) {
 
 export default async function AskPage({ searchParams }: { searchParams: Promise<{ t?: string; msg?: string }> }) {
   const { t, msg } = await searchParams
-  await requireUser()
+  await requireMember()
   const sb = await createClient()
 
   const threads = await sb.from('chat_threads').select('id, title, created_at').order('created_at', { ascending: false }).limit(30)
