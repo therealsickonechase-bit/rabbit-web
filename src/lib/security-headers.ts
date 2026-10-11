@@ -53,8 +53,21 @@ export function securityHeaders(): HeaderRule[] {
   ]
 }
 
-/** The same rules as a Cloudflare `_headers` block for static files (which do not go through the app). CSP is left to the page responses. */
+/** The `_headers` file for static files, which do not go through the app. CSP is left to the page responses.
+ *  vinext writes its own `_headers` (one-year immutable caching for hashed files under /_next/static/) and a file in `public/` REPLACES it, so that rule
+ *  must be repeated here. Without it every visit revalidated every script (seen on 2026-10-11 after the first headers deploy). */
+export const STATIC_CACHE_RULE = ['/_next/static/*', '  Cache-Control: public, max-age=31536000, immutable']
+
 export function staticHeadersFile(): string {
   const rules = securityHeaders().filter((h) => !h.key.startsWith('Content-Security-Policy'))
-  return ['# Security headers for static files. Generated from src/lib/security-headers.ts: run `node scripts/write-static-headers.mjs`.', '/*', ...rules.map((h) => `  ${h.key}: ${h.value}`), ''].join('\n')
+  return [
+    '# Static file headers. Generated from src/lib/security-headers.ts: run `node scripts/write-static-headers.mjs`.',
+    '# Hashed build files are cached for a year (the vinext rule, repeated because this file replaces it).',
+    ...STATIC_CACHE_RULE,
+    '',
+    '# Security headers for every static file.',
+    '/*',
+    ...rules.map((h) => `  ${h.key}: ${h.value}`),
+    '',
+  ].join(String.fromCharCode(10))
 }
