@@ -20,6 +20,12 @@ test('the twin relay launch instructions retain the Windows directory separator'
   assert.equal(CONNECTIONS.find((c) => c.id === 'relay').start, 'research-agents\\start-twinnet.ps1 -Relay, then Connect Twin A in the Twin network panel')
 })
 
+test('account-free connections never load saved provider keys or send portrait summaries to an account', () => {
+  assert.match(CONNECTIONS.find((c) => c.id === 'claude').leaves, /keys are never loaded/)
+  assert.match(CONNECTIONS.find((c) => c.id === 'selfdata').leaves, /browser only/)
+  assert.match(CONNECTIONS.find((c) => c.id === 'server').leaves, /No account session/)
+})
+
 test('a live feed that goes quiet is shown as quiet, not live', () => {
   assert.equal(judge('live', 1000, 3000), 'live'); assert.equal(judge('live', 1000, 20_000), 'stale'); assert.equal(judge('off', 1000, 20_000), 'off'); assert.equal(judge('live', null, 20_000), 'live')
 })

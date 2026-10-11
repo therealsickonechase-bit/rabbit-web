@@ -53,10 +53,9 @@ export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame
   const [wifiOn, setWifiOn] = useState(false)
   const [wifi, setWifi] = useState<WifiFrame | null>(null)
   const [wifiState, setWifiState] = useState<'off' | 'connecting' | 'live' | 'quiet'>('off')
-  const [chatProvider, setChatProvider] = useState<'builtin' | 'anthropic' | 'qwen'>('builtin')
+  const [chatProvider, setChatProvider] = useState<'builtin' | 'qwen'>('builtin')
   const [qwenConsent, setQwenConsent] = useState(false)
   const [qwenAt, setQwenAt] = useState<number | null>(null)
-  const [claudeAt, setClaudeAt] = useState<number | null>(null)
   const [speak, setSpeak] = useState(false)
   const [busy, setBusy] = useState(false)
   const [nogl, setNogl] = useState(false)
@@ -66,7 +65,7 @@ export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame
     detail: wifiOn && wifi ? `${describeWifi(wifi)}${wifi.simulated ? ' (simulated visitor)' : ''}` : wifiOn ? 'waiting for the bridge on this computer' : '',
     lastAt: wifi?.t ?? null,
   })
-  useConnectionReport('claude', { status: chatProvider !== 'anthropic' ? 'off' : busy ? 'connecting' : 'idle', detail: chatProvider === 'anthropic' ? (claudeAt ? 'on; answered an open question this visit' : 'on; used only for open questions') : '', lastAt: claudeAt })
+  useConnectionReport('claude', { status: 'off', detail: 'Account-stored provider keys are unavailable in the account-free workspace', lastAt: null })
   useConnectionReport('qwenchat', { status: chatProvider !== 'qwen' ? 'off' : busy ? 'connecting' : 'idle', detail: chatProvider === 'qwen' ? 'Cloudflare-hosted; consent required for each open question' : '', lastAt: qwenAt })
 
   // everything the animation loop reads lives in refs, so it never restarts when the page re-renders
@@ -251,16 +250,15 @@ export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame
         const j = (await r.json().catch(() => ({}))) as { answer?: string; error?: string }
         if (r.ok && j.answer) {
           reply = j.answer
-          note = chatProvider === 'qwen' ? 'Cloudflare-hosted Qwen3; a model, not advice' : 'Claude, using your key; a model, not advice'
-          if (chatProvider === 'qwen') setQwenAt(Date.now())
-          else setClaudeAt(Date.now())
+          note = 'Cloudflare-hosted Qwen3; a model, not advice'
+          setQwenAt(Date.now())
         } else {
-          reply = chatProvider === 'qwen' ? (j.error || 'Hosted Qwen could not answer.') : reply
-          note = chatProvider === 'qwen' ? 'Hosted request failed; no other provider was contacted' : `${j.error ?? 'Claude could not answer'}; showing my built-in answer`
+          reply = j.error || 'Hosted Qwen could not answer.'
+          note = 'Hosted request failed; no other provider was contacted'
         }
       } catch {
-        if (chatProvider === 'qwen') reply = 'Could not reach hosted Qwen. Retry later with fresh consent.'
-        note = chatProvider === 'qwen' ? 'No other provider was contacted' : 'Could not reach Claude; showing my built-in answer'
+        reply = 'Could not reach hosted Qwen. Retry later with fresh consent.'
+        note = 'No other provider was contacted'
       }
       setBusy(false)
     }
@@ -356,11 +354,10 @@ export default function AvatarPanel({ live, scenario, scene }: { live: LiveFrame
             <div className="flex flex-wrap gap-4 text-[11px] text-muted">
               <label className="flex items-center gap-1">Open-question provider <select disabled={busy} value={chatProvider} onChange={(e) => {
                 const value = e.target.value
-                if (value !== 'builtin' && value !== 'anthropic' && value !== 'qwen') return
+                if (value !== 'builtin' && value !== 'qwen') return
                 setChatProvider(value); setMsgs([]); setQ(''); setQwenConsent(false)
               }}>
                 <option value="builtin">Built-in body model (local)</option>
-                <option value="anthropic">Claude (your key in Settings)</option>
                 <option value="qwen">Hosted Qwen3 / Cloudflare</option>
               </select></label>
               {chatProvider === 'qwen' && <label className="flex items-center gap-1"><input type="checkbox" disabled={busy} checked={qwenConsent} onChange={(e) => setQwenConsent(e.target.checked)} /> For this message, I approve sending my question, recent chat and avatar state words to Cloudflare-hosted Qwen. No personal health data or automatic provider fallback.</label>}

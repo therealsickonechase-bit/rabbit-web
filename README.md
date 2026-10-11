@@ -1,57 +1,64 @@
 # RabbitOS (rabbit-web)
 
-The RabbitOS console at **app.rabbitsoftware.io**: a Next.js app (run on Cloudflare Workers with vinext) over Supabase. People and research agents work on one body of
-research; every agent write is signed and recorded in a hash-linked audit trail. Start with [docs/rabbitos.md](docs/rabbitos.md) for what it is and the in-app
-**Guide** (`/guide`) for step-by-step instructions.
+The account-free RabbitOS workspace at **app.rabbitsoftware.io**, served by
+Next.js/vinext on Cloudflare Workers. No email, password, CAPTCHA or guest pass
+is required. Public literature metadata comes from the existing Supabase feed;
+private accounts and records remain stored but inaccessible. The in-app
+**Guide** (`/guide`) describes the current workflow.
 
 ## What is in it
 
 | Area | Who | Notes |
 |---|---|---|
-| Sign-in | anyone | Email magic link, no password, Cloudflare Turnstile check. Accounts are kept; sign-ups are open to anyone. |
-| Research, Ask RabbitOS, Collections, Memory, CRISPR Explorer, Agent tasks, API keys | signed-in members | Research corpus (with MeSH tags on topics), cited answers (hosted Qwen3 or your own Anthropic key), private notes, in-silico guide design, task queue with owner approval, scoped keys and an MCP server at `/api/mcp`. |
-| Overview, Twin Atlas, Agents, Chain & Audit | everyone signed in (read-only mirror of the owner's view) | Twin readings, agent runs, audit chain. The owner can switch the mirror off with the `GUEST_MIRROR=off` environment variable. Guests do not see the twin's name and date of birth, the owner's stored EEG, or any owner action. |
-| Chemistry & DNA | signed-in members | Gene and chemistry map with standard identifiers. |
-| Members | owner only | Accounts and contact records. |
-| **Brain Network** | everyone signed in (stored EEG and AI illustrations stay owner-only) | 3D brain and a detailed body (organs, spinal cord, nerve routes) driven by scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; picture, clip and glTF export; Qwen-Image-2.1-Turbo pictures through a Hugging Face Space; **My data portrait** (your own wearable, lab and PC data drawn against your own baseline, with live network in/out); a **Twin network (prototype)** where two twins talk through a signed, encrypted, permissioned agent-to-agent layer with a hash-chained provenance ledger (see docs/twin-network.md); a **Wormhole** that matches your present state (live EEG, hormone levels you note, feelings, time of day, words) to moments you logged yourself and says how confident it is, with feedback, a hash-chained log, scene hand-off to the avatar, image model, other twins and local agents (see research-agents/docs/wormhole.md; it cannot read memories); a **Connections** list of everything feeding the page (status, last update, what it is used for, what leaves your computer, how to start it); a **walking avatar** that chooses by itself how to move (sit, stroll, walk, jog, run, stretch, look around) from its hormones, time of day and EEG/heart signals, and answers questions about its body and mind instead of clicking on organs, with a simulated inner life (attention, memory, self-model, needs; not a claim of consciousness) and a choice of built-in bodies or a Mixamo human model fetched from GitHub. |
+| Overview | anyone | Start directly; old login/signup/guest URLs redirect here. |
+| Research, Ask RabbitOS | anyone | Latest 20 already-public literature titles; Qwen research chat uses up to four recent titles as pointers, not full papers or the private corpus. |
+| Memory & Files, Collections, Local tasks, Settings | browser-local | Notes/checklists, selected-text-file viewer, workspace name, JSON export and clear. Tasks do not execute remote agents. No cross-device sync. |
+| Brain & Body, Twin model, Connections | anyone | Existing local 3D explorer, physiology, avatar, opt-in loopback bridges, image/export tools. No server-stored EEG, twin identity or personal readings are loaded. Coarse portrait summaries stay in this browser. |
+| CRISPR Explorer | anyone | Text-only teaching editor; no private guide candidates are loaded. |
+| Public proof | anyone | Already-public audit head only; no private audit entries or sealing controls. |
+| Accounts, API keys, owner controls | disabled | Old account cookies do not grant access. No shared/fake owner account is used and no database/RLS permissions are widened. |
 | Open model API | anyone, read-only | `/api/model/body`, `/api/model/state`, `/api/model/concepts` (MeSH), `/api/model/openapi.json`, `/llms.txt`. Teaching data only; no personal data. |
-| **Downloads** (`/downloads`) | anyone can download; only the owner uploads | Public data packages. The owner picks a file on their computer; the browser checks the type, size and scans text for keys and personal identifiers; the file goes to a public storage bucket with its SHA-256 and licence. Needs the `public_packages` migration. |
+| **Downloads** (`/downloads`) | anyone, read-only | Existing public packages with licence/checksum. Account uploads and removal are disabled. |
 | Public feed | anyone, read-only | `/api/public/research-feed` for rabbitsoftware.io. |
 
 ## Commands
 
-### Sign-in verification
+### Account-free boundary
 
-The passwordless login is shared by existing accounts and new public signups.
-Supabase verifies each Turnstile token; the application does not redeem it
-separately or bypass CAPTCHA. The submit button remains disabled until a fresh
-token is available and while a link request is pending. Tokens are cleared on
-expiry, challenge errors and submission, and the widget resets for a retry.
-The token is submitted through one React-owned hidden field rather than a
-third-party DOM field. No token or email is logged.
+`src/proxy.ts` rewrites public workspace paths to `/workspace/:section` before
+legacy account pages run. Old account actions return 405; private account APIs,
+including email sending, return 410 regardless of cookies. Legacy account
+layout/session helpers also fail closed. Login, signup, guest and confirmation
+pages redirect without consuming tokens or creating accounts.
 
-If the security check fails to load, permit `challenges.cloudflare.com` and its
-challenge subdomains in your browser/network filters and use **Try again**.
-Receiving the "Check your email" page means the auth service accepted the
-request, not proof of inbox delivery. Email links are single-use.
+Only explicit public read APIs and Qwen avatar POST remain available.
+Signed ingest, agent and MCP endpoints retain their own credential validation;
+they are not anonymous account access. Existing Supabase data, secrets and RLS
+are unchanged. Legacy account implementation/design notes remain for history,
+not as active public features.
+
+Chats, notes, tasks and settings persist under `rabbitos.account-free.v1` in
+unencrypted browser storage. Portrait saving stores one coarse local summary.
+Storage failures are visible; Settings exports/clears local state. Browser
+clearing or changing profiles does not preserve this workspace.
 
 ### Hosted Qwen chat
 
-Ask RabbitOS and avatar open questions offer Cloudflare-hosted Qwen3 alongside
-the existing personal-key Claude option. Qwen uses the fixed shared gateway
+Ask RabbitOS and avatar open questions offer Cloudflare-hosted Qwen3.
+Former account-stored Claude keys are not loaded. Qwen uses the fixed shared gateway
 in `rabbitsoftware-cloudflare/workers/qwen`; no local Ollama installation or
-personal provider key is needed. Signed-in access is still required. Approve
+personal provider key is needed. No sign-in is required. Approve
 each message and never include private health data. Qwen failures do not call
 Claude automatically. Built-in avatar body/introspection answers remain local.
 
-Ask RabbitOS stores approved questions and answers in account-owned threads
-and records the model used; avatar conversations stay in the current tab.
+Ask RabbitOS stores questions and answers in this browser only;
+avatar conversations stay in the current tab.
 The shared gateway enforces daily/hourly attempt quotas (including failed
-attempts). RabbitOS server requests share their outbound-IP quota, in addition
-to the console's existing limits. No schema migration is required.
+attempts). Direct research chat uses the browser client's quota; avatar server
+requests share their outbound-IP quota. No schema migration is required.
 
 ```powershell
-node --test tests\qwen.test.mjs tests\ask.test.mjs tests\avatar-qa.test.mjs tests\connections.test.mjs
+node --test tests\account-free.test.mjs tests\qwen.test.mjs tests\avatar-qa.test.mjs tests\connections.test.mjs
 npx tsc --noEmit
 npm run build:vinext
 ```

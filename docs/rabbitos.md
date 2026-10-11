@@ -1,6 +1,24 @@
 # RabbitOS — what it is, and where it is going
 
-RabbitOS is the logged-in console at `app.rabbitsoftware.io` (it is linked from rabbitsoftware.io, section RabbitOS). It is the one
+## Current account-free workspace
+
+RabbitOS now opens without email, password, CAPTCHA or guest passes.
+Public research uses only the existing public feed. Qwen chat requires
+per-message consent, not an account. Chats, notes, checklists and settings
+persist in unencrypted browser storage; local device tools remain opt-in.
+Existing private account data is retained but inaccessible, even with old
+cookies. Private API actions and owner controls are disabled, not public.
+No database permissions or schema are changed.
+
+Read the in-app `/guide` or [README](../README.md) for current features and
+limitations. The latest-title feed is not full-corpus retrieval, local tasks
+are not remote agent jobs, and private twin/EEG/guide data is not loaded.
+
+## Historical account-backed design (inactive)
+
+The remainder records the previous design, not current public access or setup.
+
+RabbitOS was the logged-in console at `app.rabbitsoftware.io` (linked from rabbitsoftware.io, section RabbitOS). It was the one
 place where **people, AI agents and a digital twin** meet around a body of research. Supabase is the system of
 record; Cloudflare Workers serve it; the Python research agents feed it through a signed ingest.
 

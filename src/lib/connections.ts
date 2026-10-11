@@ -26,7 +26,7 @@ export const CONNECTIONS: ConnMeta[] = [
   {
     id: 'selfdata', name: 'Self-data hub (my data portrait)', where: 'This computer: ws://127.0.0.1:8766',
     uses: 'Your own wearable, lab and PC data compared with your own usual, drawn as the data portrait, plus this PC’s network bytes in and out.',
-    leaves: 'Nothing, unless you press "Paint with Qwen" (fixed words only) or "Save today’s summary" (owner only, coarse levels and flag counts).', start: 'research-agents\\start-selfdata.ps1 (-Demo for a made-up person)',
+    leaves: 'Nothing, unless you press "Paint with Qwen" (fixed words only). Saved coarse summaries remain unencrypted in this browser only.', start: 'research-agents\\start-selfdata.ps1 (-Demo for a made-up person)',
   },
   {
     id: 'wormhole', name: 'Wormhole moments (from the self-data hub)', where: 'This computer: ws://127.0.0.1:8766 (the same hub, its own connection)',
@@ -49,14 +49,14 @@ export const CONNECTIONS: ConnMeta[] = [
     leaves: 'Fixed words and a seed only (state, rhythm, hormone levels, heart and muscle words, level words). Never EEG, heart or hormone numbers. Optionally your own Hugging Face read token.', start: 'Press "Paint now" or "Paint with Qwen"',
   },
   {
-    id: 'workersai', name: 'Cloudflare Workers AI illustration', where: 'RabbitOS server, then Cloudflare Workers AI (owner only)',
-    uses: 'Draws a teaching illustration of the chosen scenario, organ and style.',
-    leaves: 'A prompt built on the server from the model alone, plus optional fixed mood words. No numbers, no free text.', start: 'Press "Generate AI illustration"',
+    id: 'workersai', name: 'Cloudflare Workers AI illustration (retired)', where: 'Disabled account service',
+    uses: 'The former owner illustration service is unavailable in the account-free workspace.',
+    leaves: 'Nothing; this account endpoint is disabled.', start: 'Use the optional Hugging Face image panel instead',
   },
   {
-    id: 'claude', name: 'Claude conversation (your own key)', where: 'RabbitOS server, then Anthropic, with the key saved in your Settings',
-    uses: 'Lets the avatar hold a free conversation about open questions.',
-    leaves: 'The question you type, the last few chat lines, and the avatar’s state as words (mood, activity, hormone levels, scenario).', start: 'Choose Claude as the open-question provider under the avatar',
+    id: 'claude', name: 'Claude conversation (retired)', where: 'Disabled account service',
+    uses: 'Former account-stored provider keys are not loaded.',
+    leaves: 'Nothing; account-stored keys are never loaded.', start: 'Use hosted Qwen or the built-in local body model',
   },
   {
     id: 'qwenchat', name: 'Hosted Qwen3 conversation', where: 'RabbitOS server, then Cloudflare Workers AI through the shared Qwen gateway',
@@ -65,13 +65,13 @@ export const CONNECTIONS: ConnMeta[] = [
   },
   {
     id: 'server', name: 'RabbitOS server and database', where: 'app.rabbitsoftware.io (Cloudflare Worker, Supabase)',
-    uses: 'Serves this page, the research records and the stored EEG band powers (owner only).',
-    leaves: 'Your sign-in session. Live EEG, WiFi and data-portrait values are not sent here.', start: 'Always on',
+    uses: 'Serves the account-free workspace, public literature feed and optional hosted avatar chat.',
+    leaves: 'Approved avatar questions/history/state words only. No account session is used; live raw EEG, WiFi and data-portrait values stay local.', start: 'Always on',
   },
   {
     id: 'supabase', name: 'Supabase (accounts, data, storage)', where: 'Supabase project behind app.rabbitsoftware.io; the page reaches it only through the RabbitOS server',
-    uses: 'Sign-in, the research records, the stored EEG band powers (owner only), your coarse daily summaries (owner only) and the public downloads bucket.',
-    leaves: 'Your sign-in session, and only what you press a button to save (for example today’s coarse summary). Raw EEG, wearable and lab data stay on this computer.', start: 'Always on (health is read from the server’s database check)',
+    uses: 'Already-public literature metadata and published downloads. Existing private accounts and records remain inaccessible.',
+    leaves: 'No account credentials or browser notes. Public feed/download requests only. Raw EEG, wearable and lab data stay on this computer.', start: 'Public read-only access (health is read from the server database check)',
   },
 ]
 

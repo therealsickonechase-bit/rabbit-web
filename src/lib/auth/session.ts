@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { guestState } from '@/lib/guest'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -12,14 +13,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * helpers only decide what the app shows and where it redirects. A mistake here cannot expose owner data.
  */
 
-/** Signed-in, email-confirmed user, or a redirect to /login. */
-export async function requireUser() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) redirect('/login')
-  if (!user.email_confirmed_at) redirect('/login?error=unconfirmed')
-  return user
+/** Legacy account surfaces are disabled, including for previously signed-in browsers. */
+export async function requireUser(): Promise<User> {
+  notFound()
 }
 
 /** The user plus their role, from the database's own is_owner() check. */
