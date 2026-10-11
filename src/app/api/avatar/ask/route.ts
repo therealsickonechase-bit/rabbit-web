@@ -8,8 +8,8 @@ import { INTENTS } from '@/lib/avatar-mind'
 import { SCENARIO_IDS } from '@/lib/neuro'
 import { askQwen, QwenError, QWEN_MODEL } from '@/lib/qwen'
 
-// Optional free conversation with the avatar, answered by Claude with the SIGNED-IN PERSON'S OWN Anthropic key (the one saved in Settings).
-// What is sent to Anthropic: the question the person typed, the last few lines of this chat, and the avatar's state as WORDS (mood, activity, hormone levels,
+// Optional open questions use the signed-in person's Claude key or explicitly approved hosted Qwen.
+// What is sent: the question, recent chat and the avatar's state as WORDS (mood, activity, hormone levels,
 // scenario). No EEG, heart or hormone numbers and nothing from the person's data portrait ever goes in. The built-in answers (no AI service) do not use this route.
 
 const body = z.object({
