@@ -1,0 +1,147 @@
+{
+ "now": 1800000000000,
+ "a": {
+  "name": "Twin A",
+  "card": {
+   "v": 1,
+   "name": "Twin A",
+   "id": "0b811b666ca66293",
+   "sign": {
+    "x": "6QcXtxlIiwQ3EggAdD_wxi2cUr21VcOQeQazYLObaus",
+    "y": "dKAEWE1BAuaQ1-Ywhj-x9Ci3ynUS6oRiNDVRjo4Uc9o"
+   },
+   "dh": {
+    "x": "n9cFFc_XMvxBIsA7vqz9_vCpwsM7yNy1uR41bUrpYfQ",
+    "y": "dzFXuZztooFljBXMhMQRJGEYjGXo9BvzyxnryjQCMEg"
+   },
+   "issued": "2027-01-15T08:00:00.000Z",
+   "sig": "KvuLHIj-s0krUEEUZ1jzfAtavX5_zzlCer9-LhtSpFWj50qEZO73NY-uIquRWuqnP_NuCa-8hPE6x9jTkuFcQg"
+  },
+  "sign_d": "t_7HtarFDBYpJKOA9j9qllHpVIcwzyA55Mh0jr701rs",
+  "dh_d": "5vUaq-PcyM7NUDtRE1B0gNG8H0-dqbWglWaNnGacUAA"
+ },
+ "b": {
+  "name": "Twin B",
+  "card": {
+   "v": 1,
+   "name": "Twin B",
+   "id": "5dc0a053ccb9f5a0",
+   "sign": {
+    "x": "n5hIT_ErRpkcERe4Dy8_hCkcsIz14a9Z2nSUlvcjrVY",
+    "y": "ptPzhRqbx98F_SGH22i2y6HYpnguFS5J648D2Tg9dyE"
+   },
+   "dh": {
+    "x": "l-11GfN5XaXFLDd-PE4gGjs3RZYHTq59a6oGApvUxEk",
+    "y": "vs63TFoiuKaNfppPtpCiVulnFzT26ClBfevNgg9VA98"
+   },
+   "issued": "2027-01-15T08:00:00.000Z",
+   "sig": "VPvJBqfDrT7gHfG4p2DrkX7vuHcImWR-S_JSwOb80ympHRKmaeYVm-WfwEOU7hEBpaK2l7XDc1vbp5adJG2awQ"
+  },
+  "sign_d": "RbQyeHf_56aIEIgvjlNVgKLOTKiIlf1dbD2dx0payys",
+  "dh_d": "0ga_WBkAkEO7-JuZ5V-pMrWUGrPtg7YiH-E9BYWRZjo"
+ },
+ "status_request": {
+  "h": {
+   "v": 1,
+   "id": "0b811b666ca66293-1-1800000000000",
+   "from": "0b811b666ca66293",
+   "to": "5dc0a053ccb9f5a0",
+   "type": "status.request",
+   "ts": 1800000000000,
+   "seq": 0
+  },
+  "iv": "x0694-wVEvXBf7Ev",
+  "ct": "YtDFVGp_FN3gpz1QrO6dXuSb",
+  "sig": "JO_MQzfiOPXL_0KxpEwG0PZDgr2G3xLf_M7cswTNCYnPmiMkOTuSZiRiGGswZhNVu1s22TAqc30e0DldJdHQgw"
+ },
+ "status_response": {
+  "h": {
+   "v": 1,
+   "id": "5dc0a053ccb9f5a0-1-1800000000000",
+   "from": "5dc0a053ccb9f5a0",
+   "to": "0b811b666ca66293",
+   "type": "response",
+   "ts": 1800000000000,
+   "seq": 0,
+   "re": "0b811b666ca66293-1-1800000000000"
+  },
+  "iv": "ZediUDUVluYqjP7h",
+  "ct": "IMhta1lFCgNi0nmJYpRzcBs0XjAEdTABeQ5GBZPhaUOqJemTWwDckZGiqwAXWk6KfayWPq7z-6qvyBzog7reeY_SV8LnetAV9ct7YYtcogfanb4XJJJRg8MU8WxjPwXX",
+  "sig": "CQEcvHOZzDinqfhcPLMlvdkMg29M7tiPURYaW_i1Htrn5hzcBcWz27VENaQ4IEorkzBloRvQIy9JJl_g7YxFJA"
+ },
+ "question_request": {
+  "h": {
+   "v": 1,
+   "id": "0b811b666ca66293-2-1800000000000",
+   "from": "0b811b666ca66293",
+   "to": "5dc0a053ccb9f5a0",
+   "type": "question.ask",
+   "ts": 1800000000000,
+   "seq": 1
+  },
+  "iv": "D43BpKpUmtKjBM1l",
+  "ct": "i1U05JUpyJN2E83vi_TCQMWTGpIm6FkNV1v6iz_4ZOT0Mz-dptJ9BFGz",
+  "sig": "pHK0oLKEfAEQO_Dkrl3qABydqzYQgAYOSFNhlfMvMaHHfUO5HlMdjrw-i7WkulzI9iSC6G1KJUwPaCiOa_Pq_g"
+ },
+ "question_response": {
+  "h": {
+   "v": 1,
+   "id": "5dc0a053ccb9f5a0-2-1800000000000",
+   "from": "5dc0a053ccb9f5a0",
+   "to": "0b811b666ca66293",
+   "type": "response",
+   "ts": 1800000000000,
+   "seq": 1,
+   "re": "0b811b666ca66293-2-1800000000000"
+  },
+  "iv": "6LPVRAFqn2HJkU9E",
+  "ct": "5plrLvTQMRn5VBk4TOiUhn-LfqWOEX9SVPfgOpKp-NB6oGwkAuns7kW4xkoskgPWJKR6",
+  "sig": "6WmL2UT0suwpsFm5B2mhzN5PFGam2Z5M8VGUIUSF5jMc5iFKHSoHkF4dsTpO_sh6XZ7ry2sEVEPXUo_hiPSpkw"
+ },
+ "ledger": [
+  {
+   "seq": 0,
+   "ts": 1800000000000,
+   "from": "0b811b666ca66293",
+   "to": "5dc0a053ccb9f5a0",
+   "kind": "status.request",
+   "outcome": "delivered",
+   "envelope": "8019162cd4d38363",
+   "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+   "hash": "57b25d2d4abdb304114b6889f0821ba91046d82e86096efd903574f618be9f76"
+  },
+  {
+   "seq": 1,
+   "ts": 1800000000000,
+   "from": "5dc0a053ccb9f5a0",
+   "to": "0b811b666ca66293",
+   "kind": "status.request",
+   "outcome": "answered",
+   "envelope": "8019162cd4d38363",
+   "prev": "57b25d2d4abdb304114b6889f0821ba91046d82e86096efd903574f618be9f76",
+   "hash": "579b93e1a5e04fd463a65cd2fdff5a6d28cc1b7fcbe5f808f124ac7619539b43"
+  },
+  {
+   "seq": 2,
+   "ts": 1800000000000,
+   "from": "0b811b666ca66293",
+   "to": "5dc0a053ccb9f5a0",
+   "kind": "question.ask",
+   "outcome": "delivered",
+   "envelope": "6968dd30bb07c2fa",
+   "prev": "579b93e1a5e04fd463a65cd2fdff5a6d28cc1b7fcbe5f808f124ac7619539b43",
+   "hash": "5515dff6bfe397a07c216e6dfe235de82fc27a5e6cc871432e6b6449117b81d8"
+  },
+  {
+   "seq": 3,
+   "ts": 1800000000000,
+   "from": "5dc0a053ccb9f5a0",
+   "to": "0b811b666ca66293",
+   "kind": "question.ask",
+   "outcome": "answered",
+   "envelope": "6968dd30bb07c2fa",
+   "prev": "5515dff6bfe397a07c216e6dfe235de82fc27a5e6cc871432e6b6449117b81d8",
+   "hash": "be16afdfbbe51b4abd176ba5064424e1de0f8a0dd69ec339e83797b287677e65"
+  }
+ ]
+}

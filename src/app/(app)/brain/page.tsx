@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { requireOwner } from '@/lib/auth/session'
+import { requireViewer, viewerClient } from '@/lib/auth/session'
 import BrainExplorer, { type ChemRef, type GraphData } from '@/components/BrainExplorer'
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, short } from '@/components/ui'
 import { buildLinks, type EegSample, type Term } from '@/lib/brain'
@@ -8,12 +7,13 @@ import { primaryGene } from '@/lib/twin-stats'
 const label = (t: Term) => `${t.kind}: ${t.name}`
 
 export default async function BrainPage() {
-  await requireOwner()
-  const sb = await createClient()
+  const { isOwner } = await requireViewer()
+  const sb = await viewerClient(isOwner)
+  const none = Promise.resolve({ data: [] as never[], count: 0 })   // the owner's stored EEG is never shown to guests
 
   const [eeg, total, chem, recs, agents] = await Promise.all([
-    sb.from('eeg_band_samples').select('channel, band, power, rel_power, ts').order('ts', { ascending: false }).limit(400),
-    sb.from('eeg_band_samples').select('id', { count: 'exact', head: true }),
+    isOwner ? sb.from('eeg_band_samples').select('channel, band, power, rel_power, ts').order('ts', { ascending: false }).limit(400) : none,
+    isOwner ? sb.from('eeg_band_samples').select('id', { count: 'exact', head: true }) : none,
     sb.from('chemo_baselines').select('chemical_name, chemical_class, unit, baseline_mean, baseline_stddev'),
     sb.from('research_records').select('id, source, title, url, meta').limit(3000),
     sb.from('agents').select('node_id, kind, last_seen_at').order('last_seen_at', { ascending: false }),
@@ -33,13 +33,16 @@ export default async function BrainPage() {
     edges: links.edges.slice(0, 40).map((e) => ({ a: `${e.a.kind}:${e.a.name}`, b: `${e.b.kind}:${e.b.name}`, records: e.records })),
   }
 
+  // genes that have CRISPR guide candidates stored, so the body view can link them to the CRISPR Explorer
+  const crisprGenes = [...new Set(records.filter((r) => r.source === 'crispr_guide').map((r) => String((r.meta as Record<string, unknown> | null)?.gene ?? '')).filter(Boolean))]
+
   const initial = (eeg.data ?? []) as EegSample[]
   const streaming = new Set(initial.map((s) => s.channel)).size
   const eegAgents = (agents.data ?? []).filter((a) => a.kind === 'network_node' && a.node_id.startsWith('eeg-'))
 
   return (
     <>
-      <PageHeader title="Brain Network" sub="Live EEG from OpenBCI / BrainFlow, with the research and chemistry connected to it — owner only" />
+      <PageHeader title="Brain Network" sub={isOwner ? "Live EEG from OpenBCI / BrainFlow, with the research and chemistry connected to it" : "3D brain and body, research and chemistry. Stored EEG is owner only; your own live signals stay on your computer"} />
       <div className="space-y-6">
         <p role="note" className="text-sm rounded-md border border-warn/40 text-warn px-3 py-2">
           Research and visualisation only, not a medical device and not for diagnosis. EEG is neural data: use it on yourself or with the wearer&apos;s informed consent.
@@ -54,7 +57,7 @@ export default async function BrainPage() {
         </div>
 
         <Card>
-          <BrainExplorer initial={initial} graph={graph} chemicals={chemicals} />
+          <BrainExplorer initial={initial} graph={graph} chemicals={chemicals} crisprGenes={crisprGenes} storedEeg={isOwner} />
         </Card>
 
         <div className="grid lg:grid-cols-2 gap-6">

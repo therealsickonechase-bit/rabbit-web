@@ -1,7 +1,23 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import Brain3D, { rampColor, type ElectrodeView } from '@/components/Brain3D'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Brain3D, { DEFAULT_LAYERS, rampColor, type Brain3DControls, type ElectrodeView, type Layers, type ViewName } from '@/components/Brain3D'
+import LiveBridge from '@/components/LiveBridge'
+import CapturePanel from '@/components/CapturePanel'
+import HfGenerator from '@/components/HfGenerator'
+import SelfData from '@/components/SelfData'
+import ConnectionsPanel from '@/components/ConnectionsPanel'
+import TwinNetworkPanel from '@/components/TwinNetworkPanel'
+import WormholePanel from '@/components/WormholePanel'
+import type { SharedScene } from '@/lib/twin-net'
+import { ConnectionsProvider } from '@/components/ConnectionsContext'
+import AvatarPanel from '@/components/AvatarPanel'
+import { eegIndices, type Baseline, type LiveFrame } from '@/lib/live-signals'
+import PathwayPanel from '@/components/PathwayPanel'
+import BodyPanel from '@/components/BodyPanel'
+import type { OrganId } from '@/lib/body'
+import { physioAt, type Physio } from '@/lib/body-physiology'
+import { SCENARIO_IDS, SCENARIO_INFO, SYSTEM_IDS, SYSTEM_INFO, type ScenarioId, type SystemId } from '@/lib/neuro'
 import { BANDS, BAND_HZ, dominantBand, electrodePosition, latestByChannel, regionOf, type Band, type EegSample } from '@/lib/brain'
 
 export interface RecordRef { id: string; source: string; title: string; url: string | null }
@@ -16,15 +32,32 @@ export interface ChemRef { name: string; unit: string; mean: number; sd: number;
 const CHANNELS_FALLBACK = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2']
 const hex = (c: { getHexString: () => string }) => `#${c.getHexString()}`
 
-export default function BrainExplorer({ initial, graph, chemicals }: { initial: EegSample[]; graph: GraphData; chemicals: ChemRef[] }) {
+export default function BrainExplorer({ initial, graph, chemicals, crisprGenes = [], storedEeg = true }: { initial: EegSample[]; graph: GraphData; chemicals: ChemRef[]; crisprGenes?: string[]; storedEeg?: boolean }) {
   const [samples, setSamples] = useState<EegSample[]>(initial)
   const [band, setBand] = useState<Band>('alpha')
   const [selected, setSelected] = useState<string | null>(null)
-  const [spin, setSpin] = useState(true)
+  const [spin, setSpin] = useState(false)
   const [live, setLive] = useState<'live' | 'stale' | 'error'>('stale')
   const [lastAt, setLastAt] = useState<string | null>(initial[0]?.ts ?? null)
   const [similar, setSimilar] = useState(true)
   const [now, setNow] = useState(0)
+  const [layers, setLayers] = useState<Layers>(DEFAULT_LAYERS)
+  const [view, setView] = useState<{ name: ViewName; nonce: number } | undefined>()
+  const [system, setSystem] = useState<SystemId | 'none'>('none')
+  const [scenario, setScenario] = useState<ScenarioId>('healthy')
+  const [lobe, setLobe] = useState<string | null>(null)
+  const [organ, setOrgan] = useState<OrganId | null>(null)
+  const [physio, setPhysio] = useState<Physio>(() => physioAt('healthy', 0))
+  const physioRef = useRef<Physio>(physio)
+  const [bridge, setBridge] = useState<LiveFrame | null>(null)
+  const [wormholeScene, setWormholeScene] = useState<SharedScene | null>(null)
+  const sceneSentence = useMemo(() => (wormholeScene ? `I picture ${wormholeScene.words.slice(0, 5).join(', ')}.` : null), [wormholeScene])
+  const [baseline, setBaseline] = useState<Baseline>({ emg: {} })
+  const liveBuffer = useRef<LiveFrame[]>([])
+  const liveRef = useRef<LiveFrame | null>(null)
+  const controlRef = useRef<Brain3DControls | null>(null)
+  const onLiveFrame = useCallback((f: LiveFrame | null) => { liveRef.current = f; setBridge(f) }, [])
+  const onPhysio = useCallback((p: Physio) => { physioRef.current = p; setPhysio(p) }, [])
 
   const poll = useCallback(async () => {
     try {
@@ -41,12 +74,20 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
     }
   }, [])
   useEffect(() => {
+    if (!storedEeg) return            // the stored EEG feed is owner only; guests use the model and their own local bridge
     const t0 = setTimeout(poll, 0)
     const id = setInterval(poll, 2000)
     return () => { clearTimeout(t0); clearInterval(id) }
-  }, [poll])
+  }, [poll, storedEeg])
 
-  const latest = useMemo(() => latestByChannel(samples), [samples])
+  // while the local bridge is live its EEG frame drives the brain colours directly; otherwise the stored samples do
+  const liveSamples = useMemo<EegSample[] | null>(() => {
+    if (!bridge?.eeg) return null
+    const ts = new Date(bridge.t).toISOString(), out: EegSample[] = []
+    for (const [channel, bands] of Object.entries(bridge.eeg)) for (const [band, v] of Object.entries(bands)) if (typeof v === 'number') out.push({ channel, band, power: v, rel_power: v, ts })
+    return out.length ? out : null
+  }, [bridge])
+  const latest = useMemo(() => latestByChannel(liveSamples ?? samples), [liveSamples, samples])
   const names = useMemo(() => (latest.size ? [...latest.keys()] : CHANNELS_FALLBACK), [latest])
 
   const electrodes: ElectrodeView[] = useMemo(() => {
@@ -74,6 +115,17 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
     return pairs.slice(0, 60)
   }, [electrodes, similar])
 
+  const cardLines = useCallback(() => {
+    const p = physioRef.current, f = liveRef.current, idx = eegIndices(f)
+    const title = [SCENARIO_INFO[scenario].name, system !== 'none' ? SYSTEM_INFO[system].name.split(' (')[0] : null].filter(Boolean).join(' + ')
+    const lines = [`RabbitOS  |  ${title}${scenario === 'epilepsy' ? `  |  ${p.phase}` : ''}`]
+    lines.push(`Heart ${Math.round(p.heart.bpm)}/min${p.heart.irregular > 0.3 ? ' irregular' : ''}${p.live?.heart ? ' (measured)' : ''}   Breathing ${p.lungs.apnea > 0.5 ? 'paused' : `${Math.round(p.lungs.rpm)}/min`}${p.live?.breathing ? ' (measured)' : ''}`)
+    lines.push(`Muscle strength L ${Math.round(p.muscle.strengthL * 100)}% / R ${Math.round(p.muscle.strengthR * 100)}%   tone ${p.muscle.tone.toFixed(1)}x${p.live?.muscle ? ' (measured)' : ''}`)
+    if (idx.channels) lines.push(`EEG strongest band ${idx.dominant}${idx.thetaAlpha !== null ? `   theta/alpha ${idx.thetaAlpha.toFixed(2)}` : ''}${idx.engagement !== null ? `   engagement ${idx.engagement.toFixed(2)}` : ''}`)
+    lines.push(p.live ? `Source: ${p.live.source} (local bridge) mixed with the illustrative model` : 'Source: illustrative model, not measurements')
+    return lines
+  }, [scenario, system])
+
   const sel = selected ? latest.get(selected) : undefined
   const region = selected ? regionOf(selected) : null
   const recs = (key: string) => (graph.mentions[key] ?? []).map((id) => graph.records[id]).filter(Boolean)
@@ -82,6 +134,8 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
   const age = lastAt && now ? Math.max(0, Math.round((now - new Date(lastAt).getTime()) / 1000)) : null
 
   return (
+    <ConnectionsProvider>
+    <div className="space-y-4">
     <div className="grid xl:grid-cols-[1fr_340px] gap-4">
       <div className="space-y-3 min-w-0">
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Band">
@@ -99,7 +153,33 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
           </span>
         </div>
 
-        <Brain3D electrodes={electrodes} selected={selected} onSelect={setSelected} spin={spin} links={links} />
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Chemical pathway">
+          <span className="text-xs text-muted">Pathway</span>
+          {(['none', ...SYSTEM_IDS] as const).map((s) => (
+            <button key={s} onClick={() => setSystem(s)} aria-pressed={system === s}
+              className={`text-xs rounded-full border px-3 py-1 ${system === s ? 'border-accent text-accent bg-accent-soft' : 'border-line text-muted hover:text-fg'}`}>
+              {s === 'none' ? 'None' : SYSTEM_INFO[s].name.split(' (')[0].replace(' loops', '')}
+            </button>
+          ))}
+          <label className="text-xs text-muted flex items-center gap-1 ml-auto">Damage overlay
+            <select value={scenario} onChange={(e) => setScenario(e.target.value as ScenarioId)} className="rounded border border-line bg-canvas px-2 py-1 text-xs text-fg">
+              {SCENARIO_IDS.map((s) => <option key={s} value={s}>{SCENARIO_INFO[s].name}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <Brain3D electrodes={electrodes} selected={selected} onSelect={setSelected} onCortex={setLobe} spin={spin} links={links} layers={layers} view={view} system={system} scenario={scenario} organ={organ} onOrgan={setOrgan} onPhysio={onPhysio} live={bridge} baseline={baseline} controlRef={controlRef} />
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" role="group" aria-label="Camera view and layers">
+          {(['home', 'top', 'front', 'back', 'left', 'right', 'body'] as const).map((v) => (
+            <button key={v} onClick={() => setView({ name: v, nonce: Date.now() })} className="rounded-full border border-line px-2.5 py-0.5 hover:border-accent hover:text-accent">{v === 'home' ? '3/4' : v === 'body' ? 'whole body' : v}</button>
+          ))}
+          <span className="mx-1 text-line">|</span>
+          {([['heat', 'cortex heat map'], ['lobes', 'lobes'], ['scalp', 'scalp'], ['arcs', 'network arcs'], ['labels', 'labels'], ['cereb', 'cerebellum']] as const).map(([k, label]) => (
+            <label key={k} className="flex items-center gap-1"><input type="checkbox" checked={layers[k]} onChange={(e) => setLayers({ ...layers, [k]: e.target.checked })} /> {label}</label>
+          ))}
+          {lobe && <span className="ml-auto rounded border border-line px-2 py-0.5">{lobe} lobe</span>}
+        </div>
 
         <div className="flex items-center gap-2 text-xs text-muted" aria-hidden>
           <span>low</span>
@@ -108,8 +188,9 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
           <span className="ml-3">grey = no data</span>
         </div>
         <p className="text-xs text-muted">
-          Schematic head and brain with electrodes at approximate international 10-20 positions. It is not an MRI-based model, and the colours show band power at the scalp, not activity at a particular spot in the brain.
+          Schematic head and brain with electrodes at approximate international 10-20 positions. It is not an MRI-based model. The cortex colours are an estimate spread from the scalp electrodes, not located brain activity, and the arcs join electrodes with similar band levels, which is not measured connectivity.
         </p>
+        <section className="bg-surface border border-line rounded-lg p-4"><PathwayPanel system={system} scenario={scenario} /></section>
       </div>
 
       <aside className="space-y-4 text-sm" aria-live="polite">
@@ -164,5 +245,44 @@ export default function BrainExplorer({ initial, graph, chemicals }: { initial: 
         </section>
       </aside>
     </div>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Body">
+      <BodyPanel system={system} scenario={scenario} organ={organ} onOrgan={setOrgan} onView={(v) => { setLayers((l) => ({ ...l, body: true })); setView({ name: v, nonce: Date.now() }) }} crisprGenes={crisprGenes} physio={physio} physioRef={physioRef} layers={layers} onLayers={setLayers} />
+    </section>
+
+    <div className="grid lg:grid-cols-2 gap-4">
+      <section className="bg-surface border border-line rounded-lg p-4" aria-label="Live signals">
+        <LiveBridge onFrame={onLiveFrame} onBaseline={setBaseline} bufferRef={liveBuffer} />
+      </section>
+      <section className="bg-surface border border-line rounded-lg p-4" aria-label="Pictures and open files">
+        <CapturePanel controlRef={controlRef} lines={cardLines} scenario={scenario} system={system} organ={organ} live={bridge} />
+      </section>
+    </div>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Walking avatar">
+      <AvatarPanel live={bridge} scenario={scenario} scene={sceneSentence} />
+    </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Qwen-Image generator">
+      <HfGenerator live={bridge} baseline={baseline} />
+    </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="My data portrait">
+      <SelfData />
+    </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Wormhole">
+      <WormholePanel live={bridge} onScene={setWormholeScene} />
+    </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Twin network prototype">
+      <TwinNetworkPanel scene={wormholeScene} />
+    </section>
+
+    <section className="bg-surface border border-line rounded-lg p-4" aria-label="Connections">
+      <ConnectionsPanel />
+    </section>
+    </div>
+    </ConnectionsProvider>
   )
 }
