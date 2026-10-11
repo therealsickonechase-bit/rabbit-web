@@ -38,11 +38,12 @@ const COPY: Record<Exclude<AuthEmailType, 'reauthentication'>, { subject: string
     button: 'Sign in',
     next: '/',
   },
+  // RabbitOS has no passwords (sign-in is by emailed link) and the reset-password page was removed, so this link just signs the person in.
   recovery: {
-    subject: 'Reset your RabbitOS password',
-    lead: 'Someone asked to reset the password for this RabbitOS account. If that was you, choose a new password.',
-    button: 'Reset password',
-    next: '/reset-password',
+    subject: 'Your RabbitOS sign-in link',
+    lead: 'RabbitOS does not use passwords. Use this link to sign in to your account. If you did not ask for it, you can ignore this email.',
+    button: 'Sign in',
+    next: '/',
   },
   email_change: {
     subject: 'Confirm your new RabbitOS email address',
