@@ -26,8 +26,20 @@ if (!url) {
   process.exit(1)
 }
 
+if (url.includes('[YOUR-PASSWORD]')) {
+  console.error('SUPABASE_DB_URL still contains the [YOUR-PASSWORD] placeholder. Put your database password in its place.')
+  process.exit(1)
+}
+
 const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } })
-await client.connect()
+try {
+  await client.connect()
+} catch (e) {
+  // Print the reason only; the error object can carry connection details.
+  console.error(`Could not connect to the database: ${e.code ?? ''} ${String(e.message).slice(0, 120)}`)
+  if (e.code === '28P01') console.error('The password was rejected. Reset it in Supabase > Project Settings > Database and update .env.local.')
+  process.exit(1)
+}
 await client.query('begin read only')
 
 const q = async (text, params) => (await client.query(text, params)).rows
