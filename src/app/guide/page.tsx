@@ -140,22 +140,36 @@ python rabbit_sync.py       # signed upload to RabbitOS`}</Code>
           <P>These programs run on your Windows computer and talk to the Brain Network page over <code>127.0.0.1</code>, so raw signals and medical values never leave it. Open PowerShell and use the full paths (a bare folder path is not a command):</P>
           <Steps>
             <li>
-              Check what is installed: <Code>{`& C:\Users\odaat\Projects\research-agents\check-setup.ps1`}</Code>
+              Check what is installed: <Code>{String.raw`& C:\Users\odaat\Projects\research-agents\check-setup.ps1`}</Code>
             </li>
             <li>
               <strong>Live brain, heart and muscle signals:</strong> start the bridge with no hardware, or with your board, then press <em>Connect</em> under “Live signals” on Brain Network:
-              <Code>{`& C:\Users\odaat\Projects\research-agents\start-live.ps1 -Simulate
+              <Code>{String.raw`& C:\Users\odaat\Projects\research-agents\start-live.ps1 -Simulate
 & C:\Users\odaat\Projects\research-agents\start-live.ps1 -Board cyton -SerialPort COM3 -Ecg 8 -Emg "6=left_forearm,7=right_forearm"`}</Code>
               <span className="text-xs text-muted">This is a different program from Part 3: it keeps everything local. The brain state comes from the EEG transformer (about 83% for eyes open vs closed and 53% for three states on held-out data, with 8 electrodes). It does not read thoughts.</span>
             </li>
             <li><strong>Pictures:</strong> “Paint it with Qwen-Image-2.1-Turbo” sends only fixed words (brain state, strongest rhythm, hormone levels, heart and muscle words) to a Hugging Face Space. Add your own Hugging Face <em>read</em> token if the free quota runs out; never a write token.</li>
             <li>
               <strong>My data portrait:</strong> try the made-up person first, then your own files (Apple Health, Fitbit, Oura, Garmin or Google Fit exports; lab results as CSV or FHIR JSON; this PC’s activity counters):
-              <Code>{`& C:\Users\odaat\Projects\research-agents\start-selfdata.ps1 -Demo
+              <Code>{String.raw`& C:\Users\odaat\Projects\research-agents\start-selfdata.ps1 -Demo
 & C:\Users\odaat\Projects\research-agents\start-selfdata.ps1 -Inbox`}</Code>
               Then press <em>Connect to my hub</em> in the “My data portrait” panel. Step-by-step export directions are in <code>research-agents/docs/self-data.md</code>.
             </li>
             <li><strong>Walking avatar:</strong> on Brain Network, the avatar chooses by itself how to move and says why. Its mood comes from hormone levels, the time of day and EEG and heart signals: its own simulated twin by default, or yours if you tick &quot;mirror my live signals&quot; while the bridge is connected. Type or tap a question (&quot;How do you feel?&quot;, &quot;What does your liver do?&quot;) and the relevant organ glows through its skin. Answers come from the body model; tick the Claude box to let your own Anthropic key answer open questions (only fixed words about its state are sent). It also has a simulated inner life (a global workspace that decides what it is aware of, working and episodic memory, a model of itself that predicts its own moves, and needs for rest, activity and curiosity); ask it &quot;What are you aware of?&quot;, &quot;What do you remember?&quot; or &quot;Are you conscious?&quot;. That is a model of ideas from consciousness science, not proof that it is conscious, and it says so. Choose the body: three built-in figures made in code, or Michelle, a Mixamo human character that your browser downloads from GitHub (RabbitOS does not host it; Mixamo&apos;s terms apply).</li>
+            <li>
+              <strong>Wormhole (find moments from your own history):</strong> log moments you want to remember in a CSV (date, time, title, tags, how you felt, hormone levels) and import them, or try the made-up set:
+              <Code>{String.raw`cd C:\Users\odaat\Projects\research-agents
+.\.venv-eeg\Scripts\python.exe -m selfdata import-moments moments.csv
+.\.venv-eeg\Scripts\python.exe -m selfdata demo`}</Code>
+              Start the hub (<code>start-selfdata.ps1</code>), press <em>Connect to my hub</em> in the Wormhole panel, say how you are now (live EEG helps; what you select by hand counts for more), and it shows the closest moments you logged with how sure it is. Thumbs up or down teach it. “Use this scene” tells the avatar; “Paint this scene” sends only approved words to the image model. It compares you with <em>your own</em> log: it cannot read memories or scenes from a brain. Details: <code>research-agents/docs/wormhole.md</code>.
+            </li>
+            <li>
+              <strong>Twin network on other computers:</strong> twins can talk to twins on other computers through a relay that only carries encrypted messages. Start a relay and a node (a MicroPython node on Windows or Linux), then swap cards:
+              <Code>{String.raw`& C:\Users\odaat\Projects\research-agents\start-twinnet.ps1 -Relay
+& C:\Users\odaat\Projects\research-agents\start-twinnet.ps1 -Node -Name "Desk twin"`}</Code>
+              In the Twin network panel press <em>Connect Twin A</em>, paste the other twin&apos;s card, and ask. Every request follows that twin&apos;s permissions (allow, ask me first, deny); only words are shared, never numbers. A scene shared with another twin always asks its owner first. From an https page the browser only allows <code>ws://127.0.0.1</code>; a relay on another computer needs <code>wss://</code>. Details: <code>research-agents/docs/twin-network-protocol.md</code>.
+            </li>
+            <li><strong>Connections:</strong> the Connections list at the bottom of Brain Network shows every feed and service (EEG bridge, data hub, wormhole, WiFi sensing, twin relay, image Space, Claude, Supabase) with whether it is live, what the page uses it for, what leaves your computer and how to start it.</li>
             <li><strong>Optional save:</strong> “Save today’s summary to my account” stores a coarse summary per body system and lab flag counts (never raw values or names) in an owner-only table. It needs the <code>self_daily</code> migration. “Delete saved summaries” removes them.</li>
           </Steps>
           <Note>Descriptive analytics against your own usual, for research and education. Not medical advice and not a diagnosis.</Note>
@@ -166,7 +180,7 @@ python rabbit_sync.py       # signed upload to RabbitOS`}</Code>
             <li>Sign in and open <strong>API keys</strong> (top bar). Name the key (for example “Claude Desktop”) and press <em>Create key</em>. Copy it immediately: it is shown once.</li>
             <li>
               In Claude Code, add the server:
-              <Code>{`claude mcp add --transport http rabbitos https://app.rabbitsoftware.io/api/mcp \
+              <Code>{String.raw`claude mcp add --transport http rabbitos https://app.rabbitsoftware.io/api/mcp \
   --header "Authorization: Bearer rbk_YOUR_KEY"`}</Code>
               Other MCP clients: server address <code>https://app.rabbitsoftware.io/api/mcp</code>, header <code>Authorization: Bearer rbk_…</code>.
             </li>
