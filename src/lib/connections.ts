@@ -41,7 +41,7 @@ export const CONNECTIONS: ConnMeta[] = [
   {
     id: 'relay', name: 'Twin relay (twins on other computers)', where: 'ws://127.0.0.1:8790 on this computer, or a wss:// relay you choose',
     uses: 'Carries signed, encrypted messages between Twin A in this page and twins on other computers (MicroPython or Python nodes).',
-    leaves: 'Only ciphertext and who is talking to whom, when, and message sizes. The relay cannot read or change what is said.', start: 'research-agents\start-twinnet.ps1 -Relay, then Connect Twin A in the Twin network panel',
+    leaves: 'Only ciphertext and who is talking to whom, when, and message sizes. The relay cannot read or change what is said.', start: 'research-agents\\start-twinnet.ps1 -Relay, then Connect Twin A in the Twin network panel',
   },
   {
     id: 'qwen', name: 'Qwen-Image Space (Hugging Face)', where: 'huggingface.co, Space Therealsickonechase-bit/rabbitos-eeg-qwen-image',

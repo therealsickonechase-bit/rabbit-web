@@ -50,6 +50,8 @@ members cannot.
 - A member or owner files a task: "run ClinVar enrichment for gene X", "summarise new items on topic Y".
 - Tasks sit in `agent_tasks` (`queued → claimed → proposed → approved/rejected → done`).
 - Research agents poll a signed endpoint, claim a task, run it, and post a **proposal** (results + evidence).
+- Proposal links must be parseable absolute HTTP(S) URLs, at most 500 characters;
+  absent or null links are allowed. Malformed links are rejected before approval.
 - An owner approves; only then do results enter the shared corpus. Rejected proposals stay on record.
 
 ### 3. API keys and a public API
