@@ -46,9 +46,8 @@ test('the CSP is report-only until deliberately switched', () => {
 })
 
 test('public/_headers is in step with the definition', () => {
-  const onDisk = readFileSync(new URL('../public/_headers', import.meta.url), 'utf8').replace(/
-/g, '
-')
+  // git on Windows may check the file out with CRLF line endings: compare the content, not the line endings
+  const onDisk = readFileSync(new URL('../public/_headers', import.meta.url), 'utf8').split(String.fromCharCode(13)).join('')
   assert.equal(onDisk, staticHeadersFile())
   assert.ok(!onDisk.includes('Content-Security-Policy'))
 })
