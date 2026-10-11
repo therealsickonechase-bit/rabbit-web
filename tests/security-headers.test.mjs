@@ -51,3 +51,12 @@ test('public/_headers is in step with the definition', () => {
   assert.equal(onDisk, staticHeadersFile())
   assert.ok(!onDisk.includes('Content-Security-Policy'))
 })
+
+test('the static headers file keeps the one-year immutable cache rule for hashed files (it replaces the file vinext generates)', () => {
+  const file = staticHeadersFile()
+  const lines = file.split(String.fromCharCode(10))
+  const i = lines.indexOf('/_next/static/*')
+  assert.ok(i >= 0, 'missing the /_next/static/* rule')
+  assert.equal(lines[i + 1], '  Cache-Control: public, max-age=31536000, immutable')
+  assert.ok(lines.includes('/*'))
+})
