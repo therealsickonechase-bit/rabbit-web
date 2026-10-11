@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { InnerLife, verbIng } from '@/lib/avatar-inner'
 import { Mind, type MindInputs } from '@/lib/avatar-mind'
-import { CAPABILITIES, CAPABILITY_TEXT, Ledger, TwinNode, createIdentity, type Capability, type Decision, type Envelope, type Handled, type MsgType, type Outcome, type StateProvider } from '@/lib/twin-net'
+import { CAPABILITIES, CAPABILITY_TEXT, Ledger, TwinNode, createIdentity, verifyCard, type Capability, type Card, type Decision, type Envelope, type Handled, type MsgType, type Outcome, type StateProvider } from '@/lib/twin-net'
+import { checkRelayUrl, connectRelay, type RelayLink } from '@/lib/twin-relay'
 
 // A prototype of the twin network: two twins with their own minds, memory and (simulated) sensors, talking through a signed and encrypted agent-to-agent layer,
 // under a permission policy, with every message and decision written to a hash-chained provenance ledger. Everything runs in this tab: keys live in memory only,
@@ -43,6 +44,13 @@ export default function TwinNetworkPanel() {
   const [lastCt, setLastCt] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  // the transport to twins on other computers (through a relay); Twin A is the one that connects
+  const [relayUrl, setRelayUrl] = useState('ws://127.0.0.1:8790')
+  const [relayState, setRelayState] = useState<'off' | 'connecting' | 'live' | 'closed' | 'error'>('off')
+  const [relayNote, setRelayNote] = useState('')
+  const [remotes, setRemotes] = useState<Card[]>([])
+  const [pasted, setPasted] = useState('')
+  const relay = useRef<RelayLink | null>(null)
 
   const build = useCallback(async () => {
     const ledger = new Ledger()
@@ -96,6 +104,34 @@ export default function TwinNetworkPanel() {
     return () => clearInterval(id)
   }, [auto, deliver])
 
+  const relayDeliver = useCallback(async (env: Envelope) => {
+    const n = netRef.current; if (!n) return
+    const got = await n.a.receive(env)
+    if (got.response) relay.current?.send(got.response)
+    setTick((x) => x + 1)
+  }, [])
+  const connect = () => {
+    const n = netRef.current; if (!n) return
+    relay.current?.close()
+    const bad = checkRelayUrl(relayUrl); if (bad) { setRelayState('error'); setRelayNote(bad); return }
+    relay.current = connectRelay(relayUrl, n.a.me, (env) => void relayDeliver(env), (s, d) => { setRelayState(s); setRelayNote(d ?? '') })
+  }
+  const disconnect = () => { relay.current?.close(); relay.current = null; setRelayState('off'); setRelayNote('') }
+  useEffect(() => () => { relay.current?.close() }, [])
+  const addRemote = async () => {
+    const n = netRef.current; if (!n) return
+    try {
+      const card = JSON.parse(pasted) as Card
+      if (!(await verifyCard(card))) { setRelayNote('That card is not valid (its keys and signature do not match).'); return }
+      if (!(await n.a.addPeer(card))) { setRelayNote('That card could not be added (it may be this twin\u2019s own).'); return }
+      setRemotes((r) => [...r.filter((c) => c.id !== card.id), card]); setPasted(''); setRelayNote(`Added ${card.name}.`)
+    } catch { setRelayNote('Paste the whole card (the JSON from the other twin\u2019s card file).') }
+  }
+  const askRemote = async (peerId: string, type: Exclude<MsgType, 'response' | 'denied'>, payload: unknown = {}) => {
+    const n = netRef.current; if (!n || !relay.current) return
+    try { relay.current.send(await n.a.request(peerId, type, payload)); setTick((x) => x + 1) } catch (e) { setRelayNote(e instanceof Error ? e.message : 'Could not send.') }
+  }
+
   // changes to a twin go through these handlers (the simulation objects live outside React state)
   const setMood = (who: 'a' | 'b', mood: Mood) => { const n = netRef.current; if (!n) return; n.sims[who].mood = mood; setTick((x) => x + 1) }
   const setVisitor = (who: 'a' | 'b', on: boolean) => { const n = netRef.current; if (!n) return; n.sims[who].visitor = on; setTick((x) => x + 1) }
@@ -107,7 +143,7 @@ export default function TwinNetworkPanel() {
   void tick
   if (err && !net) return <p className="text-xs text-bad">{err}</p>
   if (!net) return <p className="text-xs text-muted">Creating two twins and their keys…</p>
-  const name = (id: string) => (id === net.a.me.id ? 'A' : id === net.b.me.id ? 'B' : id.slice(0, 4))
+  const name = (id: string) => (id === net.a.me.id ? 'A' : id === net.b.me.id ? 'B' : (remotes.find((c) => c.id === id)?.name ?? id.slice(0, 4)))
   const sel = 'rounded border border-line bg-canvas px-1 py-0.5 text-xs'
   const btn = 'text-xs rounded-md border border-line px-2.5 py-1 enabled:hover:border-accent enabled:hover:text-accent disabled:opacity-50'
 
@@ -151,10 +187,30 @@ export default function TwinNetworkPanel() {
       <h3 className="text-sm font-semibold">Twin network (prototype): two twins talking</h3>
       <p className="text-xs text-muted">
         Each twin has its own identity (a signing key and a key-agreement key), its own mind and memory, and (simulated) sensors. They exchange messages that are signed and encrypted, a permission policy decides what each will tell the other
-        (only words, never numbers; raw sensor data cannot be asked for at all), and every message and decision goes into a hash-chained provenance ledger either side can verify. It all runs in this tab: keys exist only in memory, nothing is sent anywhere or saved.
+        (only words, never numbers; raw sensor data cannot be asked for at all), and every message and decision goes into a hash-chained provenance ledger either side can verify. The two twins here live in this tab and their keys exist only in memory. Twin A can also join a relay to talk to twins on other computers (below); only signed, encrypted envelopes ever leave the tab.
         This is a prototype of the design, not a finished or audited protocol.
       </p>
       <div className="grid md:grid-cols-2 gap-3">{card('a')}{card('b')}</div>
+      <details className="rounded-md border border-line p-3 text-xs space-y-2">
+        <summary className="cursor-pointer font-medium">Twins on other computers (via a relay)</summary>
+        <p className="text-muted">Twin A can join a relay and talk to twins running on other computers (a MicroPython node on Windows, Linux or macOS, or another browser). Start a relay with <code className="font-mono">start-twinnet.ps1 -Relay</code>, start a node with <code className="font-mono">-Node</code>, then swap cards. From this https page the browser only allows <code className="font-mono">ws://127.0.0.1</code>; a relay on another computer must be behind TLS (<code className="font-mono">wss://</code>). The relay sees who talks to whom, never what is said.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input className="rounded border border-line bg-canvas px-2 py-1 font-mono w-64" value={relayUrl} onChange={(e) => setRelayUrl(e.target.value)} aria-label="Relay address" />
+          {relayState === 'live' || relayState === 'connecting' ? <button className={btn} onClick={disconnect}>Disconnect</button> : <button className={btn} onClick={connect}>Connect Twin A</button>}
+          <span className="text-muted">{relayState === 'live' ? 'connected' : relayState === 'connecting' ? 'connecting…' : relayState === 'closed' ? 'connection closed' : relayState === 'error' ? 'problem' : 'not connected'}</span>
+        </div>
+        {relayNote && <p className="text-muted">{relayNote}</p>}
+        <div className="grid md:grid-cols-2 gap-3">
+          <label className="block">Twin A&apos;s card (copy this to the other twin)<textarea readOnly value={JSON.stringify(net.a.card)} rows={4} className="w-full rounded border border-line bg-canvas px-2 py-1 font-mono" onFocus={(e) => e.currentTarget.select()} /></label>
+          <label className="block">Add a remote twin: paste its card<textarea value={pasted} onChange={(e) => setPasted(e.target.value)} rows={4} className="w-full rounded border border-line bg-canvas px-2 py-1 font-mono" /></label>
+        </div>
+        <button className={btn} disabled={!pasted.trim()} onClick={() => void addRemote()}>Add this twin</button>
+        {remotes.map((c) => (
+          <div key={c.id} className="flex flex-wrap items-center gap-1.5 rounded border border-line p-2"><span><strong>{c.name}</strong> <span className="font-mono text-muted">{c.id}</span></span>
+            <span className="text-muted">Ask:</span>{(['status.request', 'presence.request', 'vitals.request', 'memory.request'] as const).map((t) => <button key={t} className={btn} disabled={relayState !== 'live'} onClick={() => void askRemote(c.id, t)}>{t.split('.')[0]}</button>)}
+            <button className={btn} disabled={relayState !== 'live'} onClick={() => void askRemote(c.id, 'question.ask', { question: question.slice(0, 200) })}>question</button></div>
+        ))}
+      </details>
       <div className="flex flex-wrap items-center gap-3 text-xs">
         <label className="flex items-center gap-1"><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> let them check on each other every 12 seconds</label>
         <button className={btn} onClick={() => void verify()}>Verify provenance chain</button>
@@ -175,7 +231,7 @@ export default function TwinNetworkPanel() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-muted">Not built yet from the full diagram: real network transport between separate computers, an agent kernel per twin beyond these minds, and the MicroPython node layer on Windows, Linux and macOS.</p>
+      <p className="text-xs text-muted">Built: transport between computers through a relay, and MicroPython nodes (see research-agents/docs/twin-network-protocol.md). Not built yet: an agent kernel per twin beyond these minds, a relay hosted with TLS for the internet, and card introduction other than copying the card.</p>
     </div>
   )
 }
