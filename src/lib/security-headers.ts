@@ -1,0 +1,60 @@
+// Security headers for every response the console sends. Pure data, tested in tests/security-headers.test.mjs; next.config.ts applies it.
+//
+// Enforced now: HSTS, nosniff, no framing, referrer policy, permissions policy.
+// Content-Security-Policy is sent as Report-Only first: the app uses inline scripts (the page payload), Supabase, Hugging Face, GitHub,
+// Cloudflare Turnstile and WebSockets to services on the visitor's own computer, and the signed-in pages cannot be exercised automatically,
+// so violations are shown in the browser console instead of breaking anything. When the console is quiet while using Brain Network, sign-in
+// and the guide, rename 'Content-Security-Policy-Report-Only' to 'Content-Security-Policy' (see CSP_HEADER).
+
+export interface HeaderRule { key: string; value: string }
+
+/** Where the page may load things from and connect to. Keep every entry justified by a feature. */
+export const CSP_DIRECTIVES: Record<string, string[]> = {
+  'default-src': ["'self'"],
+  // inline scripts: the page payload; Turnstile: the sign-in check; wasm-unsafe-eval: WebAssembly (3D and signal processing)
+  'script-src': ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", 'https://challenges.cloudflare.com'],
+  'style-src': ["'self'", "'unsafe-inline'"],
+  // illustrations arrive as data: URLs, pictures from the Hugging Face Space as https, exports as blob:
+  'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+  'font-src': ["'self'", 'data:'],
+  'media-src': ["'self'", 'blob:', 'data:'],
+  'connect-src': [
+    "'self'",
+    'https://*.supabase.co', 'wss://*.supabase.co',           // sign-in session, storage, realtime
+    'https://huggingface.co', 'https://*.huggingface.co', 'https://*.hf.space', 'wss://*.hf.space',   // the image Space (gradio client)
+    'https://raw.githubusercontent.com',                       // the Michelle avatar model
+    'ws://127.0.0.1:*', 'ws://localhost:*',                    // EEG bridge, data hub, WiFi bridge, twin relay on this computer
+    'wss:',                                                    // a twin relay behind TLS
+  ],
+  'frame-src': ['https://challenges.cloudflare.com'],
+  'worker-src': ["'self'", 'blob:'],
+  'object-src': ["'none'"],
+  'base-uri': ["'self'"],
+  'form-action': ["'self'"],
+  'frame-ancestors': ["'none'"],
+}
+
+export const cspValue = (d: Record<string, string[]> = CSP_DIRECTIVES) => Object.entries(d).map(([k, v]) => `${k} ${v.join(' ')}`).join('; ')
+
+/** Report-Only for now. Change to 'Content-Security-Policy' once the browser console shows no violations. */
+export const CSP_HEADER = 'Content-Security-Policy-Report-Only'
+
+export const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()'
+
+export function securityHeaders(): HeaderRule[] {
+  return [
+    // one year; no includeSubDomains or preload on purpose, so other subdomains are not affected
+    { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+    { key: 'X-Content-Type-Options', value: 'nosniff' },
+    { key: 'X-Frame-Options', value: 'DENY' },
+    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+    { key: 'Permissions-Policy', value: PERMISSIONS_POLICY },
+    { key: CSP_HEADER, value: cspValue() },
+  ]
+}
+
+/** The same rules as a Cloudflare `_headers` block for static files (which do not go through the app). CSP is left to the page responses. */
+export function staticHeadersFile(): string {
+  const rules = securityHeaders().filter((h) => !h.key.startsWith('Content-Security-Policy'))
+  return ['# Security headers for static files. Generated from src/lib/security-headers.ts: run `node scripts/write-static-headers.mjs`.', '/*', ...rules.map((h) => `  ${h.key}: ${h.value}`), ''].join('\n')
+}
