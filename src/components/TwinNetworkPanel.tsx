@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useConnectionReport } from '@/components/ConnectionsContext'
 import { InnerLife, verbIng } from '@/lib/avatar-inner'
 import { Mind, type MindInputs } from '@/lib/avatar-mind'
 import { CAPABILITIES, CAPABILITY_TEXT, Ledger, TwinNode, createIdentity, verifyCard, type Capability, type Card, type Decision, type Envelope, type Handled, type MsgType, type Outcome, type SharedScene, type StateProvider } from '@/lib/twin-net'
@@ -49,6 +50,7 @@ export default function TwinNetworkPanel({ scene }: { scene?: SharedScene | null
   const [relayUrl, setRelayUrl] = useState('ws://127.0.0.1:8790')
   const [relayState, setRelayState] = useState<'off' | 'connecting' | 'live' | 'closed' | 'error'>('off')
   const [relayNote, setRelayNote] = useState('')
+  useConnectionReport('relay', { status: relayState === 'closed' ? 'off' : relayState, detail: relayState === 'live' ? 'Twin A is connected' : relayState === 'error' ? relayNote : '', lastAt: null })
   const [remotes, setRemotes] = useState<Card[]>([])
   const [pasted, setPasted] = useState('')
   const relay = useRef<RelayLink | null>(null)

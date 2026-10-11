@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useConnectionReport } from '@/components/ConnectionsContext'
 import { HF_SPACE_DEFAULT, validSpaceId } from '@/lib/hf-generator'
 import { eegIndices, isFresh, type LiveFrame } from '@/lib/live-signals'
 import { HUB_URL } from '@/lib/self-data'
@@ -45,6 +46,7 @@ export default function WormholePanel({ live, onScene }: { live: LiveFrame | nul
   const [space, setSpace] = useState(HF_SPACE_DEFAULT)
   const [busy, setBusy] = useState(false)
   const [shot, setShot] = useState<{ src: string; prompt: string } | null>(null)
+  useConnectionReport('wormhole', { status: status === 'live' ? (moments.length ? 'idle' : 'connecting') : status, detail: status === 'live' ? (moments.length ? `${moments.length} logged moments loaded` : 'connected, waiting for your moments') : '', lastAt: null })
   const ws = useRef<WebSocket | null>(null)
   const prov = useRef(new ProvenanceLog())
   const [clock, setClock] = useState(() => Date.now())

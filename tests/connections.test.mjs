@@ -26,3 +26,12 @@ test('ages and the summary line read plainly', () => {
   assert.match(s, /2 of 3 local data feeds live; 2 connections live in all/)
   assert.equal(STATUS_LABEL.stale, 'quiet')
 })
+
+test('the wormhole, twin relay and Supabase are listed, with honest "leaves" text and sensible defaults', () => {
+  for (const id of ['wormhole', 'relay', 'supabase']) assert.ok(CONNECTIONS.some((c) => c.id === id), id)
+  assert.match(CONNECTIONS.find((c) => c.id === 'wormhole').leaves, /^Nothing/)
+  assert.match(CONNECTIONS.find((c) => c.id === 'relay').leaves, /ciphertext/)
+  assert.match(CONNECTIONS.find((c) => c.id === 'supabase').leaves, /Raw EEG, wearable and lab data stay on this computer/)
+  const m = merge({})
+  assert.equal(m.find((c) => c.id === 'supabase').status, 'idle'); assert.equal(m.find((c) => c.id === 'relay').status, 'off')
+})

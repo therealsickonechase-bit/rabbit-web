@@ -31,6 +31,8 @@ export default function ConnectionsPanel() {
   }, [])
   useConnectionReport('server', { status: server ? (server.ok ? 'live' : 'error') : 'connecting', detail: server ? (server.ok ? `healthy${server.ms !== null ? `, database ${server.ms} ms` : ''}` : 'not answering') : 'checking…', lastAt: server?.at ?? null })
 
+  useConnectionReport('supabase', { status: server ? (server.ok && server.ms !== null ? 'live' : server.ok ? 'idle' : 'error') : 'connecting', detail: server ? (server.ok ? (server.ms !== null ? `database answered in ${server.ms} ms` : 'reachable') : 'database not answering') : 'checking…', lastAt: server?.at ?? null })
+
   useEffect(() => {
     const first = setTimeout(() => setNow(Date.now()), 0), id = setInterval(() => setNow(Date.now()), 1000)
     return () => { clearTimeout(first); clearInterval(id) }
