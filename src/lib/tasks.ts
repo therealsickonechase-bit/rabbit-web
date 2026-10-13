@@ -37,7 +37,7 @@ export function parseTaskParams(kind: string, raw: unknown) {
   return r.success ? { ok: true as const, kind: kind as Kind, params: r.data as Record<string, unknown> } : { ok: false as const, error: r.error.issues[0]?.message ?? 'Invalid input.' }
 }
 
-const httpUrl = z.string().max(500).refine((u) => /^https?:\/\//i.test(u), 'url must be http(s)')
+const httpUrl = z.url({ protocol: /^https?$/, error: 'url must be http(s)' }).max(500).regex(/^https?:\/\//i, 'url must be http(s)')
 
 export const proposalSchema = z.object({
   summary: z.string().trim().min(1).max(500),

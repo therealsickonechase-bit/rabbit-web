@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useConnectionReport } from '@/components/ConnectionsContext'
 import { DIMENSIONS, HUB_URL, buildPrompt, drawArt, isFreshSelf, parseSelfFrame, summaryFrom, type SelfFrame } from '@/lib/self-data'
 import { HF_SPACE_DEFAULT, validSpaceId } from '@/lib/hf-generator'
-import { createClient } from '@/lib/supabase/client'
 
 // Your own data, drawn. Connects to the self-data hub on THIS computer (research-agents: python -m selfdata serve). Values and fixed words arrive over loopback
 // and stay in this page; the live picture is drawn here. "Paint with Qwen" sends only fixed words (e.g. "sleep below usual") to the Hugging Face Space.
@@ -66,17 +65,15 @@ export default function SelfData() {
   const saveSummary = async (remove = false) => {
     const f = frameRef.current
     if (!remove && !f) return
-    if (remove && !window.confirm('Delete every summary saved to your account?')) return
+    if (remove && !window.confirm('Delete summaries saved in this browser?')) return
     setNote(remove ? 'Deleting…' : 'Saving…')
     try {
       const day = new Date().toISOString().slice(0, 10)
-      // the server checks this access token (sent only to RabbitOS, same origin) and lets only the owner through
-      const { data: { session } } = await createClient().auth.getSession()
-      if (!session) { setNote('Sign in first.'); return }
-      const auth = { Authorization: `Bearer ${session.access_token}` }
-      const r = await fetch('/api/self/daily', remove ? { method: 'DELETE', headers: auth } : { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(summaryFrom(f!, day)) })
-      setNote(r.ok ? (remove ? 'Deleted.' : `Saved today's summary (${day}) to your account.`) : r.status === 403 ? 'Only the owner account can save these.' : r.status === 401 || r.redirected ? 'Sign in first.' : 'Could not save.')
-    } catch { setNote('Could not reach the server.') }
+      const key = 'rabbitos.local-summary.v1'
+      if (remove) localStorage.removeItem(key)
+      else localStorage.setItem(key, JSON.stringify(summaryFrom(f!, day)))
+      setNote(remove ? 'Browser summary deleted.' : `Saved today's summary (${day}) in this browser only; replaces the previous summary.`)
+    } catch { setNote('Browser storage failed. The summary was not saved or deleted.') }
   }
 
   const paint = async () => {
@@ -139,9 +136,9 @@ export default function SelfData() {
         <button className={btn} disabled={!live || busy} onClick={() => void paint()}>{busy ? 'Painting…' : 'Paint with Qwen'}</button>
       </div>
       <div className="flex flex-wrap items-center gap-3 text-xs">
-        <button className={btn} disabled={!live} onClick={() => void saveSummary()}>Save today&apos;s summary to my account</button>
+        <button className={btn} disabled={!live} onClick={() => void saveSummary()}>Save today&apos;s summary in this browser</button>
         <button className={btn} onClick={() => void saveSummary(true)}>Delete saved summaries</button>
-        <span className="text-muted">Owner only. Saves a coarse summary per body system (position against your usual, trend) and lab flag counts, never raw values or names.</span>
+        <span className="text-muted">Browser-local, unencrypted. Saves one coarse summary (replacing the previous one), never raw values or names. Nothing is sent to an account.</span>
       </div>
       {note && <p className="text-xs text-muted" aria-live="polite">{note}</p>}
       {shots.length > 0 && (

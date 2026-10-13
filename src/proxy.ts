@@ -1,89 +1,35 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { guestPathAllowed, guestState } from '@/lib/guest'
+import { machineApi, publicApiAllowed, workspaceSection } from '@/lib/account-free'
+import { ownerCloudApi } from '@/lib/cloud-jobs'
 
-// Pages anyone may open without being signed in (the account forms and the emailed-link landing page).
-const PUBLIC_PATHS = ['/login', '/signup', '/auth/confirm', '/guide', '/downloads', '/guest']
-const isPublicPath = (path: string) => PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
-
-export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  const path = request.nextUrl.pathname
-
-  // These endpoints authenticate with their own request signature, not a user session.
-  if (path.startsWith('/api/ingest') || path.startsWith('/api/agent/') || path === '/api/mcp' || path.startsWith('/api/auth/send-email')) return supabaseResponse
-  // Public, read-only feed for rabbitsoftware.io (public literature titles, counts and chain heads only).
-  if (path === '/api/public/research-feed' || path === '/api/public/proof' || path === '/api/health' || path.startsWith('/api/model/') || path === '/llms.txt') return supabaseResponse
-
-  // Refresh session if expired
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user && !isPublicPath(path)) {
+export function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname.replace(/\/$/, '') || '/'
+  const method = request.method
+  if (path.startsWith('/api/')) {
+    if (publicApiAllowed(path, method) || machineApi(path) || ownerCloudApi(path, method)) return NextResponse.next()
+    return NextResponse.json(
+      { error: 'Account services are disabled. Existing private data is not available in the account-free workspace.' },
+      { status: 410, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+  if (method !== 'GET' && method !== 'HEAD') {
+    return NextResponse.json({ error: 'Account actions are disabled.' }, { status: 405, headers: { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' } })
+  }
+  if (['/login', '/signup', '/guest', '/members', '/guests', '/keys'].includes(path) || path.startsWith('/auth/')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/dashboard'
     url.search = ''
     return NextResponse.redirect(url)
   }
-
-  // Guest passes: an ended pass is signed out; a live one may only use a few read-only pages.
-  const guest = guestState(user)
-  if (user && guest.isGuest) {
-    if (!guest.active) {
-      await supabase.auth.signOut({ scope: 'local' })
-      const url = request.nextUrl.clone()
-      url.pathname = '/guest'
-      url.search = '?ended=1'
-      const ended = NextResponse.redirect(url)
-      supabaseResponse.cookies.getAll().forEach((c) => ended.cookies.set(c))
-      return ended
-    }
-    if (!guestPathAllowed(path)) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/research'
-      url.search = ''
-      return NextResponse.redirect(url)
-    }
-  }
-
-  // Signed in but never confirmed their email: clear the session and send them to the login page.
-  // Who may see what (owner vs member) is enforced by the database, not here.
-  if (user && !user.email_confirmed_at) {
-    await supabase.auth.signOut({ scope: 'local' })
+  const section = workspaceSection(path.slice(1))
+  if (section || path === '/') {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.search = '?error=unconfirmed'
-    const rejected = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach((c) => rejected.cookies.set(c))
-    return rejected
+    url.pathname = `/workspace/${section ?? 'dashboard'}`
+    return NextResponse.rewrite(url)
   }
-
-  return supabaseResponse
+  return NextResponse.next()
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|glb)$).*)'],
 }

@@ -38,3 +38,14 @@ test('agent requests are one of claim, submit or fail', () => {
   assert.equal(agentRequestSchema.safeParse({ action: 'submit', agent: { node_id: 'a' }, task_id: 'nope', result: {} }).success, false)
   assert.equal(agentRequestSchema.safeParse({ action: 'drop', agent: { node_id: 'a' } }).success, false)
 })
+
+test('proposal links require a parseable absolute HTTP URL, not just a prefix', () => {
+  for (const url of ['https://', 'http://', 'http:example.org', 'https:/example.org', 'https://exa mple.org/paper', 'https://[invalid]/paper']) {
+    const result = checkProposal('research_topic', { summary: 's', records: [rec({ url })] })
+    assert.equal(result.ok, false, url)
+    assert.ok(result.error.length > 0)
+  }
+  for (const url of ['https://example.org/paper?q=EEG#results', 'HTTPS://example.org/paper', 'http://localhost:8788/paper', null, undefined]) {
+    assert.equal(checkProposal('research_topic', { summary: 's', records: [rec({ url })] }).ok, true)
+  }
+})

@@ -5,8 +5,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireMember } from '@/lib/auth/session'
 import { decryptSecret } from '@/lib/secrets'
 import { MODEL, summarize } from '@/lib/summarize'
+import { askQwen, QwenError, QWEN_MODEL } from '@/lib/qwen'
 import { ASK_DISCLAIMER, ASK_SYSTEM, buildAskPrompt, citedIds, keywords, orFilter, type AskRecord } from '@/lib/ask'
 import { Badge, Card, PageHeader, ago } from '@/components/ui'
+import AskQuestionInputs from '@/components/AskQuestionInputs'
 
 const DAILY_QUESTION_LIMIT = 40
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -19,6 +21,10 @@ const NOTICE: Record<string, string> = {
   credits: 'Your Anthropic account has no credits. Add credits in the Anthropic console, then try again.',
   badkey: 'Anthropic rejected your saved key. Replace it in Settings.',
   ratelimit: 'Anthropic is rate limiting this key. Wait a minute and try again.',
+  consent: 'Choose a provider and approve sending this message before asking.',
+  qwenlimit: 'Hosted Qwen reached its usage limit. Try later; no other provider was contacted.',
+  qweninput: 'Hosted Qwen rejected the prompt. Remove personal information and keep the question and context short.',
+  qwenfailed: 'Hosted Qwen could not answer. Try later; no other provider was contacted.',
 }
 
 async function ask(formData: FormData) {
@@ -26,7 +32,10 @@ async function ask(formData: FormData) {
   const user = await requireMember()
   const question = String(formData.get('question') ?? '').trim().slice(0, 1000)
   const given = String(formData.get('thread') ?? '')
-  const back = (code: string, thread?: string): never => redirect(`/ask?${thread ? `t=${thread}&` : ''}msg=${code}`)
+  const provider = formData.get('provider')
+  const useQwen = provider === 'qwen'
+  const back = (code: string, thread?: string): never => redirect(`/ask?${thread ? `t=${thread}&` : ''}provider=${useQwen ? 'qwen' : 'anthropic'}&msg=${code}`)
+  if (!['qwen', 'anthropic'].includes(String(provider)) || formData.get('consent') !== 'on') back('consent', UUID.test(given) ? given : undefined)
   if (!question) back('empty', UUID.test(given) ? given : undefined)
 
   const admin = createAdminClient()
@@ -38,7 +47,7 @@ async function ask(formData: FormData) {
   if ((recent.count ?? 0) >= DAILY_QUESTION_LIMIT) back('limit', UUID.test(given) ? given : undefined)
 
   const { data: settings } = await admin.from('user_settings').select('anthropic_key_enc').eq('user_id', user.id).maybeSingle()
-  if (!settings?.anthropic_key_enc) back('nokey', UUID.test(given) ? given : undefined)
+  if (!useQwen && !settings?.anthropic_key_enc) back('nokey', UUID.test(given) ? given : undefined)
 
   // An existing thread must belong to this person; otherwise start a new one.
   let threadId: string | null = null
@@ -74,23 +83,25 @@ async function ask(formData: FormData) {
 
   let outcome = 'failed'
   try {
-    const key = await decryptSecret(settings!.anthropic_key_enc)
-    const answer = await summarize(key, prompt, ASK_SYSTEM, 700)
+    const answer = useQwen
+      ? await askQwen(prompt, ASK_SYSTEM, 700)
+      : await summarize(await decryptSecret(settings!.anthropic_key_enc), prompt, ASK_SYSTEM, 700)
     const cited = citedIds(answer, records.map((r) => r.id))
     const saved = await admin.from('chat_messages').insert([
       { thread_id: threadId, user_id: user.id, role: 'user', content: question },
-      { thread_id: threadId, user_id: user.id, role: 'assistant', content: answer, cited, model: MODEL },
+      { thread_id: threadId, user_id: user.id, role: 'assistant', content: answer, cited, model: useQwen ? QWEN_MODEL : MODEL },
     ])
     if (saved.error) throw saved.error
     outcome = ''
   } catch (e) {
     const detail = e instanceof Error ? e.message : 'unknown'
     console.error('ask failed', detail.slice(0, 300))
-    if (/credit balance/i.test(detail)) outcome = 'credits'
+    if (useQwen) outcome = e instanceof QwenError && e.status === 429 ? 'qwenlimit' : e instanceof QwenError && e.status === 400 ? 'qweninput' : 'qwenfailed'
+    else if (/credit balance/i.test(detail)) outcome = 'credits'
     else if (/Anthropic API 40[13]/.test(detail)) outcome = 'badkey'
     else if (/Anthropic API 429/.test(detail)) outcome = 'ratelimit'
   }
-  redirect(`/ask?t=${threadId}${outcome ? `&msg=${outcome}` : ''}`)
+  redirect(`/ask?t=${threadId}&provider=${useQwen ? 'qwen' : 'anthropic'}${outcome ? `&msg=${outcome}` : ''}`)
 }
 
 async function deleteThread(formData: FormData) {
@@ -101,15 +112,15 @@ async function deleteThread(formData: FormData) {
   redirect('/ask')
 }
 
-export default async function AskPage({ searchParams }: { searchParams: Promise<{ t?: string; msg?: string }> }) {
-  const { t, msg } = await searchParams
+export default async function AskPage({ searchParams }: { searchParams: Promise<{ t?: string; msg?: string; provider?: string }> }) {
+  const { t, msg, provider } = await searchParams
   await requireMember()
   const sb = await createClient()
 
   const threads = await sb.from('chat_threads').select('id, title, created_at').order('created_at', { ascending: false }).limit(30)
   const active = t && UUID.test(t) ? t : null
   const messages = active
-    ? await sb.from('chat_messages').select('id, role, content, cited, created_at').eq('thread_id', active).order('created_at')
+    ? await sb.from('chat_messages').select('id, role, content, cited, created_at, model').eq('thread_id', active).order('created_at')
     : null
 
   const citedAll = [...new Set((messages?.data ?? []).flatMap((m) => m.cited ?? []))]
@@ -145,6 +156,7 @@ export default async function AskPage({ searchParams }: { searchParams: Promise<
               <div className="flex items-center gap-2 mb-2">
                 <Badge tone={m.role === 'user' ? 'info' : 'warn'}>{m.role === 'user' ? 'You' : 'AI answer'}</Badge>
                 <span className="text-xs text-muted">{ago(m.created_at)}</span>
+                {m.role === 'assistant' && m.model && <span className="text-xs text-muted">{m.model}</span>}
               </div>
               <p className="text-sm whitespace-pre-line">{m.content}</p>
               {m.role === 'assistant' && (
@@ -171,12 +183,9 @@ export default async function AskPage({ searchParams }: { searchParams: Promise<
           <Card>
             <form action={ask} className="space-y-3">
               <input type="hidden" name="thread" value={active ?? ''} />
-              <label htmlFor="question" className="block text-xs font-medium">{active ? 'Follow-up question' : 'Your question'}</label>
-              <textarea id="question" name="question" required maxLength={1000} rows={3}
-                placeholder="e.g. What trials mention BRCA1?"
-                className="w-full rounded-md border border-line bg-canvas px-3 py-2 text-sm" />
+              <AskQuestionInputs key={`${active ?? 'new'}-${provider ?? 'anthropic'}`} provider={provider === 'qwen' ? 'qwen' : 'anthropic'} followUp={Boolean(active)} />
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted">Uses your own Anthropic key from Settings. {DAILY_QUESTION_LIMIT} questions per day.</p>
+                <p className="text-xs text-muted">Claude uses your key from Settings; Qwen runs on Cloudflare, not local Ollama. {DAILY_QUESTION_LIMIT} questions per day plus hosted gateway limits.</p>
                 <button className="rounded-md bg-accent text-white text-sm font-medium px-4 py-2 hover:opacity-90">Ask</button>
               </div>
             </form>
