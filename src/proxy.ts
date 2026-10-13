@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { machineApi, publicApiAllowed, workspaceSection } from '@/lib/account-free'
+import { ownerCloudApi } from '@/lib/cloud-jobs'
 
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname.replace(/\/$/, '') || '/'
   const method = request.method
   if (path.startsWith('/api/')) {
-    if (publicApiAllowed(path, method) || machineApi(path)) return NextResponse.next()
+    if (publicApiAllowed(path, method) || machineApi(path) || ownerCloudApi(path, method)) return NextResponse.next()
     return NextResponse.json(
       { error: 'Account services are disabled. Existing private data is not available in the account-free workspace.' },
       { status: 410, headers: { 'Cache-Control': 'no-store' } },

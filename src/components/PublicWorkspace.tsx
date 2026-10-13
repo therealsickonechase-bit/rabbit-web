@@ -125,6 +125,7 @@ export default function PublicWorkspace({ section }: { section: WorkspaceSection
           {WORKSPACE_SECTIONS.map((key) => <Link key={key} href={`/${key}`} aria-current={key === section ? 'page' : undefined} className={`text-sm rounded px-2 py-1 ${key === section ? 'bg-accent-soft text-accent' : 'text-muted'}`}>{LABELS[key]}</Link>)}
           <Link href="/downloads" className="text-sm px-2 py-1">Downloads</Link>
           <Link href="/guide" className="text-sm px-2 py-1">Guide</Link>
+          <Link href="/cloudshell" className="text-sm px-2 py-1">Owner cloud tools</Link>
         </nav>
       </aside>
       <main className="min-w-0 p-4 sm:p-6 space-y-5">
