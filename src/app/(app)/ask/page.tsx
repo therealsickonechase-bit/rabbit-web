@@ -113,8 +113,8 @@ async function deleteThread(formData: FormData) {
   redirect('/ask')
 }
 
-export default async function AskPage({ searchParams }: { searchParams: Promise<{ t?: string; msg?: string }> }) {
-  const { t, msg } = await searchParams
+export default async function AskPage({ searchParams }: { searchParams: Promise<{ t?: string; msg?: string; q?: string }> }) {
+  const { t, msg, q } = await searchParams
   await requireMember()
   await autoRestoreIfEmpty('chat_threads')
   const sb = await viewerClient()
@@ -186,7 +186,7 @@ export default async function AskPage({ searchParams }: { searchParams: Promise<
           <Card>
             <form action={ask} className="space-y-3">
               <input type="hidden" name="thread" value={active ?? ''} />
-              <AskQuestionInputs key={active ?? 'new'} followUp={Boolean(active)} />
+              <AskQuestionInputs key={active ?? 'new'} followUp={Boolean(active)} initial={(q ?? '').slice(0, 1000)} />
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-muted">Answers come from Qwen on Cloudflare, not local Ollama. {DAILY_QUESTION_LIMIT} questions per day plus hosted gateway limits.</p>
                 <button className="rounded-md bg-accent text-white text-sm font-medium px-4 py-2 hover:opacity-90">Ask</button>

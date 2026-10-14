@@ -26,6 +26,7 @@ export const CSP_DIRECTIVES: Record<string, string[]> = {
     'https://raw.githubusercontent.com',                       // the Michelle avatar model
     'ws://127.0.0.1:*', 'ws://localhost:*',                    // EEG bridge, data hub, WiFi bridge, twin relay on this computer
     'wss:',                                                    // a twin relay behind TLS
+    'https://*.rabbitsoftware.io', 'https://*.workers.dev',     // the public CloudShell Worker (session request); its WebSocket is covered by wss:
     'https://cloudflareinsights.com',                          // where the Web Analytics beacon reports
   ],
   'frame-src': ['https://challenges.cloudflare.com'],
@@ -43,6 +44,16 @@ export const CSP_HEADER = 'Content-Security-Policy-Report-Only'
 
 /** Public pages where the CSP is enforced (not just reported). Each was loaded in a headless browser with no violations. */
 export const ENFORCED_CSP_PATHS = ['/login', '/signup', '/guide', '/guest', '/auth/confirm']
+
+/** AI provider origins the owner CloudShell console's AI coder panel calls directly from the browser. Added ONLY on AI_CODER_PATHS, never site-wide. */
+export const AI_CODER_ORIGINS = ['https://generativelanguage.googleapis.com', 'https://api.anthropic.com']
+export const AI_CODER_PATHS = ['/cloudshell']
+
+/** The CSP for one path: the base policy, plus the AI provider origins in connect-src on AI_CODER_PATHS only. */
+export function cspForPath(path: string): string {
+  if (!AI_CODER_PATHS.includes(path)) return cspValue()
+  return cspValue({ ...CSP_DIRECTIVES, 'connect-src': [...CSP_DIRECTIVES['connect-src'], ...AI_CODER_ORIGINS] })
+}
 
 export const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()'
 
@@ -63,6 +74,8 @@ export function nextHeaderRules(): { source: string; headers: HeaderRule[] }[] {
   return [
     { source: '/:path*', headers: securityHeaders() },
     ...ENFORCED_CSP_PATHS.map((source) => ({ source, headers: [{ key: 'Content-Security-Policy', value: cspValue() }] })),
+    // the owner CloudShell page alone may connect to the AI providers (report-only like the rest of the signed-in pages)
+    ...AI_CODER_PATHS.map((source) => ({ source, headers: [{ key: CSP_HEADER, value: cspForPath(source) }] })),
   ]
 }
 

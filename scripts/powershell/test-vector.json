@@ -1,0 +1,74 @@
+[
+  {
+    "seq": 1,
+    "table": "collections",
+    "op": "insert",
+    "row_id": "c-1",
+    "payload": {
+      "id": "c-1",
+      "user_id": "u-1",
+      "name": "Plain",
+      "created_at": "2026-10-01T12:00:00.000Z"
+    },
+    "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "hash": "c6dbbe8a193bac40531cb58507d110063853a195fd5dc1c333d539ff782466a1"
+  },
+  {
+    "seq": 2,
+    "table": "notes",
+    "op": "insert",
+    "row_id": "n-1",
+    "payload": {
+      "id": "n-1",
+      "body": "quote \" back \\ nl \n tab \t ctl \u0001  café   😀 lone \ud800 / done",
+      "created_at": "2026-10-01T12:00:01.000Z"
+    },
+    "prev_hash": "c6dbbe8a193bac40531cb58507d110063853a195fd5dc1c333d539ff782466a1",
+    "hash": "271341a5380c8c8a644cdb22d30cbaf85f6dd7b8827aff9d95993a7c8bb6c098"
+  },
+  {
+    "seq": 3,
+    "table": "self_daily",
+    "op": "update",
+    "row_id": "u-1|2026-10-01",
+    "payload": {
+      "user_id": "u-1",
+      "day": "2026-10-01",
+      "dims": {
+        "b": 0.1,
+        "a": 1e-7,
+        "Z": 1.5e+25,
+        "z": 123456789012345680000,
+        "y": 1e+21,
+        "x": -3,
+        "w": 100,
+        "v": 0.000001,
+        "u": 12345.678,
+        "é": true,
+        "A": null,
+        "list": [
+          1,
+          "two",
+          [
+            3,
+            {
+              "k": false
+            }
+          ]
+        ]
+      },
+      "synthetic": true
+    },
+    "prev_hash": "271341a5380c8c8a644cdb22d30cbaf85f6dd7b8827aff9d95993a7c8bb6c098",
+    "hash": "5f8b535bc5f94aa64ec996edc56db23bf5a9be7e4e567473168da900deb61fe1"
+  },
+  {
+    "seq": 4,
+    "table": "notes",
+    "op": "delete",
+    "row_id": "n-1",
+    "payload": {},
+    "prev_hash": "5f8b535bc5f94aa64ec996edc56db23bf5a9be7e4e567473168da900deb61fe1",
+    "hash": "4d344d2bb12b14225c7facc48aa401db90efe42212ffdada8ddcb03d7c6e9ec2"
+  }
+]

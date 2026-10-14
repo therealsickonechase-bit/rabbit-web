@@ -17,6 +17,9 @@ const NAV = [
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
   { href: '/ledger', label: 'Public ledger' },
+  { href: '/data', label: 'Data hub' },
+  { href: '/cloudshell-public', label: 'CloudShell' },
+  { href: '/commands', label: 'Commands' },
   { href: '/downloads', label: 'Downloads' },
 ]
 

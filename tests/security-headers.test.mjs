@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { CSP_DIRECTIVES, CSP_HEADER, ENFORCED_CSP_PATHS, cspValue, nextHeaderRules, securityHeaders, staticHeadersFile } from '../src/lib/security-headers.ts'
+import { AI_CODER_ORIGINS, AI_CODER_PATHS, cspForPath, CSP_DIRECTIVES, CSP_HEADER, ENFORCED_CSP_PATHS, cspValue, nextHeaderRules, securityHeaders, staticHeadersFile } from '../src/lib/security-headers.ts'
 
 const get = (name) => securityHeaders().find((h) => h.key === name)?.value
 
@@ -46,7 +46,7 @@ test('the CSP is report-only everywhere and enforced only on the listed public p
   assert.equal(get('Content-Security-Policy'), undefined)             // never enforced by the catch-all rule
   const rules = nextHeaderRules()
   assert.equal(rules[0].source, '/:path*')
-  const enforced = rules.slice(1)
+  const enforced = rules.slice(1, 1 + ENFORCED_CSP_PATHS.length)
   assert.deepEqual(enforced.map((r) => r.source), ENFORCED_CSP_PATHS)
   for (const r of enforced) { assert.equal(r.headers.length, 1); assert.equal(r.headers[0].key, 'Content-Security-Policy'); assert.equal(r.headers[0].value, cspValue()) }
   // the signed-in pages stay report-only until they are exercised
@@ -72,4 +72,20 @@ test('the static headers file keeps the one-year immutable cache rule for hashed
   assert.ok(i >= 0, 'missing the /_next/static/* rule')
   assert.equal(lines[i + 1], '  Cache-Control: public, max-age=31536000, immutable')
   assert.ok(lines.includes('/*'))
+})
+
+test('AI provider origins are in connect-src on the cloudshell page only, never site-wide', () => {
+  assert.deepEqual(AI_CODER_PATHS, ['/cloudshell'])
+  assert.deepEqual(AI_CODER_ORIGINS, ['https://generativelanguage.googleapis.com', 'https://api.anthropic.com'])
+  for (const origin of AI_CODER_ORIGINS) {
+    assert.ok(!cspValue().includes(origin), origin)
+    assert.ok(!cspForPath('/vault-jobs').includes(origin), origin)
+    assert.ok(!cspForPath('/').includes(origin), origin)
+    assert.ok(cspForPath('/cloudshell').includes(origin), origin)
+    assert.ok(!get('Content-Security-Policy-Report-Only').includes(origin))
+  }
+  const rules = nextHeaderRules()
+  const mine = rules.filter((r) => r.headers.some((h) => h.value.includes(AI_CODER_ORIGINS[0])))
+  assert.deepEqual(mine.map((r) => r.source), ['/cloudshell'])
+  assert.ok(!ENFORCED_CSP_PATHS.includes('/cloudshell'))
 })

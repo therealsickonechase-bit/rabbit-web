@@ -33,9 +33,13 @@ const PUBLIC_READS = [
   '/api/chain/head', '/api/chain/ledger',
 ]
 
+/** The read-only data hub: /api/data and /api/data/<dataset>. The route itself 404s unknown datasets. */
+const DATA_HUB_PATH = /^\/api\/data\/[a-z_]{1,40}$/
+
 export function publicApiAllowed(path: string, method: string) {
   if (path === '/api/avatar/ask') return method === 'POST'
   if (Object.hasOwn(OPEN_ROUTES, path)) return OPEN_ROUTES[path].includes(method)
+  if (path === '/api/data' || DATA_HUB_PATH.test(path)) return method === 'GET' || method === 'HEAD' || method === 'OPTIONS'
   return PUBLIC_READS.includes(path) && (method === 'GET' || method === 'HEAD' || method === 'OPTIONS')
 }
 

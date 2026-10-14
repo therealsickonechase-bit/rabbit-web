@@ -177,3 +177,67 @@ is covered by explicit consent, and can be exported or deleted by the member at 
 7. **Person data vault.**
 
 Each step ships behind its own PR with tests, and nothing deploys without your go-ahead.
+
+## AI coder in the owner CloudShell
+
+The owner console at `/cloudshell` has an "AI coder" panel (Gemini by default, Claude optional). It exists only in that owner-only, approval-gated console; the open-access pages have no such panel and the console's access rules are unchanged.
+
+- **Key**: you paste your own provider API key. It is held in the browser tab's memory only (never localStorage, cookies or RabbitOS servers, never logged) and goes straight from the browser to the provider in a request header. Closing the tab or "Forget key" removes it. Only the `/cloudshell` page's CSP allows connecting to `generativelanguage.googleapis.com` and `api.anthropic.com`.
+- **Default coding agent**: the "Default coding agent" choice (Gemini or Claude) is saved in this browser's localStorage only (`rabbitos.defaultAgent`, never a key, never sent to a server) and is shared by the owner panel, the public CloudShell ("Start my default agent" types `gemini` or `claude` without Enter) and a banner on `/commands`. The permission rule is fixed and shown in the UI: every command needs your click (owner: plus an active approved grant); auto-run does not exist and no stored value can enable it.
+- **Human in the loop**: the model replies with strict JSON (`explanation`, `files`, `command`, `done`). The exact text to be sent is shown. Nothing runs until you tick the approval box and click "Run in CloudShell", every step. It uses the console's existing execute path, so an active, approved grant is required. At most 8 steps per task; it stops on done, deny, an expired grant or any shell error, and never retries.
+- **Local safety checks**: at most 8 files of 2000 bytes, safe relative paths, command plus files within the 4000-byte limit; environment dumps, ssh and credential-file access are refused; `curl | sh` needs a second confirmation.
+- **What leaves your browser**: your task text and each command's output go to the AI provider you chose, after credential patterns (private keys, `sk-`, `AIza`, GitHub/AWS/Slack tokens, Bearer tokens) and your key are removed and the output is capped at 16 KB. Scrubbing is pattern-based, not a guarantee; do not run commands that print private data.
+- Logic and tests: `src/lib/coding-assistant.ts`, `tests/coding-assistant.test.mjs`.
+
+## Command catalog
+
+`src/lib/command-catalog.ts` is one shared list of the commands built across rabbit-web, rabbitsoftware-cloudflare (including `workers/vault-agent` and the `vault:*` scripts) and research-agents. Every entry comes from a tracked file named in its `source` field (package.json scripts, README/DEVELOPMENT/docs, `scripts/`, the Python entry points and tests). Nothing is invented and nothing runs by itself.
+
+- **Everyone**: the `/commands` page lists the catalog by project and group with search, copy buttons, scope badges and risk labels. Owner-only commands are shown read-only.
+- **Public CloudShell**: the Commands drawer lists only `scope: 'public'` entries and types the chosen command into the terminal without pressing Enter. Public means read, test, lint, typecheck, build, dev-server, ledger helpers: no secret, nothing remote written, and valid in the public sandbox image (only `/workspace/rabbit-web` and the `site/` folder exist there; `/workspace` is read-only, so install-and-build commands work in a copy under the visitor's home).
+- **Owner CloudShell**: a picker lists every entry and fills the command box. You still tick the approval box and click Run exactly as before. The AI coder can optionally be given the ids and labels (not the command text). Entries without a `cd /workspace` prefix are written for the repo root on your own computer, not for the sandbox.
+- **Owner scope** covers anything that deploys, uses `wrangler` secrets or resources, Supabase service role, ingest secrets or the database URL, touches the vault or contact records, uses cloud-access/approval, or needs a private checkout (all of rabbitsoftware-cloudflare except the sandbox helpers, and all of research-agents, which are not in the sandbox image and whose data sources are not on its network allowlist). `needs` lists environment variable names only.
+- Tests: `tests/command-catalog.test.mjs` checks unique ids, field validity, the 4000-byte/no-NUL contract, that no public entry matches deploy/secret/token/approval patterns, that every `npm run` script and referenced file exists in the sibling repos (skipped when a repo is absent), and stable order. Add a new command to the module with its `source`, then run `npm run test:auth`.
+
+## Terminal look, Copilot and provider checks
+
+- **Public CloudShell look**: black terminal (Cascadia Mono, Consolas, Menlo, monospace; 5000 lines of scrollback, blinking cursor), a title bar with a session clock (an estimate; the server decides), and a collapsible Guide panel. The `Style: Linux | PowerShell-look` toggle changes colors and the welcome banner only. The shell in the container is always bash. Typing `help-rabbit` in the sandbox prints the same guide.
+- **PowerShell and network tools (default: the normal connection).**
+  - *Public sandbox:* the image has PowerShell 7 (`pwsh`, v7.6.6 from the official GitHub release, SHA256 checked in the Docker build; the login shell stays bash). The page has a "Start PowerShell" button that types `pwsh` without pressing Enter. `Invoke-WebRequest` / `Invoke-RestMethod` work only through the same egress allowlist as `curl` (HTTPS, named hosts, mostly read-only); nothing about the allowlist, proxy or approval gates changed. `rabbit-net status` shows the allowlisted connection and `rabbit-net check` sends `curl --head` (5 s timeout) to each allowed host. **ICMP/ping, DNS lookup tools, traceroute, nmap, netcat and port scanners are intentionally not installed**: only HTTPS to named hosts can leave the box, so they could not give true answers, and they are the tools used to scan other machines from a free shared sandbox. Use the module below on your own PC for real diagnostics.
+  - *Your PC:* `scripts/powershell/RabbitNet.psd1` (PowerShell 7). Run in PowerShell on your PC, from the rabbit-web folder: `Import-Module ./scripts/powershell/RabbitNet.psd1 -Force`. `Test-RabbitConnection` prints DNS, TCP 443, TLS, HTTP status and latency for app.rabbitsoftware.io, its `/api/chain/head` and (if set) `RABBIT_CLOUDSHELL_URL`. No proxy unless `-Proxy <url>` or `RABBIT_PROXY`. `-NetworkTools` is opt-in and asks first (`-Confirm`/`-WhatIf`): all DNS record types, a traceroute (Windows), IP configuration and MTU, only for hosts you name with `-TargetHost` (single host names; no IPs, ranges or ports) or the RabbitOS/Cloudflare hosts. There is no port-scan mode; only port 443 is contacted. `Get-RabbitChainHead` reads the public head.
+  - *`Sync-RabbitChain` is a local pull, not an upload.* It reads `GET /api/chain/ledger?since=N` into `~/RabbitOS/chain_ledger_local.jsonl` (or `-Path`), verifies the hash chain with a PowerShell port of `src/lib/chain-ledger.ts` (checked against a test vector built by the TypeScript code), refuses a broken chain, and resumes from `<file>.state.json`. It sends only GET requests with no body: no vault, notes, local files or tokens leave the PC, and it never uses `vault:cloud-access`. The CloudShell does not read your PC's file; it reads the same public URL itself, so Sync prints the copy-able CloudShell command (`curl -fsS "https://app.rabbitsoftware.io/api/chain/ledger?since=0" | head -c 60000`).
+  - *Tests:* `pwsh -File scripts/powershell/test-rabbitnet.ps1` (offline; skips with a message when PowerShell 7 is missing; `-Live` adds read-only live GETs) and `tests/rabbitnet.test.mjs` (static: exports, no port-scan cmdlets, no tokens, no uploads, no vault paths, default has no proxy; part of `npm run test:auth`). The command catalog lists these as owner commands labelled "run in PowerShell on your PC"; the public catalog gets only `rabbit-net check` and `pwsh --version`, and a test rejects scanning tools in any public entry.
+- **Owner console**: the command box is a black terminal view with a prompt line, scrollback of this tab's commands and outputs, Up/Down history (memory only) and a `help` panel. Enter never runs anything; you still tick the approval box and click Run.
+- **Copilot** (`copilot`, `@github/copilot`) is terminal-only. It can be the saved default agent for the public shell button; the AI coder panel then uses Gemini and says "Copilot runs in the terminal". Sign in with `/login` (device code) or paste a fine-grained token with the "Copilot Requests" permission as `COPILOT_GITHUB_TOKEN` in the keys drawer. It needs a Copilot subscription and Node 22+.
+- **Gemini model picker**: "Load models from my key" calls `GET /v1beta/models` from your browser with your key, keeps models that support `generateContent`, and fills the picker. A 403 or 404 shows a clear message; you can always type a model name.
+- **`npm run verify:ai`** (owner, your computer): with `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `COPILOT_GITHUB_TOKEN` in your environment it lists Gemini models, sends one tiny request per provider, checks GitHub accepts the Copilot token, and checks the three CLI packages with `npm view`. Prints PASS, FAIL or SKIPPED per item and never prints keys. With no keys only the npm checks run.
+
+## Data hub
+
+A public, read-only window onto research data and the chain ledger. Page: `/data`. API: `GET /api/data` (manifest: datasets, columns,
+row counts, endpoints, ledger head) and `GET /api/data/<dataset>` with `q` (search), `limit` (1 to 200, default 50), `cursor` (the
+`nextCursor` of the previous page), `sort` (a declared column, `-` for descending), exact-match filters on declared columns, and
+`format=json|csv|ndjson` (`download=1` sends it as a file). CORS is `*`, responses are cached for seconds, and each caller is rate limited
+(best effort). Only GET, HEAD and OPTIONS are allowed; there is nothing to write.
+
+**What is public (permanent once copied):** exactly these datasets, with explicit column lists in `src/lib/data-hub.ts`:
+`research_records`, `research_topics`, `research_runs`, `research_summaries`, `agents` (node id, kind, timestamps; no twin link),
+`chain_blocks`, `node_scores`, `merkle_batches`, `audit_entries`, `ledger` (sequence, table name, operation and hashes only; no payloads and
+no row ids, the full verified log stays at `/api/chain/ledger`) and `commands` (the public-scope CloudShell catalog). Any column or nested
+key that looks like a token, secret, key, email, password or user id is dropped. Once somebody copies a row you cannot take it back.
+
+**What is not in the hub:** chats, notes, collections, the memory graph, EEG samples, `self_daily`, contact records, API keys, settings, guest
+passes, owners, twin name and date of birth, and user ids. They stay on their own pages. The private local research stores in the
+`research-agents` folder are also not in the hub: they only appear here if they were ingested through the signed ingest into the research
+tables above.
+
+**From CloudShell** (the public sandbox may `GET` this API and nothing else on the origin):
+
+```
+curl -fsS "https://app.rabbitsoftware.io/api/data" | jq
+curl -fsS "https://app.rabbitsoftware.io/api/data/research_records?limit=50&q=brca1" | jq
+curl -fsS "https://app.rabbitsoftware.io/api/data/audit_entries?format=csv&limit=200" > audit.csv
+```
+
+The `/data` page shows the exact command per dataset with a copy button; the command catalog (`/commands`) lists them too. The website
+copy of the explorer is `data.html` in rabbitsoftware-cloudflare; it reads the same API across origins.
