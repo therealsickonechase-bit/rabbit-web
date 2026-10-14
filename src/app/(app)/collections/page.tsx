@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireMember, viewerClient } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, ago } from '@/components/ui'
+import RestoreButton from '@/components/RestoreButton'
+import { autoRestoreIfEmpty, recordWrite, selectAll } from '@/lib/chain-ledger-db'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -21,16 +23,28 @@ async function createCollection(formData: FormData) {
   const admin = createAdminClient()
   const count = await admin.from('collections').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
   if ((count.count ?? 0) >= 50) redirect('/collections?msg=toomany')
-  const made = await admin.from('collections').insert({ user_id: user.id, name }).select('id').single()
+  // Chain first, then the live table. Ids are made here so both carry the same row.
+  const col = { id: crypto.randomUUID(), user_id: user.id, name, created_at: new Date().toISOString() }
+  const taken = await admin.from('collections').select('id').eq('user_id', user.id).eq('name', name).maybeSingle()
+  if (taken.data) redirect('/collections?msg=exists')
+  try { await recordWrite('collections', 'insert', [col]) } catch { redirect('/collections?msg=exists') }
+  const made = await admin.from('collections').insert(col)
   if (made.error) redirect('/collections?msg=exists')
-  redirect(`/collections?c=${made.data.id}`)
+  redirect(`/collections?c=${col.id}`)
 }
 
 async function deleteCollection(formData: FormData) {
   'use server'
   const user = await requireMember()
   const id = await ownCollection(user.id, String(formData.get('collection') ?? ''))
-  if (id) await createAdminClient().from('collections').delete().eq('id', id)
+  if (id) {
+    // Tombstone the collection and what hangs off it (the live delete cascades), then remove the live rows.
+    const admin = createAdminClient()
+    await recordWrite('collection_items', 'delete', await selectAll(admin, 'collection_items', 'collection_id, record_id', ['collection_id', id]))
+    await recordWrite('notes', 'delete', await selectAll(admin, 'notes', 'id', ['collection_id', id]))
+    await recordWrite('collections', 'delete', [{ id }])
+    await admin.from('collections').delete().eq('id', id)
+  }
   redirect('/collections')
 }
 
@@ -39,7 +53,10 @@ async function removeItem(formData: FormData) {
   const user = await requireMember()
   const id = await ownCollection(user.id, String(formData.get('collection') ?? ''))
   const record = String(formData.get('record') ?? '')
-  if (id) await createAdminClient().from('collection_items').delete().eq('collection_id', id).eq('record_id', record)
+  if (id) {
+    await recordWrite('collection_items', 'delete', [{ collection_id: id, record_id: record }])
+    await createAdminClient().from('collection_items').delete().eq('collection_id', id).eq('record_id', record)
+  }
   redirect(`/collections?c=${id ?? ''}`)
 }
 
@@ -50,7 +67,9 @@ async function addNote(formData: FormData) {
   const body = String(formData.get('body') ?? '').trim().slice(0, 5000)
   const record = String(formData.get('record') ?? '') || null
   if (id && body) {
-    await createAdminClient().from('notes').insert({ user_id: user.id, collection_id: record ? null : id, record_id: record, body })
+    const note = { id: crypto.randomUUID(), user_id: user.id, collection_id: record ? null : id, record_id: record, body, created_at: new Date().toISOString() }
+    await recordWrite('notes', 'insert', [note])
+    await createAdminClient().from('notes').insert(note)
   }
   redirect(`/collections?c=${id ?? ''}`)
 }
@@ -59,7 +78,10 @@ async function deleteNote(formData: FormData) {
   'use server'
   const user = await requireMember()
   const note = String(formData.get('note') ?? '')
-  if (UUID.test(note)) await createAdminClient().from('notes').delete().eq('id', note).eq('user_id', user.id)
+  if (UUID.test(note)) {
+    await recordWrite('notes', 'delete', [{ id: note }])
+    await createAdminClient().from('notes').delete().eq('id', note).eq('user_id', user.id)
+  }
   redirect(`/collections?c=${String(formData.get('collection') ?? '')}`)
 }
 
@@ -71,6 +93,7 @@ const NOTICE: Record<string, string> = {
 export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ c?: string; msg?: string }> }) {
   const { c, msg } = await searchParams
   await requireMember()
+  await autoRestoreIfEmpty('collections')
   const sb = await viewerClient()
 
   const [cols, items] = await Promise.all([
@@ -98,7 +121,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
         <div className="space-y-4">
           <Card title="Your collections" flush>
             <nav aria-label="Collections" className="text-sm">
-              {(cols.data ?? []).length === 0 && <p className="p-4 text-muted">None yet.</p>}
+              {(cols.data ?? []).length === 0 && <div className="p-4 space-y-3"><p className="text-muted">None yet.</p><RestoreButton back="/collections" what="Your collections list" /></div>}
               {(cols.data ?? []).map((col) => (
                 <Link key={col.id} href={`/collections?c=${col.id}`} aria-current={col.id === active?.id ? 'true' : undefined}
                   className={`flex items-center justify-between px-4 py-2 border-b border-line last:border-0 hover:bg-canvas ${col.id === active?.id ? 'bg-accent-soft' : ''}`}>

@@ -6,6 +6,7 @@ import { PUBLIC_SOURCES } from '@/lib/public-feed'
 import { MAX_OPEN_PER_USER, MAX_PER_DAY } from '@/lib/tasks'
 import { embedTexts, toVectorLiteral, type AiLike } from '@/lib/embed'
 import type { Db } from '@/lib/mcp'
+import { recordWrite } from '@/lib/chain-ledger-db'
 
 // The only sources an API key can read: public literature/variants and CRISPR guides. Never chats, notes, EEG or twin data.
 const READABLE = [...PUBLIC_SOURCES, 'crispr_guide']
@@ -64,8 +65,11 @@ export function makeDb(): Db {
       if ((open.count ?? 0) >= MAX_OPEN_PER_USER) return { ok: false, error: `Too many open tasks (max ${MAX_OPEN_PER_USER}).` }
       const day = await sb.from('agent_tasks').select('id', { count: 'exact', head: true }).eq('created_by', userId).gte('created_at', new Date(Date.now() - 86400_000).toISOString())
       if ((day.count ?? 0) >= MAX_PER_DAY) return { ok: false, error: `Daily limit reached (${MAX_PER_DAY}).` }
-      const ins = await sb.from('agent_tasks').insert({ created_by: userId, kind, params }).select('id').single()
-      return ins.error ? { ok: false, error: 'Could not queue the task.' } : { ok: true, id: ins.data.id }
+      const now = new Date().toISOString()
+      const row = { id: crypto.randomUUID(), created_by: userId, kind, params, status: 'queued', created_at: now, updated_at: now }
+      try { await recordWrite('agent_tasks', 'insert', [row]) } catch { return { ok: false, error: 'Could not queue the task.' } } // chain first
+      const ins = await sb.from('agent_tasks').insert(row)
+      return ins.error ? { ok: false, error: 'Could not queue the task.' } : { ok: true, id: row.id }
     },
     async myTasks(userId) {
       const r = await sb.from('agent_tasks').select('id, kind, params, status, result').eq('created_by', userId).order('created_at', { ascending: false }).limit(20)

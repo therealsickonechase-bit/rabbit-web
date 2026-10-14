@@ -6,6 +6,8 @@ import { askQwen, QwenError, QWEN_MODEL } from '@/lib/qwen'
 import { ASK_DISCLAIMER, ASK_SYSTEM, buildAskPrompt, citedIds, keywords, orFilter, type AskRecord } from '@/lib/ask'
 import { Badge, Card, PageHeader, ago } from '@/components/ui'
 import AskQuestionInputs from '@/components/AskQuestionInputs'
+import RestoreButton from '@/components/RestoreButton'
+import { autoRestoreIfEmpty, recordWrite, selectAll } from '@/lib/chain-ledger-db'
 
 const DAILY_QUESTION_LIMIT = 40
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -44,9 +46,12 @@ async function ask(formData: FormData) {
     threadId = own.data?.id ?? null
   }
   if (!threadId) {
-    const made = await admin.from('chat_threads').insert({ user_id: user.id, title: question.slice(0, 120) }).select('id').single()
-    if (made.error || !made.data) back('failed')
-    threadId = made.data!.id
+    // Chain first (ids are made here so the ledger and the live row carry the same data), then the live table.
+    const thread = { id: crypto.randomUUID(), user_id: user.id, title: question.slice(0, 120), created_at: new Date().toISOString() }
+    try { await recordWrite('chat_threads', 'insert', [thread]) } catch { back('failed') }
+    const made = await admin.from('chat_threads').insert(thread)
+    if (made.error) back('failed')
+    threadId = thread.id
   }
 
   // Retrieve: records whose title matches a keyword, plus records under topics that match.
@@ -73,10 +78,13 @@ async function ask(formData: FormData) {
   try {
     const answer = await askQwen(prompt, ASK_SYSTEM, 700)
     const cited = citedIds(answer, records.map((r) => r.id))
-    const saved = await admin.from('chat_messages').insert([
-      { thread_id: threadId, user_id: user.id, role: 'user', content: question },
-      { thread_id: threadId, user_id: user.id, role: 'assistant', content: answer, cited, model: QWEN_MODEL },
-    ])
+    const t0 = Date.now()
+    const msgs = [
+      { id: crypto.randomUUID(), thread_id: threadId, user_id: user.id, role: 'user', content: question, cited: [], model: null, created_at: new Date(t0).toISOString() },
+      { id: crypto.randomUUID(), thread_id: threadId, user_id: user.id, role: 'assistant', content: answer, cited, model: QWEN_MODEL, created_at: new Date(t0 + 1).toISOString() },
+    ]
+    await recordWrite('chat_messages', 'insert', msgs)
+    const saved = await admin.from('chat_messages').insert(msgs)
     if (saved.error) throw saved.error
     outcome = ''
   } catch (e) {
@@ -91,13 +99,24 @@ async function deleteThread(formData: FormData) {
   'use server'
   const user = await requireMember()
   const id = String(formData.get('thread') ?? '')
-  if (UUID.test(id)) await createAdminClient().from('chat_threads').delete().eq('id', id).eq('user_id', user.id)
+  if (UUID.test(id)) {
+    const admin = createAdminClient()
+    // Tombstones first (the thread and its messages); the chain keeps their content, only the live view loses them.
+    const own = await admin.from('chat_threads').select('id').eq('id', id).eq('user_id', user.id).maybeSingle()
+    if (own.data) {
+      const msgs = await selectAll(admin, 'chat_messages', 'id', ['thread_id', id])
+      await recordWrite('chat_messages', 'delete', msgs)
+      await recordWrite('chat_threads', 'delete', [{ id }])
+      await admin.from('chat_threads').delete().eq('id', id).eq('user_id', user.id)
+    }
+  }
   redirect('/ask')
 }
 
 export default async function AskPage({ searchParams }: { searchParams: Promise<{ t?: string; msg?: string }> }) {
   const { t, msg } = await searchParams
   await requireMember()
+  await autoRestoreIfEmpty('chat_threads')
   const sb = await viewerClient()
 
   const threads = await sb.from('chat_threads').select('id, title, created_at').order('created_at', { ascending: false }).limit(30)
@@ -117,6 +136,7 @@ export default async function AskPage({ searchParams }: { searchParams: Promise<
         <Card title="Conversations" flush>
           <nav className="text-sm" aria-label="Conversations">
             <Link href="/ask" className="block px-4 py-2 text-accent hover:bg-canvas border-b border-line">+ New question</Link>
+            {!(threads.data ?? []).length && <div className="px-4 py-2 border-b border-line"><RestoreButton back="/ask" what="Your conversation list" /></div>}
             {(threads.data ?? []).map((th) => (
               <Link key={th.id} href={`/ask?t=${th.id}`} aria-current={th.id === active ? 'true' : undefined}
                 className={`block px-4 py-2 border-b border-line last:border-0 hover:bg-canvas ${th.id === active ? 'bg-accent-soft' : ''}`}>

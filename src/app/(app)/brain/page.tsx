@@ -3,11 +3,14 @@ import BrainExplorer, { type ChemRef, type GraphData } from '@/components/BrainE
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, short } from '@/components/ui'
 import { buildLinks, type EegSample, type Term } from '@/lib/brain'
 import { primaryGene } from '@/lib/twin-stats'
+import { autoRestoreIfEmpty } from '@/lib/chain-ledger-db'
+import RestoreButton from '@/components/RestoreButton'
 
 const label = (t: Term) => `${t.kind}: ${t.name}`
 
 export default async function BrainPage() {
   await requireViewer()
+  await autoRestoreIfEmpty('eeg_band_samples')
   const sb = await viewerClient()
 
   const [eeg, total, chem, recs, agents] = await Promise.all([
@@ -47,6 +50,8 @@ export default async function BrainPage() {
           Research and visualisation only, not a medical device and not for diagnosis. EEG is neural data: use it on yourself or with the wearer&apos;s informed consent.
           Only band powers are stored (never raw waveforms), the stored samples are visible to everyone, and samples older than 30 days can be purged.
         </p>
+
+        {!(total.count ?? 0) && <RestoreButton back="/brain" what="The EEG sample store" />}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat label="Channels streaming" value={streaming} sub="in the newest samples" tone={streaming ? 'ok' : 'warn'} />

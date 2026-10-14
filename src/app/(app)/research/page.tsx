@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { recordWrite } from '@/lib/chain-ledger-db'
 import { redirect } from 'next/navigation'
 import { requireMember, viewerClient } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -52,8 +53,10 @@ async function saveRecord(formData: FormData) {
   if (!own.data) redirect('/research?msg=nocollection')
   const exists = await admin.from('research_records').select('id').eq('id', recordId).maybeSingle()
   if (!exists.data) redirect('/research')
+  const item = { collection_id: collectionId, record_id: recordId, user_id: user.id, added_at: new Date().toISOString() }
+  await recordWrite('collection_items', 'insert', [item]) // chain first
   await admin.from('collection_items').upsert(
-    { collection_id: collectionId, record_id: recordId, user_id: user.id },
+    item,
     { onConflict: 'collection_id,record_id', ignoreDuplicates: true },
   )
   redirect(`/collections?c=${collectionId}`)

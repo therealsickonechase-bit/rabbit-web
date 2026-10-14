@@ -4,6 +4,8 @@ import AutoRefresh from '@/components/AutoRefresh'
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, short } from '@/components/ui'
 import { GENES, KINDS, KIND_LABEL, MAX_OPEN_PER_USER, MAX_PER_DAY, type Kind } from '@/lib/tasks'
 import { queueTask } from '@/lib/task-queue'
+import { autoRestoreIfEmpty } from '@/lib/chain-ledger-db'
+import RestoreButton from '@/components/RestoreButton'
 
 const tone = { queued: 'muted', claimed: 'info', proposed: 'warn', approved: 'ok', rejected: 'bad', failed: 'bad' } as const
 
@@ -32,6 +34,7 @@ const describe = (kind: string, p: Record<string, unknown>) =>
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { msg } = await searchParams
+  await autoRestoreIfEmpty('agent_tasks')
   const sb = await viewerClient()
   const tasks = await sb.from('agent_tasks').select('id, kind, params, status, claimed_by, result, error, review_note, created_at, updated_at').order('created_at', { ascending: false }).limit(50)
   const rows = tasks.data ?? []
@@ -46,6 +49,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       </PageHeader>
       <div className="space-y-6">
         {notice && <p role="status" className={`text-sm rounded-md border px-3 py-2 ${notice.ok ? 'text-ok border-ok/40' : 'text-bad border-bad/40'}`}>{notice.text}</p>}
+
+        {!rows.length && <RestoreButton back="/tasks" what="The task list" />}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat label="Queued" value={count('queued')} />

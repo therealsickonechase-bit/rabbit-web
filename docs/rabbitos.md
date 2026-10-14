@@ -121,6 +121,30 @@ receipt) is anchored → anyone holding the original can prove it matches, and n
 Revoking consent deletes the data from Supabase and anchors a revocation; the old hash then proves nothing
 about content.
 
+### 7a. The chain ledger (why wiped data comes back)
+Every write to the opened tables (EEG band samples, self-daily summaries, chats, collections and their items, notes, the knowledge graph, agent tasks)
+is first appended to `chain_ledger`, and only then written to the live table. An event is
+`{seq, table, op, row_id, payload, prev_hash, hash}`; the hash is the Merkle leaf hash (`src/lib/merkle.ts`) of the event's canonical JSON plus the
+previous hash, so changing, dropping or reordering any event breaks every later one. A delete or a wipe is a **tombstone** event; the ledger itself
+cannot be updated, deleted or truncated (RLS, revoked privileges, and triggers), and only the server's service role can insert.
+The live tables are just a view of the ledger.
+
+- **Restore.** `POST /api/chain/restore` (the "Restore from chain" button, and automatically when a page finds a table empty) replays the ledger,
+  verifies the hash chain (a broken chain is refused, nothing is written), and puts back every row's last non-deleted state. It is idempotent: rows already
+  present are left alone. A deliberate delete is therefore recorded, but can be undone by a restore; that is the point of "always persists".
+- **Replication.** After each event it is mirrored, best effort and without blocking the write, to a second store: an R2 bucket bound as `CHAIN_MIRROR`
+  (not bound by default; the no-op mirror is used until you add the binding). `GET /api/chain/ledger?since=N` publishes the events publicly (read-only) and
+  `scripts/chain-export.mjs` pulls them to the Maxwell node (`export`), checks them (`verify`) and pushes them back (`import`, signed like `/api/ingest`).
+  Restore also reads the mirror, so it can rebuild even a lost Supabase ledger, but only if the combined chain verifies.
+- **What is never on the ledger.** Only whitelisted columns of the tables above. Contact records, API keys, per-person settings, guest passes and the
+  twin's name and date of birth are never written to it, the public route re-sanitises every payload, and the import route rejects events carrying anything else.
+
+**What this is not.** It is a tamper-evident, replicated, hash-chained log you control. It is not a decentralized public blockchain: there is no consensus
+among strangers, and someone with database superuser rights could still disable the triggers and rewrite it. Tampering is *detectable* by comparing against the
+mirror or the Maxwell copy, not impossible. **What survives:** if the live tables are wiped, the ledger restores them. If Supabase is lost but the R2 mirror is
+intact, the mirror restores both. If Supabase AND the mirror are both lost, only a copy pulled by the Maxwell node (`chain-export.mjs export`, run regularly)
+remains, so schedule that pull. Data written after your last export from a total double loss is gone.
+
 ### 8. Person data vault (opt-in)
 A member may attach their own data to their account (for example a sequence file they own) to use with the
 simulator and chat. It is encrypted before storage with a key derived per user, is never shown to other members,

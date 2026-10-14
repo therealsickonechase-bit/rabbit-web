@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { recordWrite } from '@/lib/chain-ledger-db'
 import { GENESIS_HASH, checkAuditLinks, ingestSchema, verifySignature } from '@/lib/ingest'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -172,8 +173,10 @@ export async function POST(request: Request) {
     }
 
     if (p.eeg.length) {
+      const eegRows = p.eeg.map((e) => ({ agent_id: node, session: e.session, ts: e.ts, channel: e.channel, band: e.band, power: e.power, rel_power: e.rel_power ?? null, board: e.board }))
+      await recordWrite('eeg_band_samples', 'insert', eegRows) // chain first, then the live table
       const res = await sb.from('eeg_band_samples').upsert(
-        p.eeg.map((e) => ({ agent_id: node, session: e.session, ts: e.ts, channel: e.channel, band: e.band, power: e.power, rel_power: e.rel_power ?? null, board: e.board })),
+        eegRows,
         { onConflict: 'agent_id,session,ts,channel,band', ignoreDuplicates: true }
       )
       if (res.error) throw res.error

@@ -7,6 +7,8 @@ import { EMBED_MODEL, embedTexts, recordText, toVectorLiteral, type AiLike } fro
 import { buildLinks } from '@/lib/brain'
 import { primaryGene } from '@/lib/twin-stats'
 import { PUBLIC_SOURCES } from '@/lib/public-feed'
+import { autoRestoreIfEmpty, recordWrite, selectAll } from '@/lib/chain-ledger-db'
+import RestoreButton from '@/components/RestoreButton'
 
 const SOURCES = [...PUBLIC_SOURCES, 'crispr_guide']
 const ai = async () => (await getAi()) as AiLike | undefined
@@ -56,6 +58,11 @@ async function rebuildGraph() {
   const genes = [...new Set(records.map((r) => primaryGene((r.meta as Record<string, unknown> | null)?.gene)).filter((g) => g !== 'UNKNOWN'))]
   const links = buildLinks(records.map((r) => ({ id: r.id, source: r.source, title: r.title, meta: r.meta as Record<string, unknown> | null })), { chemicals: (chem.data ?? []).map((c) => c.chemical_name), genes })
   const rows = links.edges.flatMap((e) => e.records.map((record_id) => ({ a_kind: e.a.kind, a_name: e.a.name, b_kind: e.b.kind, b_name: e.b.name, record_id })))
+  // Chain first: tombstone every current edge, record the new ones, and only then touch the live table. The wipe removes the live view only.
+  try {
+    await recordWrite('kg_edges', 'delete', await selectAll(admin, 'kg_edges', 'a_kind, a_name, b_kind, b_name, record_id'))
+    await recordWrite('kg_edges', 'insert', rows)
+  } catch { redirect('/memory?msg=failed') }
   const del = await admin.from('kg_edges').delete().neq('record_id', '')
   if (del.error) redirect('/memory?msg=failed')
   for (let i = 0; i < rows.length; i += 500) {
@@ -75,6 +82,7 @@ async function search(formData: FormData) {
 
 export default async function MemoryPage({ searchParams }: { searchParams: Promise<{ msg?: string; q?: string }> }) {
   const { msg, q } = await searchParams
+  await autoRestoreIfEmpty('kg_edges')
   const sb = await viewerClient()
   const admin = createAdminClient()
 
@@ -117,6 +125,8 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
       <PageHeader title="Memory" sub="Search by meaning, and the graph of what the research connects" />
       <div className="space-y-6">
         {notice && <p role="status" className={`text-sm rounded-md border px-3 py-2 ${notice.ok ? 'text-ok border-ok/40' : 'text-bad border-bad/40'}`}>{notice.text}</p>}
+
+        {!(edges.data ?? []).length && <RestoreButton back="/memory" what="The knowledge graph" />}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat label="Records" value={recCount.count ?? 0} />
