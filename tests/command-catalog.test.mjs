@@ -97,6 +97,19 @@ test('RabbitNet PowerShell entries are owner-only, labelled to run on your PC, a
   if (existsSync(join(roots['rabbit-web'], 'scripts', 'powershell'))) for (const f of ['RabbitNet.psm1', 'RabbitNet.psd1']) assert.ok(existsSync(join(roots['rabbit-web'], 'scripts', 'powershell', f)), f)
 })
 
+test('Maxwell mirror dry run is owner-only, labelled to run on your PC, and sends nothing', () => {
+  const e = CATALOG.find((x) => x.id === 'ra-maxwell-sync-dry')
+  assert.ok(e)
+  assert.equal(e.project, 'research-agents')
+  assert.equal(e.scope, 'owner')
+  assert.equal(e.command, 'python maxwell_chain_sync.py --dry-run')
+  assert.equal(runsIn(e), 'computer')
+  assert.match(e.label, /run on your PC/)
+  assert.equal(e.needs, undefined)
+  assert.equal(e.risk, 'local')
+  assert.equal(e.source, 'maxwell_chain_sync.py')
+})
+
 test('every referenced package.json script and local file exists', (t) => {
   let checked = 0
   for (const e of CATALOG) {

@@ -15,7 +15,7 @@
 Set-StrictMode -Version 3.0
 
 $script:DefaultOrigin = 'https://app.rabbitsoftware.io'
-$script:LedgerTables = @('collections', 'chat_threads', 'chat_messages', 'collection_items', 'notes', 'agent_tasks', 'self_daily', 'kg_edges', 'eeg_band_samples')
+$script:LedgerTables = @('collections', 'chat_threads', 'chat_messages', 'collection_items', 'notes', 'agent_tasks', 'self_daily', 'kg_edges', 'eeg_band_samples', 'maxwell_chain')
 $script:LedgerOps = @('insert', 'update', 'delete')
 $script:GenesisHash = '0' * 64
 $script:CloudflareHosts = @('www.cloudflare.com')

@@ -8,6 +8,7 @@
 // This is a replicated, hash-chained log. It is NOT a decentralized public blockchain: there is no consensus among
 // strangers. Pure logic only (no imports besides merkle) so tests and scripts can load it with plain Node.
 import { leafHash, merkleRoot } from './merkle.ts'
+import { MAXWELL_KEYS, MAXWELL_TABLE, validateMaxwellBlock } from './maxwell-block.ts'
 
 export const GENESIS_PREV = '0'.repeat(64)
 export type Op = 'insert' | 'update' | 'delete'
@@ -33,6 +34,8 @@ interface TableSpec {
   order: number
   /** Restore skips rows whose timestamp column is older than this many days (mirrors the live retention purge). */
   retention?: { col: string; days: number }
+  /** false: there is no live table behind this ledger table (the ledger IS the data), so restore and auto-restore skip it. */
+  live?: false
 }
 
 export const LEDGER_TABLES = {
@@ -54,6 +57,8 @@ export const LEDGER_TABLES = {
     order: 9,
     retention: { col: 'ts', days: 30 },
   },
+  // The owner's Maxwell chain, mirrored block by block (POST /api/ingest/maxwell-chain). Strict shape: see maxwell-block.ts.
+  maxwell_chain: { key: ['index'], cols: MAXWELL_KEYS, order: 10, live: false },
 } as const satisfies Record<string, TableSpec>
 
 export type LedgerTable = keyof typeof LEDGER_TABLES
@@ -94,6 +99,11 @@ const norm = (col: string, v: unknown) => (typeof v === 'string' && /(_at|^ts|_u
 /** Only whitelisted columns survive; nested forbidden keys are stripped; timestamps normalised. */
 export function sanitizeRow(table: string, row: Record<string, unknown>): Record<string, unknown> {
   if (!isLedgerTable(table)) throw new Error(`table ${table} is not on the ledger`)
+  if (table === MAXWELL_TABLE) {
+    const v = validateMaxwellBlock(row)
+    if (!v.ok) throw new Error(`${MAXWELL_TABLE}: ${v.reason}`)
+    return { ...v.block }
+  }
   const out: Record<string, unknown> = {}
   for (const c of spec(table).cols) if (row[c] !== undefined) out[c] = stripForbidden(norm(c, row[c]))
   return out
@@ -163,13 +173,17 @@ export async function verifyChain(events: LedgerEvent[], from: Head = GENESIS_HE
 export function isClean(e: LedgerEvent): boolean {
   if (!isLedgerTable(e.table)) return false
   if (e.op === 'delete') return Object.keys(e.payload).length === 0
-  return canonical(sanitizeRow(e.table, e.payload)) === canonical(e.payload) && e.row_id === rowId(e.table, e.payload)
+  try {
+    return canonical(sanitizeRow(e.table, e.payload)) === canonical(e.payload) && e.row_id === rowId(e.table, e.payload)
+  } catch { return false }
 }
 
 /** What the public may read: whitelisted tables only, payload re-sanitised, fields in a fixed shape. */
 export function publicEvent(e: LedgerEvent): LedgerEvent | null {
   if (!isLedgerTable(e.table)) return null
-  return { seq: e.seq, table: e.table, op: e.op, row_id: e.row_id, payload: e.op === 'delete' ? {} : sanitizeRow(e.table, e.payload), prev_hash: e.prev_hash, hash: e.hash }
+  try {
+    return { seq: e.seq, table: e.table, op: e.op, row_id: e.row_id, payload: e.op === 'delete' ? {} : sanitizeRow(e.table, e.payload), prev_hash: e.prev_hash, hash: e.hash }
+  } catch { return null } // a payload that fails its table's strict check is never shown
 }
 
 /** Merkle root over a run of event hashes (reuses src/lib/merkle.ts); a short way to publish "the ledger up to here". */
@@ -208,7 +222,7 @@ export interface RestorePlan { table: LedgerTable; conflict: string; rows: Recor
 export function planRestore(events: LedgerEvent[], tables?: readonly string[], opts: ReplayOptions = {}): RestorePlan[] {
   const state = replay(events, opts)
   return LEDGER_TABLE_NAMES
-    .filter((t) => (!tables || tables.includes(t)) && state[t]?.size)
+    .filter((t) => (!tables || tables.includes(t)) && state[t]?.size && (spec(t).live ?? true))
     .sort((a, b) => spec(a).order - spec(b).order)
     .map((t) => ({ table: t, conflict: spec(t).key.join(','), rows: [...state[t].values()].map((p) => ({ ...p })) }))
 }

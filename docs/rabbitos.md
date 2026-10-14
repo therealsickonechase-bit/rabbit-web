@@ -241,3 +241,17 @@ curl -fsS "https://app.rabbitsoftware.io/api/data/audit_entries?format=csv&limit
 
 The `/data` page shows the exact command per dataset with a copy button; the command catalog (`/commands`) lists them too. The website
 copy of the explorer is `data.html` in rabbitsoftware-cloudflare; it reads the same API across origins.
+
+## Maxwell mirror
+
+Every block of the owner's Maxwell chain (`maxwell_chain.json` in research-agents) is also an event on the public chain ledger, so anyone can read and verify it at `/api/chain/ledger`, in the `/ledger` explorer and with `Sync-RabbitChain` / `chain_pull.py`.
+
+- **What is public**: only the six block fields: `index`, `timestamp`, `transactions`, `previous_hash`, `nonce`, `hash`. A block carries at most 20 transactions, each with at most 12 string or number fields, and at most about 20 KB in all. Any other key, nested value, or field name that looks like a secret or personal data makes the block refused (never silently trimmed). The chain file holds no personal data.
+- **How it is stored**: ledger table `maxwell_chain`, op `insert`, `row_id` = the block index. There is no live table behind it (the ledger is the data), so restore and auto-restore skip it. A partial unique index means an index can be mirrored once.
+- **How it links**: two chains. The Maxwell chain links by `previous_hash` (block 0 follows 64 zeros). The ledger links each event to the one before it. `POST /api/ingest/maxwell-chain` checks the Maxwell linkage before writing: a new block's `previous_hash` must equal the hash of the block before it (already mirrored, or earlier in the same call), so gaps and forks are refused (422).
+- **Idempotent, never overwritten**: re-sending a block with the same index and hash is skipped. The same index with a different hash is refused with 409 and nothing in that call is written.
+- **Route contract**: signed like `/api/ingest` (`x-rabbit-timestamp`, `x-rabbit-signature` = hex HMAC-SHA256 of `${timestamp}.${body}` with `INGEST_SHARED_SECRET`). Body `{ "blocks": [...] }`, at most 50 blocks and 256 KB. Reply `{ accepted, skipped, rejected: [{ index, code, reason }] }`; `rejected` is empty on 200. Rate limited per caller; logs counts only, never block contents.
+- **Sender**: `python maxwell_chain_sync.py [--dry-run] [--once]` in research-agents (run on your PC). It re-checks the chain locally (linkage and each block's SHA-256, recomputed the way `maxwellblockchain.py` hashes), remembers the last mirrored index in `.maxwell_chain_sync_state.json`, and posts only new blocks. `--dry-run` sends nothing and writes no state.
+- **A mirror, not consensus**: the server does not re-do proof of work and no other node agrees on this chain. The ledger records "these blocks were published, in this order, and have not been changed since" — it does not make Maxwell a decentralized public blockchain.
+- **Setup order**: apply `supabase/migrations/20261014010000_chain_ledger_maxwell.sql` by hand (after the base chain-ledger migration), deploy the app, then run the sync. `chain_pull.py` and the RabbitNet module list the ledger tables; keep them in step (`maxwell_chain` is in `RabbitNet.psm1`; `chain_pull.py` `TABLES` needs it too).
+- Logic and tests: `src/lib/maxwell-block.ts`, `src/lib/maxwell-mirror.ts`, `src/app/api/ingest/maxwell-chain/route.ts`, `tests/maxwell-mirror.test.mjs`; sender tests in research-agents `test_maxwell_chain_sync.py`.

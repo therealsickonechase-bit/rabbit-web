@@ -390,6 +390,11 @@ const RA: CatalogEntry[] = [
     { id: 'ra-sync-watch', group: 'Sync to RabbitOS', label: 'rabbit_sync every 5 minutes', scope: 'owner', risk: 'secret',
       command: 'python rabbit_sync.py --watch 300', needs: ['RABBIT_URL', 'RABBIT_INGEST_SECRET'], description: 'Repeats the sync every 300 seconds.' },
   ]),
+  ...seed('research-agents', 'maxwell_chain_sync.py', [
+    { id: 'ra-maxwell-sync-dry', group: 'Maxwell mirror', label: 'maxwell_chain_sync dry run (run on your PC)', scope: 'owner', risk: 'local',
+      command: 'python maxwell_chain_sync.py --dry-run',
+      description: 'Run on your PC, from the research-agents folder. Verifies maxwell_chain.json and prints which new blocks would be mirrored to the public ledger; sends nothing and writes no state. Without --dry-run it posts the new blocks to /api/ingest/maxwell-chain (needs RABBIT_URL and RABBIT_INGEST_SECRET).' },
+  ]),
   ...seed('research-agents', 'run_all.py', [
     { id: 'ra-run-all', group: 'Agents', label: 'run_all (chain, research agent, AI participant, audit)', scope: 'owner', risk: 'network',
       command: 'python3 run_all.py', description: 'The single entry point that launches everything under one project identifier.' },

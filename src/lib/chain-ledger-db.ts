@@ -176,7 +176,7 @@ const lastTry = new Map<string, number>()
 /** If a table that should have rows is empty, restore it from the chain (at most once a minute per table per instance). */
 export async function autoRestoreIfEmpty(table: string): Promise<boolean> {
   try {
-    if (!isLedgerTable(table)) return false
+    if (!isLedgerTable(table) || (LEDGER_TABLES[table] as { live?: false }).live === false) return false
     const sb = createAdminClient()
     const live = await sb.from(table).select('*', { count: 'exact', head: true })
     if (live.error || (live.count ?? 0) > 0) return false

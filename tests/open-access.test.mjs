@@ -37,7 +37,7 @@ test('the open_access migration opens exactly the open tables and touches no pro
   assert.ok(file, 'migration exists')
   const sql = readFileSync(new URL(file, dir), 'utf8')
   const after = readdirSync(dir).filter((f) => f.endsWith('.sql') && f > file)
-  assert.deepEqual(after.filter((f) => !f.endsWith('_chain_ledger.sql')), [], 'nothing but the append-only chain ledger comes after it')
+  assert.deepEqual(after.filter((f) => !/_chain_ledger(_maxwell)?\.sql$/.test(f)), [], 'nothing but the append-only chain ledger comes after it')
   for (const t of OPEN_READ_TABLES) assert.ok(sql.includes(`'${t}'`), `opens ${t}`)
   const open = sql.slice(sql.indexOf('foreach t in array array['), sql.indexOf(']', sql.indexOf('foreach t in array array[')))
   for (const t of PROTECTED_TABLES) assert.equal(open.includes(`'${t}'`), false, `${t} stays closed`)
