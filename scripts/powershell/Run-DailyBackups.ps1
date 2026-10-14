@@ -26,7 +26,19 @@ if ($LASTEXITCODE -ne 0) {
     }
 }
 
+$maxwellDir = 'C:\Users\odaat\Projects\research-agents'
+function Import-MaxwellEnv {
+    # Loads only RABBIT_URL and RABBIT_INGEST_SECRET from research-agents\.env into THIS process. Nothing is printed.
+    $envFile = Join-Path $maxwellDir '.env'
+    foreach ($name in 'RABBIT_URL', 'RABBIT_INGEST_SECRET') {
+        $l = if (Test-Path $envFile) { Get-Content $envFile | Where-Object { $_ -match "^\s*$name\s*=" } | Select-Object -First 1 }
+        if ($l) { Set-Item -Path "Env:$name" -Value (($l -split '=', 2)[1].Trim().Trim('"').Trim("'")) }
+    }
+}
 $steps = @(
+    # Maxwell first: anchor the public research records into the chain (adds a block only when the research changed), then mirror new blocks.
+    @{ Name = 'Maxwell: research anchor'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python maxwell_research_anchor.py --apply } finally { Pop-Location } } },
+    @{ Name = 'Maxwell: mirror new blocks to the public ledger'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; python maxwell_chain_sync.py --once } finally { Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; Pop-Location } } },
     @{ Name = 'Google: public ledger + datasets'; Script = 'Sync-RabbitGcs.ps1'; Params = @{ Ledger = $true; Exports = $true } },
     @{ Name = 'Google: Maxwell files';            Script = 'Sync-RabbitGcs.ps1'; Params = @{ Maxwell = $true } },
     @{ Name = 'Platform: Supabase, Cloudflare, repos'; Script = 'Backup-Platform.ps1'; Params = @{} }
@@ -34,8 +46,8 @@ $steps = @(
 foreach ($s in $steps) {
     Log "START $($s.Name)"
     try {
-        $p = $s.Params
-        $out = & (Join-Path $scripts $s.Script) @p 2>&1 | Out-String
+        if ($s.Block) { $out = & $s.Block 2>&1 | Out-String }
+        else { $p = $s.Params; $out = & (Join-Path $scripts $s.Script) @p 2>&1 | Out-String }
         $out.TrimEnd() -split "`r?`n" | Where-Object { $_.Trim() } | ForEach-Object { Add-Content $log "    $_" }
         if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
         Log "OK    $($s.Name)"
