@@ -2,6 +2,10 @@ import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 import AutoRefresh from '@/components/AutoRefresh'
 
+// These pages read the database with the server-side admin client, so they must render per request, never at build time
+// (the image build has no service-role key, by design).
+export const dynamic = 'force-dynamic'
+
 // Open access: no login, no roles. Everyone sees the same navigation.
 const NAV = [
   { href: '/dashboard', label: 'Overview' },
