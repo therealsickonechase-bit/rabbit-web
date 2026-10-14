@@ -64,7 +64,7 @@ export const CONNECTIONS: ConnMeta[] = [
     leaves: 'Only your approved question, recent conversation and state words. No raw EEG, wearable or lab values. Hosted inference is separate from local Ollama.', start: 'Choose Hosted Qwen3 and approve each open question under the avatar',
   },
   {
-    id: 'server', name: 'RabbitOS server and database', where: 'app.rabbitsoftware.io (Cloudflare Worker, Supabase)',
+    id: 'server', name: 'RabbitOS server and database', where: 'app.rabbitsoftware.io (Cloudflare Worker, Supabase); Cloud Run mirror at run.rabbitsoftware.io',
     uses: 'Serves the account-free workspace, public literature feed and optional hosted avatar chat.',
     leaves: 'Approved avatar questions/history/state words only. No account session is used; live raw EEG, WiFi and data-portrait values stay local.', start: 'Always on',
   },
