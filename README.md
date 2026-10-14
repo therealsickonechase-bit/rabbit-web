@@ -1,10 +1,10 @@
 # RabbitOS (rabbit-web)
 
-The account-free RabbitOS workspace at **app.rabbitsoftware.io**, served by
-Next.js/vinext on Cloudflare Workers. No email, password, CAPTCHA or guest pass
-is required. Public literature metadata comes from the existing Supabase feed;
-private accounts and records remain stored but inaccessible. The in-app
-**Guide** (`/guide`) describes the current workflow.
+RabbitOS at **app.rabbitsoftware.io**, served by Next.js/vinext on Cloudflare Workers.
+**Access is open to everyone: no login, no sign-up, no owner, member or guest tiers.** Everyone is the same anonymous visitor and can read
+and write the stored data (EEG band samples, daily summaries, twin, chain, agents, memory, collections, tasks) through the server.
+Contact records, API keys and audit writes stay closed; agent tasks proposed here never run on their own. The in-app **Guide**
+() describes the workflow; see [docs/rabbitos.md](docs/rabbitos.md).
 
 ## What is in it
 
@@ -16,7 +16,7 @@ private accounts and records remain stored but inaccessible. The in-app
 | Brain & Body, Twin model, Connections | anyone | Existing local 3D explorer, physiology, avatar, opt-in loopback bridges, image/export tools. No server-stored EEG, twin identity or personal readings are loaded. Coarse portrait summaries stay in this browser. |
 | CRISPR Explorer | anyone | Text-only teaching editor; no private guide candidates are loaded. |
 | Public proof | anyone | Already-public audit head only; no private audit entries or sealing controls. |
-| Accounts, API keys, owner controls | disabled | Old account cookies do not grant access. No shared/fake owner account is used and no database/RLS permissions are widened. |
+| Contact records, API keys, audit writes, task execution | closed | Not reachable anonymously. Members, Guests, Keys and Settings pages are removed. Ingest and agent endpoints keep their signed auth. |
 | Open model API | anyone, read-only | `/api/model/body`, `/api/model/state`, `/api/model/concepts` (MeSH), `/api/model/openapi.json`, `/llms.txt`. Teaching data only; no personal data. |
 | **Downloads** (`/downloads`) | anyone, read-only | Existing public packages with licence/checksum. Account uploads and removal are disabled. |
 | Public feed | anyone, read-only | `/api/public/research-feed` for rabbitsoftware.io. |
@@ -24,19 +24,13 @@ private accounts and records remain stored but inaccessible. The in-app
 
 ## Commands
 
-### Account-free boundary
+### Open-access boundary
 
-`src/proxy.ts` rewrites public workspace paths to `/workspace/:section` before
-legacy account pages run. Old account actions return 405; private account APIs,
-including email sending, return 410 regardless of cookies. Legacy account
-layout/session helpers also fail closed. Login, signup, guest and confirmation
-pages redirect without consuming tokens or creating accounts.
-
-Only explicit public read APIs and Qwen avatar POST remain available.
-Signed ingest, agent and MCP endpoints retain their own credential validation;
-they are not anonymous account access. Existing Supabase data, secrets and RLS
-are unchanged. Legacy account implementation/design notes remain for history,
-not as active public features.
+ serves the pages directly and allows server-action POSTs on them ( in ).
+Old login, signup, guest, members, guests, keys, settings and  URLs redirect to . Opened APIs: ,
+,  and the public reads; every other  path returns 410. Signed ingest, agent and MCP
+endpoints keep their own credential validation. Data access goes through the server admin client with explicit column lists;
+migration  (apply by hand) opens public read and keeps writes service-role only.
 
 ### Allowlisted cloud tools
 

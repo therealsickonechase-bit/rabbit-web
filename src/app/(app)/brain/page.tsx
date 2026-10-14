@@ -7,13 +7,12 @@ import { primaryGene } from '@/lib/twin-stats'
 const label = (t: Term) => `${t.kind}: ${t.name}`
 
 export default async function BrainPage() {
-  const { isOwner } = await requireViewer()
-  const sb = await viewerClient(isOwner)
-  const none = Promise.resolve({ data: [] as never[], count: 0 })   // the owner's stored EEG is never shown to guests
+  await requireViewer()
+  const sb = await viewerClient()
 
   const [eeg, total, chem, recs, agents] = await Promise.all([
-    isOwner ? sb.from('eeg_band_samples').select('channel, band, power, rel_power, ts').order('ts', { ascending: false }).limit(400) : none,
-    isOwner ? sb.from('eeg_band_samples').select('id', { count: 'exact', head: true }) : none,
+    sb.from('eeg_band_samples').select('channel, band, power, rel_power, ts').order('ts', { ascending: false }).limit(400),
+    sb.from('eeg_band_samples').select('id', { count: 'exact', head: true }),
     sb.from('chemo_baselines').select('chemical_name, chemical_class, unit, baseline_mean, baseline_stddev'),
     sb.from('research_records').select('id, source, title, url, meta').limit(3000),
     sb.from('agents').select('node_id, kind, last_seen_at').order('last_seen_at', { ascending: false }),
@@ -42,11 +41,11 @@ export default async function BrainPage() {
 
   return (
     <>
-      <PageHeader title="Brain Network" sub={isOwner ? "Live EEG from OpenBCI / BrainFlow, with the research and chemistry connected to it" : "3D brain and body, research and chemistry. Stored EEG is owner only; your own live signals stay on your computer"} />
+      <PageHeader title="Brain Network" sub="Live EEG from OpenBCI / BrainFlow, with the research and chemistry connected to it" />
       <div className="space-y-6">
         <p role="note" className="text-sm rounded-md border border-warn/40 text-warn px-3 py-2">
           Research and visualisation only, not a medical device and not for diagnosis. EEG is neural data: use it on yourself or with the wearer&apos;s informed consent.
-          Only band powers are stored (never raw waveforms), owner-only, and samples older than 30 days can be purged.
+          Only band powers are stored (never raw waveforms), the stored samples are visible to everyone, and samples older than 30 days can be purged.
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -57,7 +56,7 @@ export default async function BrainPage() {
         </div>
 
         <Card>
-          <BrainExplorer initial={initial} graph={graph} chemicals={chemicals} crisprGenes={crisprGenes} storedEeg={isOwner} />
+          <BrainExplorer initial={initial} graph={graph} chemicals={chemicals} crisprGenes={crisprGenes} storedEeg />
         </Card>
 
         <div className="grid lg:grid-cols-2 gap-6">

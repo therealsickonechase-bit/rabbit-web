@@ -17,8 +17,7 @@ async function askAgents(formData: FormData) {
 
 export default async function ConnectionsPage({ searchParams }: { searchParams: Promise<{ n?: string }> }) {
   const { n } = await searchParams
-  const { isOwner } = await getSessionRole()
-  const admin = createAdminClient()
+    const admin = createAdminClient()
 
   const [variants, titles] = await Promise.all([
     admin.from('research_records').select('title, url, meta').eq('source', 'clinvar').not('meta->>system', 'is', null).limit(400),
@@ -44,7 +43,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
         <p role="note" className="text-sm rounded-md border border-warn/40 text-warn px-3 py-2">
           Education and research use only. Links are textbook-level knowledge, and an EEG alone cannot diagnose a condition. Gene numbers are real counts from ClinVar and describe DNA changes in general, not any person.
         </p>
-        <ConnectionsMap examples={examples} papers={papers} initial={n ?? null} isOwner={isOwner} ask={askAgents} />
+        <ConnectionsMap examples={examples} papers={papers} initial={n ?? null} isOwner ask={askAgents} />
       </div>
     </>
   )

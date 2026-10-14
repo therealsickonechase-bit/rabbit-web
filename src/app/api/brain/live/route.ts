@@ -1,14 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-// Latest EEG band samples for the 3D brain. Owner only: the database's row-level security enforces it as well
-// (a member's query simply returns nothing), this check just gives a clear status code.
+// Latest EEG band samples for the 3D brain. Open to everyone (no login); read through the server with an explicit column list.
 export async function GET() {
-  const sb = await createClient()
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) return Response.json({ error: 'sign in' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
-  const { data: isOwner } = await sb.rpc('is_owner')
-  if (isOwner !== true) return Response.json({ error: 'owner only' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
-
+  const sb = createAdminClient()
   const since = new Date(Date.now() - 30_000).toISOString()
   const { data, error } = await sb
     .from('eeg_band_samples')

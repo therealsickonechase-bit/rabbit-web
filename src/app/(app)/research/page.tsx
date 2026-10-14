@@ -1,10 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { requireMember } from '@/lib/auth/session'
+import { requireMember, viewerClient } from '@/lib/auth/session'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { decryptSecret } from '@/lib/secrets'
-import { DISCLAIMER, MODEL, buildPrompt, summarize } from '@/lib/summarize'
 import MeshTag from '@/components/MeshTag'
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, short } from '@/components/ui'
 
@@ -42,74 +39,7 @@ function detail(source: string, m: Record<string, unknown>) {
 }
 
 const NOTICE: Record<string, { tone: 'ok' | 'bad'; text: string }> = {
-  done: { tone: 'ok', text: 'Summary saved. It appears under AI summaries below.' },
-  nokey: { tone: 'bad', text: 'Add your Anthropic key in Settings first.' },
-  limit: { tone: 'bad', text: 'Daily summary limit reached (20 per day). Try again tomorrow.' },
-  norecords: { tone: 'bad', text: 'This topic has no stored records to summarize yet.' },
-  failed: { tone: 'bad', text: 'The summary could not be generated. Try again in a moment.' },
-  credits: { tone: 'bad', text: 'Your Anthropic account has no credits. Add credits under Plans & Billing in the Anthropic console, then try again.' },
-  badkey: { tone: 'bad', text: 'Anthropic rejected your saved key. Replace it in Settings.' },
-  ratelimit: { tone: 'bad', text: 'Anthropic is rate limiting this key. Wait a minute and try again.' },
   nocollection: { tone: 'bad', text: 'Create a collection first, then save records to it.' },
-}
-
-const DAILY_SUMMARY_LIMIT = 20
-
-async function summarizeTopic(formData: FormData) {
-  'use server'
-  const user = await requireMember()
-  const sb = await createClient()
-
-  const topicId = Number(formData.get('topic_id'))
-  const admin = createAdminClient()
-
-  // Each person may request a limited number of summaries per day (they are billed to their own key).
-  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
-  const recent = await admin
-    .from('research_summaries')
-    .select('id', { count: 'exact', head: true })
-    .eq('created_by', user.id)
-    .gte('created_at', since)
-  if ((recent.count ?? 0) >= DAILY_SUMMARY_LIMIT) redirect('/research?msg=limit')
-  const { data: settings } = await admin.from('user_settings').select('anthropic_key_enc').eq('user_id', user.id).maybeSingle()
-  if (!settings?.anthropic_key_enc) redirect('/research?msg=nokey')
-
-  const [topic, records] = await Promise.all([
-    sb.from('research_topics').select('id, topic, biomarker').eq('id', topicId).maybeSingle(),
-    sb.from('research_records').select('id, source, title, meta').eq('topic_id', topicId).limit(80),
-  ])
-  if (!topic.data || !records.data?.length) redirect('/research?msg=norecords')
-
-  let outcome = 'failed'
-  try {
-    const key = await decryptSecret(settings.anthropic_key_enc)
-    const prompt = buildPrompt(topic.data.topic, topic.data.biomarker, records.data)
-    const text = await summarize(key, prompt)
-
-    const agent = await admin.from('agents').upsert({ node_id: 'rabbitos-web', kind: 'ai_participant', last_seen_at: new Date().toISOString() }, { onConflict: 'node_id' })
-    if (agent.error) throw agent.error
-    const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`web:${topicId}:${text}`))))
-      .map((b) => b.toString(16).padStart(2, '0')).join('')
-    const saved = await admin.from('research_summaries').insert({
-      agent_id: 'rabbitos-web',
-      created_by: user.id,
-      topic_id: topicId,
-      model: MODEL,
-      ai_interpretation: text,
-      disclaimer: DISCLAIMER,
-      source_counts: { records: records.data.length },
-      input_hash: hash,
-    })
-    if (saved.error) throw saved.error
-    outcome = 'done'
-  } catch (e) {
-    const detail = e instanceof Error ? e.message : 'unknown'
-    console.error('summarize failed', detail.slice(0, 300))
-    if (/credit balance/i.test(detail)) outcome = 'credits'
-    else if (/Anthropic API 40[13]/.test(detail)) outcome = 'badkey'
-    else if (/Anthropic API 429/.test(detail)) outcome = 'ratelimit'
-  }
-  redirect(`/research?msg=${outcome}`)
 }
 
 async function saveRecord(formData: FormData) {
@@ -132,7 +62,7 @@ async function saveRecord(formData: FormData) {
 export default async function ResearchPage({ searchParams }: { searchParams: Promise<{ source?: string; msg?: string }> }) {
   const { source, msg } = await searchParams
   const notice = msg ? NOTICE[msg] : undefined
-  const sb = await createClient()
+  const sb = await viewerClient()
 
   let recordQuery = sb
     .from('research_records')
@@ -142,10 +72,10 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
   if (source) recordQuery = recordQuery.eq('source', source)
 
   const [topics, records, sources, runs, summaries, myCollections] = await Promise.all([
-    sb.from('research_topics').select('*').order('created_at', { ascending: false }).limit(50),
+    sb.from('research_topics').select('id, topic, biomarker, status, discovered_by, created_at').order('created_at', { ascending: false }).limit(50),
     recordQuery,
     sb.from('research_records').select('source').limit(5000),
-    sb.from('research_runs').select('*', { count: 'exact', head: true }),
+    sb.from('research_runs').select('id', { count: 'exact', head: true }),
     sb
       .from('research_summaries')
       .select('id, model, ai_interpretation, disclaimer, created_at, research_topics(topic, biomarker)')
@@ -162,13 +92,12 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader title="Research" sub="Topics, literature and AI summaries from the research agents" />
+      <PageHeader title="Research" sub="Topics, literature and AI summaries from the research agents (read-only summaries)" />
 
       <div className="space-y-6">
         {notice && (
           <p role="status" className={`text-sm rounded-md border px-3 py-2 ${notice.tone === 'ok' ? 'text-ok border-ok/40' : 'text-bad border-bad/40'}`}>
             {notice.text}{' '}
-            {msg === 'nokey' && <Link href="/settings" className="underline">Open Settings</Link>}
           </p>
         )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -200,7 +129,7 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
         )}
 
         <Card title="Topics" flush>
-          <Table head={['Topic', 'Biomarker', 'Status', 'Found by', 'Added', 'AI summary']} empty="No topics yet. Run rabbit_sync.py to import them.">
+          <Table head={['Topic', 'Biomarker', 'Status', 'Found by', 'Added']} empty="No topics yet. Run rabbit_sync.py to import them.">
             {topicRows.map((t) => (
               <tr key={t.id}>
                 <Td>{t.topic}<MeshTag term={t.topic} /></Td>
@@ -208,12 +137,6 @@ export default async function ResearchPage({ searchParams }: { searchParams: Pro
                 <Td><Badge tone={statusTone[t.status as keyof typeof statusTone]}>{t.status}</Badge></Td>
                 <Td mono>{short(t.discovered_by, 10)}</Td>
                 <Td>{ago(t.created_at)}</Td>
-                <Td>
-                  <form action={summarizeTopic}>
-                    <input type="hidden" name="topic_id" value={t.id} />
-                    <button className="text-xs rounded-md border border-line px-2 py-1 hover:border-accent hover:text-accent">Summarize</button>
-                  </form>
-                </Td>
               </tr>
             ))}
           </Table>

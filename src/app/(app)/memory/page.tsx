@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAi } from '@/lib/runtime-env'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getSessionRole, requireOwner, requireMember } from '@/lib/auth/session'
+import { requireMember, viewerClient } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, Stat, Table, Td } from '@/components/ui'
 import { EMBED_MODEL, embedTexts, recordText, toVectorLiteral, type AiLike } from '@/lib/embed'
 import { buildLinks } from '@/lib/brain'
@@ -23,7 +22,7 @@ const NOTICE: Record<string, { ok: boolean; text: string }> = {
 
 async function embedNext() {
   'use server'
-  await requireOwner()
+  await requireMember()
   const binding = await ai()
   if (!binding) redirect('/memory?msg=noai')
   const admin = createAdminClient()
@@ -47,7 +46,7 @@ async function embedNext() {
 
 async function rebuildGraph() {
   'use server'
-  await requireOwner()
+  await requireMember()
   const admin = createAdminClient()
   const [recs, chem] = await Promise.all([
     admin.from('research_records').select('id, source, title, meta').in('source', PUBLIC_SOURCES).limit(3000),
@@ -76,8 +75,7 @@ async function search(formData: FormData) {
 
 export default async function MemoryPage({ searchParams }: { searchParams: Promise<{ msg?: string; q?: string }> }) {
   const { msg, q } = await searchParams
-  const { isOwner } = await getSessionRole()
-  const sb = await createClient()
+  const sb = await viewerClient()
   const admin = createAdminClient()
 
   const [recCount, embCount, edges] = await Promise.all([
@@ -153,14 +151,14 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
         </Card>
 
         <Card title="Strongest connections in the research" flush>
-          <Table head={['Term', 'Mentioned together with', 'Records']} empty="The graph is empty. An owner can build it from the stored records.">
+          <Table head={['Term', 'Mentioned together with', 'Records']} empty="The graph is empty. Anyone can build it from the stored records.">
             {top.map((p) => <tr key={`${p.a}|${p.b}`}><Td>{p.a}</Td><Td>{p.b}</Td><Td mono>{p.n}</Td></tr>)}
           </Table>
           <p className="text-xs text-muted px-4 py-3 border-t border-line">A connection means stored record titles mention both terms together. It points to papers to read; it is not evidence of cause.</p>
         </Card>
 
-        {isOwner && (
-          <Card title="Owner tools">
+        {(
+          <Card title="Maintenance">
             <div className="flex flex-wrap gap-3">
               <form action={embedNext}><button className="rounded-md border border-line text-sm px-3 py-2 hover:border-accent hover:text-accent">Embed next 50 records</button></form>
               <form action={rebuildGraph}><button className="rounded-md border border-line text-sm px-3 py-2 hover:border-accent hover:text-accent">Rebuild knowledge graph</button></form>

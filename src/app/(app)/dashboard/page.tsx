@@ -1,4 +1,5 @@
 import { requireViewer, viewerClient } from '@/lib/auth/session'
+import { COLS } from '@/lib/open-access'
 import { Badge, Card, PageHeader, Stat, Table, Td, short, when } from '@/components/ui'
 
 const GATE = { cortisol: 0.75, gsr: 0.05, arousal: 0.6 }
@@ -6,30 +7,30 @@ const GATE = { cortisol: 0.75, gsr: 0.05, arousal: 0.6 }
 const tierTone = { EXISTENTIAL: 'bad', CRITICAL: 'bad', HIGH: 'warn', LOW: 'ok', MINIMAL: 'muted' } as const
 
 export default async function OverviewPage() {
-  const { isOwner } = await requireViewer()
-  const sb = await viewerClient(isOwner)
+  await requireViewer()
+  const sb = await viewerClient()
   const [twin, tokens, nodes, readings, anchors] = await Promise.all([
-    sb.from('twin_identity').select('id, is_sealed, biological_hash, sealed_at, subject_name, subject_dob').limit(1).maybeSingle(),
-    sb.from('convergence_tokens').select('*').order('minted_at', { ascending: false }).limit(1),
-    sb.from('sdr_node_profiles').select('*').order('node_id').limit(50),
-    sb.from('mesh_node_readings').select('*').order('timestamp', { ascending: false }).limit(10),
-    sb.from('xrpl_memo_anchors').select('*').order('anchored_at', { ascending: false }).limit(5),
+    sb.from('twin_identity').select(COLS.twin).limit(1).maybeSingle(),
+    sb.from('convergence_tokens').select(COLS.tokens).order('minted_at', { ascending: false }).limit(1),
+    sb.from('sdr_node_profiles').select(COLS.nodes).order('node_id').limit(50),
+    sb.from('mesh_node_readings').select(COLS.readings).order('timestamp', { ascending: false }).limit(10),
+    sb.from('xrpl_memo_anchors').select(COLS.anchors).order('anchored_at', { ascending: false }).limit(5),
   ])
 
-  // guests see the twin's state but not who it is: name and date of birth are for the owner only
-  const t = twin.data && !isOwner ? { ...twin.data, subject_name: null, subject_dob: null } : twin.data
+  // Name and date of birth are never read here: the column list leaves them out.
+  const t = twin.data
   const latest = tokens.data?.[0]
   const fired = latest && latest.cortisol_ng_ml > GATE.cortisol && latest.gsr_delta_phi > GATE.gsr && latest.arousal > GATE.arousal
 
   return (
     <>
-      <PageHeader title="Overview" sub={`Digital twin${t?.subject_name ? ` — ${t.subject_name}` : ''}`} />
+      <PageHeader title="Overview" sub="Digital twin" />
 
       <div className="space-y-6">
         <Card title="Twin identity">
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div><dt className="text-xs text-muted">Subject</dt><dd className="font-medium">{t?.subject_name ?? (isOwner ? '—' : 'Hidden (owner only)')}</dd></div>
-            <div><dt className="text-xs text-muted">Date of birth</dt><dd className="font-mono">{t?.subject_dob ?? (isOwner ? '—' : 'Hidden (owner only)')}</dd></div>
+            <div><dt className="text-xs text-muted">Subject</dt><dd className="font-medium">Not published</dd></div>
+            <div><dt className="text-xs text-muted">Date of birth</dt><dd className="font-mono">Not published</dd></div>
             <div><dt className="text-xs text-muted">Sealed</dt><dd><Badge tone={t?.is_sealed ? 'ok' : 'warn'}>{t?.is_sealed ? 'Sealed' : 'Not sealed'}</Badge></dd></div>
             <div><dt className="text-xs text-muted">Biological hash</dt><dd className="font-mono text-xs">{short(t?.biological_hash, 24)}</dd></div>
           </dl>

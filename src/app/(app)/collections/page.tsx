@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireMember } from '@/lib/auth/session'
+import { requireMember, viewerClient } from '@/lib/auth/session'
 import { Badge, Card, PageHeader, ago } from '@/components/ui'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -72,7 +71,7 @@ const NOTICE: Record<string, string> = {
 export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ c?: string; msg?: string }> }) {
   const { c, msg } = await searchParams
   await requireMember()
-  const sb = await createClient()
+  const sb = await viewerClient()
 
   const [cols, items] = await Promise.all([
     sb.from('collections').select('id, name, created_at').order('created_at', { ascending: false }),

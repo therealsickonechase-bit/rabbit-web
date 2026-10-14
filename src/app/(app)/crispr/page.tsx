@@ -1,7 +1,6 @@
 import { geneLinks, identifiersFor } from '@/lib/gene-ids'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireUser } from '@/lib/auth/session'
+import { requireUser, viewerClient } from '@/lib/auth/session'
 import GuideEditor, { type GuideChoice } from '@/components/GuideEditor'
 import { guideDigest, type GuideRow } from '@/lib/crispr-sim'
 import { Badge, Card, PageHeader, Stat, Table, Td, ago, short, when } from '@/components/ui'
@@ -10,7 +9,7 @@ const LIT_LABEL: Record<string, string> = { crispr_trial: 'Trial', crispr_paper:
 
 export default async function CrisprPage() {
   await requireUser()
-  const sb = await createClient()
+  const sb = await viewerClient()
 
   const [guideRes, litRes] = await Promise.all([
     sb.from('research_records').select('id, title, url, meta, first_seen_at').eq('source', 'crispr_guide').limit(500),

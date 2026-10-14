@@ -1,31 +1,27 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { machineApi, publicApiAllowed, workspaceSection } from '@/lib/account-free'
+import { legacyRedirect, machineApi, pageMethodAllowed, publicApiAllowed } from '@/lib/account-free'
 import { ownerCloudApi } from '@/lib/cloud-jobs'
 
+// Open access: pages are served directly, no login. Only the APIs listed in account-free.ts are reachable;
+// ingest and agent endpoints keep their own signed/machine auth.
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname.replace(/\/$/, '') || '/'
   const method = request.method
   if (path.startsWith('/api/')) {
     if (publicApiAllowed(path, method) || machineApi(path) || ownerCloudApi(path, method)) return NextResponse.next()
     return NextResponse.json(
-      { error: 'Account services are disabled. Existing private data is not available in the account-free workspace.' },
+      { error: 'This endpoint is not available.' },
       { status: 410, headers: { 'Cache-Control': 'no-store' } },
     )
   }
-  if (method !== 'GET' && method !== 'HEAD') {
-    return NextResponse.json({ error: 'Account actions are disabled.' }, { status: 405, headers: { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' } })
-  }
-  if (['/login', '/signup', '/guest', '/members', '/guests', '/keys'].includes(path) || path.startsWith('/auth/')) {
+  if (legacyRedirect(path)) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     url.search = ''
-    return NextResponse.redirect(url)
+    return NextResponse.redirect(url, method === 'GET' || method === 'HEAD' ? 307 : 303)
   }
-  const section = workspaceSection(path.slice(1))
-  if (section || path === '/') {
-    const url = request.nextUrl.clone()
-    url.pathname = `/workspace/${section ?? 'dashboard'}`
-    return NextResponse.rewrite(url)
+  if (!pageMethodAllowed(path, method)) {
+    return NextResponse.json({ error: 'Method not allowed.' }, { status: 405, headers: { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' } })
   }
   return NextResponse.next()
 }

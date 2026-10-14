@@ -1,22 +1,33 @@
 # RabbitOS — what it is, and where it is going
 
-## Current account-free workspace
+## Current: open access for everyone
 
-RabbitOS now opens without email, password, CAPTCHA or guest passes.
-Public research uses only the existing public feed. Qwen chat requires
-per-message consent, not an account. Chats, notes, checklists and settings
-persist in unencrypted browser storage; local device tools remain opt-in.
-Existing private account data is retained but inaccessible, even with old
-cookies. Private API actions and owner controls are disabled, not public.
-No database permissions or schema are changed.
+RabbitOS is open to everyone. There is no login, no sign-up and no owner, member or guest tiers; every visitor is the same
+anonymous identity (), with no cookies and no auth. The pages Overview, Twin Atlas, Brain Network, Chemistry & DNA,
+Research, Ask RabbitOS, Memory, CRISPR Explorer, Collections, Agent tasks, Agents and Chain & Audit are served directly. Old
+, , , , , ,  and  URLs redirect to .
 
-Read the in-app `/guide` or [README](../README.md) for current features and
-limitations. The latest-title feed is not full-corpus retrieval, local tasks
-are not remote agent jobs, and private twin/EEG/guide data is not loaded.
+What everyone can read and write (always through the server; the service role never reaches the browser): stored EEG band samples,
+daily self summaries (), the twin, the chain, agents, memory, collections, notes, chats and tasks.
+Because everyone shares one identity, everyone sees and can change the same chats, collections, notes and daily summaries.
+,  and  are open, keeping their validation, size limits and rate limits.
+Ask RabbitOS uses the hosted Qwen model only; there are no personal API keys.
+
+Still closed to anonymous users:
+- **contact_records** (other people's contact data) and **api_keys**: no one can mint, list or revoke keys. The Members, Guests, Keys
+  and Settings pages and the guest-pass code are removed.
+- **audit_entries** writes: the audit trail is readable by all but append-only; only the signed ingest writes it. Sealing Merkle batches is removed.
+- **Agent task execution**:  and  keep their signed/machine auth. Anyone may propose a task; it is stored as
+  , agents only claim  tasks, so it never runs on the owner's computer. Approving proposals into the corpus is removed.
+- The twin's **name and date of birth** are never read or published (column list and a column-level grant).
+- Personal data (EEG, wearables, labs) still belongs on the user's own computer; only coarse summaries are stored.
+
+Database:  (not applied automatically) creates the shared visitor row, drops the
+owner-only policies and grants public read on the opened tables. Writes stay service-role only.
 
 ## Historical account-backed design (inactive)
 
-The remainder records the previous design, not current public access or setup.
+The remainder records the previous design (owner, member and guest roles), not current access or setup.
 
 RabbitOS was the logged-in console at `app.rabbitsoftware.io` (linked from rabbitsoftware.io, section RabbitOS). It was the one
 place where **people, AI agents and a digital twin** meet around a body of research. Supabase is the system of

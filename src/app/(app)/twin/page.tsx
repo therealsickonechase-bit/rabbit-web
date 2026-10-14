@@ -8,8 +8,8 @@ const HOUR = 3600 * 1000
 const clinvarUrl = (id: unknown) => (id ? `https://www.ncbi.nlm.nih.gov/clinvar/variation/${encodeURIComponent(String(id))}/` : null)
 
 export default async function TwinAtlasPage() {
-  const { isOwner } = await requireViewer()
-  const sb = await viewerClient(isOwner)
+  await requireViewer()
+  const sb = await viewerClient()
 
   const [twin, baselines, readings, variants, edits, dna, anchors, blocks, audit, runs, topics, sources] = await Promise.all([
     sb.from('twin_identity').select('id, is_sealed, biological_hash, sealed_at').limit(1).maybeSingle(),

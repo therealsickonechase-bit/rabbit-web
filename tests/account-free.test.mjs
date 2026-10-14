@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { machineApi, publicApiAllowed, workspaceSection } from '../src/lib/account-free.ts'
+import { legacyRedirect, machineApi, pageMethodAllowed, publicApiAllowed, workspaceSection } from '../src/lib/account-free.ts'
 import { emptyWorkspace, publicLink, readWorkspace, researchContext } from '../src/lib/workspace.ts'
 
 test('all workspace sections are explicit and never include account administration', () => {
@@ -8,8 +8,8 @@ test('all workspace sections are explicit and never include account administrati
   for (const name of ['members', 'keys', 'guests', '../members', 'research/private']) assert.equal(workspaceSection(name), null)
 })
 
-test('private APIs and account writes stay disabled, including old authenticated callers', () => {
-  for (const path of ['/api/self/daily', '/api/brain/live', '/api/settings', '/api/auth/send-email', '/api/packages/upload']) {
+test('account APIs and writes stay disabled', () => {
+  for (const path of ['/api/settings', '/api/keys', '/api/members', '/api/auth/send-email', '/api/packages/upload']) {
     for (const method of ['GET', 'POST', 'DELETE']) assert.equal(publicApiAllowed(path, method), false)
     assert.equal(machineApi(path), false)
   }
@@ -47,4 +47,23 @@ test('research pointers reject executable URLs and bound supplied context', () =
   const context = researchContext(feed, 'BRCA1')
   assert.equal(context.split('\n').length, 4)
   assert.equal(context.includes('javascript:'), false)
+})
+
+test('the three formerly owner-only routes are open, with only the methods they implement', () => {
+  assert.equal(publicApiAllowed('/api/brain/live', 'GET'), true)
+  assert.equal(publicApiAllowed('/api/brain/live', 'POST'), false)
+  assert.equal(publicApiAllowed('/api/brain/illustrate', 'POST'), true)
+  assert.equal(publicApiAllowed('/api/brain/illustrate', 'GET'), false)
+  for (const method of ['GET', 'POST', 'DELETE']) assert.equal(publicApiAllowed('/api/self/daily', method), true)
+  assert.equal(publicApiAllowed('/api/self/daily', 'PUT'), false)
+  assert.equal(publicApiAllowed('/api/__proto__', 'GET'), false)
+})
+
+test('server actions (POST) are allowed on app pages only, never on legacy account paths', () => {
+  for (const path of ['/ask', '/tasks', '/collections', '/research', '/memory', '/connections']) assert.equal(pageMethodAllowed(path, 'POST'), true)
+  for (const path of ['/login', '/signup', '/keys', '/members', '/guests', '/settings', '/auth/confirm', '/downloads', '/']) assert.equal(pageMethodAllowed(path, 'POST'), false)
+  assert.equal(pageMethodAllowed('/ask', 'DELETE'), false)
+  assert.equal(pageMethodAllowed('/anything', 'GET'), true)
+  for (const path of ['/login', '/signup', '/guest', '/members', '/guests', '/keys', '/auth/confirm']) assert.equal(legacyRedirect(path), true)
+  assert.equal(legacyRedirect('/dashboard'), false)
 })

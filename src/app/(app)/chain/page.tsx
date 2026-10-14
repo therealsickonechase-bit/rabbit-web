@@ -1,42 +1,24 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { MAX_BATCH, MIN_BATCH, merkleRoot } from '@/lib/merkle'
-import { requireOwner, requireViewer, viewerClient } from '@/lib/auth/session'
+import { merkleRoot } from '@/lib/merkle'
+import { requireViewer, viewerClient } from '@/lib/auth/session'
+import { COLS } from '@/lib/open-access'
 import { Badge, Card, PageHeader, Table, Td, short, when } from '@/components/ui'
 
-async function sealBatch() {
-  'use server'
-  const owner = await requireOwner()
-  const admin = createAdminClient()
-  const last = await admin.from('merkle_batches').select('to_seq').order('to_seq', { ascending: false }).limit(1).maybeSingle()
-  const from = last.data ? Number(last.data.to_seq) + 1 : 0
-  const rows = await admin.from('audit_entries').select('seq, hash').gte('seq', from).order('seq').limit(MAX_BATCH)
-  const list = rows.data ?? []
-  // Only a gap-free run can be sealed: stop at the first missing sequence number.
-  let n = 0
-  while (n < list.length && Number(list[n].seq) === from + n) n++
-  if (n < MIN_BATCH) redirect('/chain?sealed=few')
-  const batch = list.slice(0, n)
-  const root = await merkleRoot(batch.map((e) => e.hash))
-  const ins = await admin.from('merkle_batches').insert({ from_seq: from, to_seq: from + n - 1, leaf_count: n, root, sealed_by: owner.id })
-  redirect(ins.error ? '/chain?sealed=error' : '/chain?sealed=ok')
-}
-
-export default async function ChainPage({ searchParams }: { searchParams: Promise<{ chain?: string; sealed?: string }> }) {
-  const { isOwner } = await requireViewer()
-  const { chain = 'network', sealed } = await searchParams
+export default async function ChainPage({ searchParams }: { searchParams: Promise<{ chain?: string }> }) {
+  await requireViewer()
+  const { chain = 'network' } = await searchParams
   const isMaxwell = chain === 'maxwell'
-  const sb = await viewerClient(isOwner)
+  const sb = await viewerClient()
 
   const [blocks, audit, genesis] = await Promise.all([
     sb
       .from('chain_blocks')
-      .select('*')
+      .select('block_id, node_id, source, das_score, hash, prev_hash, mined_at, height')
       .eq('chain', chain)
       .order(isMaxwell ? 'height' : 'mined_at', { ascending: false })
       .limit(25),
-    sb.from('audit_entries').select('*').order('seq', { ascending: false }).limit(50),
+    sb.from('audit_entries').select(COLS.audit).order('seq', { ascending: false }).limit(50),
     isMaxwell
       ? sb.from('chain_blocks').select('payload, hash').eq('chain', 'maxwell').eq('height', 0).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -63,8 +45,6 @@ export default async function ChainPage({ searchParams }: { searchParams: Promis
     const ok = hashes.length === b.leaf_count && (await merkleRoot(hashes)) === b.root
     return { ...b, ok }
   }))
-  const lastTo = batchRes.data?.[0]?.to_seq
-  const pending = await admin.from('audit_entries').select('seq', { count: 'exact', head: true }).gt('seq', lastTo ?? -1)
   const anchor = genesis.data?.payload as { anchor_sha256?: string; anchor_verified?: boolean } | null
 
   return (
@@ -97,18 +77,8 @@ export default async function ChainPage({ searchParams }: { searchParams: Promis
 
         <Card
           title="Merkle batches"
-          action={
-            !isOwner ? undefined : <form action={sealBatch}>
-              <button className="text-xs rounded-md border border-line px-3 py-1 hover:border-accent hover:text-accent">Seal next batch ({pending.count ?? 0} waiting)</button>
-            </form>
-          }
           flush
         >
-          {sealed && (
-            <p role="status" className={`text-sm px-4 py-2 border-b border-line ${sealed === 'ok' ? 'text-ok' : 'text-bad'}`}>
-              {sealed === 'ok' ? 'Batch sealed.' : sealed === 'few' ? `Need at least ${MIN_BATCH} consecutive unsealed audit entries.` : 'Could not seal the batch.'}
-            </p>
-          )}
           <Table head={['Batch', 'Entries', 'Root', 'Recomputed', 'Sealed', 'Ledger']} empty="No batches sealed yet.">
             {batches.map((b) => (
               <tr key={b.id}>
