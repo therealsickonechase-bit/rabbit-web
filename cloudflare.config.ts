@@ -46,6 +46,9 @@ export default defineConfig(({ mode }) => {
       CONTACT_HASH_KEY: bindings.secret(),
       // Auth emails go out through Cloudflare Email Sending, from this one address only.
       APP_URL: bindings.text('https://app.rabbitsoftware.io'),
+      // Second copy of the public chain ledger (src/lib/chain-mirror.ts). Create the bucket first: npx wrangler r2 bucket create rabbitos-chain-mirror
+      // Off Workers (Cloud Run / Node) there is no binding and chain-mirror falls back to its no-op.
+      CHAIN_MIRROR: bindings.r2({ name: 'rabbitos-chain-mirror' }),
       // Remote-only bindings need a Cloudflare API token, so the self-hosted workerd container (RABBIT_SELF_HOSTED=1) omits them.
       ...(process.env.RABBIT_SELF_HOSTED === '1' ? {} : {
         EMAIL: bindings.sendEmail({ allowedSenderAddresses: ['accounts@mail.rabbitsoftware.io'] }),

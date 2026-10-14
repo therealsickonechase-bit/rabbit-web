@@ -52,3 +52,10 @@ export function mirrorBestEffort(mirror: ChainMirror, events: LedgerEvent[]): vo
 
 /** What the mirror may hold is exactly what the public may read. */
 export const mirrorable = (events: LedgerEvent[]) => events.map(publicEvent).filter((e): e is LedgerEvent => e !== null)
+
+/** The mirror for a Workers env: the `CHAIN_MIRROR` R2 binding (bucket rabbitos-chain-mirror, declared in cloudflare.config.ts) when it
+ *  looks like a bucket, else the no-op (local development, Node, Cloud Run). */
+export function mirrorFromEnv(env: Record<string, unknown> | undefined): ChainMirror {
+  const b = env?.CHAIN_MIRROR as Partial<R2Like> | undefined
+  return b && typeof b.put === 'function' && typeof b.get === 'function' && typeof b.list === 'function' ? r2Mirror(b as R2Like) : noopMirror
+}

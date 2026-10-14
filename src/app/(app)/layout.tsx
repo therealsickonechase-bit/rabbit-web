@@ -16,6 +16,7 @@ const NAV = [
   { href: '/tasks', label: 'Agent tasks' },
   { href: '/agents', label: 'Agents' },
   { href: '/chain', label: 'Chain & Audit' },
+  { href: '/ledger', label: 'Public ledger' },
   { href: '/downloads', label: 'Downloads' },
 ]
 

@@ -12,7 +12,7 @@ export const visitor = (): Visitor => ({ id: PUBLIC_USER_ID, email: PUBLIC_USER_
 /** Pages the app serves. Anything else is not rewritten. */
 export const APP_PAGES = [
   'dashboard', 'twin', 'brain', 'connections', 'research', 'ask', 'memory', 'crispr',
-  'collections', 'tasks', 'agents', 'chain',
+  'collections', 'tasks', 'agents', 'chain', 'ledger',
 ] as const
 
 export const appPage = (path: string) => APP_PAGES.find((p) => path === `/${p}` || path.startsWith(`/${p}/`)) ?? null

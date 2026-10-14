@@ -1,7 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runtimeEnv } from '@/lib/runtime-env'
-import { GENESIS_HEAD, LEDGER_TABLES, buildEvents, isClean, isLedgerTable, makeDrafts, planRestore, verifyChain, type Draft, type Head, type LedgerEvent, type Op } from '@/lib/chain-ledger'
-import { mirrorBestEffort, mirrorable, noopMirror, r2Mirror, type ChainMirror, type R2Like } from '@/lib/chain-mirror'
+import { GENESIS_HEAD, GENESIS_PREV, LEDGER_TABLES, LEDGER_TABLE_NAMES, buildEvents, isClean, isLedgerTable, makeDrafts, planRestore, verifyChain, type Draft, type Head, type LedgerEvent, type Op } from '@/lib/chain-ledger'
+import { headInfo, latestPublic, type HeadInfo, type LedgerSummary } from '@/lib/chain-public'
+import { mirrorBestEffort, mirrorFromEnv, mirrorable, noopMirror, type ChainMirror } from '@/lib/chain-mirror'
 
 // Server-only wiring for the chain ledger (service role). Every write to an opened table goes through recordWrite() FIRST,
 // then the live table. The live tables are a view; restoreFromChain() rebuilds them from the ledger.
@@ -14,8 +15,7 @@ const toRow = (e: LedgerEvent) => ({ seq: e.seq, tbl: e.table, op: e.op, row_id:
 
 /** The mirror bound to this deployment: an R2 bucket named CHAIN_MIRROR when present, else a no-op. */
 export async function getMirror(): Promise<ChainMirror> {
-  const bucket = (await runtimeEnv()).CHAIN_MIRROR as R2Like | undefined
-  return bucket ? r2Mirror(bucket) : noopMirror
+  return mirrorFromEnv(await runtimeEnv())
 }
 
 const missingTable = (e: { code?: string } | null) => e?.code === '42P01' || e?.code === 'PGRST205'
@@ -91,6 +91,34 @@ export async function readPublicLedger(since: number, limit: number) {
   const r = await sb.from('chain_ledger').select(COLS).gt('seq', since).order('seq').limit(limit)
   if (r.error) throw r.error
   return (r.data ?? []).map((x) => toEvent(x as Row))
+}
+
+/** Length, head hash and time of the last event (for GET /api/chain/head). Null when the ledger table is not migrated yet. */
+export async function readHeadInfo(): Promise<HeadInfo | null> {
+  const r = await createAdminClient().from('chain_ledger').select('seq, hash, created_at').order('seq', { ascending: false }).limit(1)
+  if (r.error) { if (missingTable(r.error)) return null; throw r.error }
+  const row = r.data?.[0]
+  return row ? headInfo({ seq: Number(row.seq), hash: row.hash }, row.created_at ?? null) : headInfo(GENESIS_HEAD, null)
+}
+
+/** Everything the public explorer shows: head, genesis, per-table counts, newest 50 events (payloads sanitised). */
+export async function readLedgerSummary(): Promise<LedgerSummary | null> {
+  const sb = createAdminClient()
+  const head = await readHeadInfo()
+  if (!head) return null
+  const [first, latest, ...counts] = await Promise.all([
+    sb.from('chain_ledger').select('hash').eq('seq', 1).maybeSingle(),
+    sb.from('chain_ledger').select(COLS).order('seq', { ascending: false }).limit(50),
+    ...LEDGER_TABLE_NAMES.map((t) => sb.from('chain_ledger').select('seq', { head: true, count: 'exact' }).eq('tbl', t)),
+  ])
+  if (latest.error) throw latest.error
+  return {
+    ...head,
+    genesis: GENESIS_PREV,
+    firstHash: first.data?.hash ?? null,
+    counts: Object.fromEntries(LEDGER_TABLE_NAMES.map((t, i) => [t, counts[i].count ?? 0])),
+    latest: latestPublic((latest.data ?? []).map((x) => toEvent(x as Row)), 50),
+  }
 }
 
 export type RestoreResult =

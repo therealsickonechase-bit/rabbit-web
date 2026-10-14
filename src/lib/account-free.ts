@@ -24,11 +24,13 @@ const OPEN_ROUTES: Record<string, string[]> = {
   '/api/brain/live': ['GET'],
   '/api/brain/illustrate': ['POST'],
   '/api/self/daily': ['GET', 'POST', 'DELETE'],
+  '/api/chain/restore': ['POST'],
 }
 
 const PUBLIC_READS = [
   '/api/public/research-feed', '/api/public/proof', '/api/health',
   '/api/model/body', '/api/model/state', '/api/model/concepts', '/api/model/openapi.json',
+  '/api/chain/head', '/api/chain/ledger',
 ]
 
 export function publicApiAllowed(path: string, method: string) {

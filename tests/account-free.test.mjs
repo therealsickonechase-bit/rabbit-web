@@ -15,6 +15,9 @@ test('account APIs and writes stay disabled', () => {
   }
   assert.equal(publicApiAllowed('/api/public/research-feed', 'GET'), true)
   assert.equal(publicApiAllowed('/api/public/research-feed', 'POST'), false)
+  assert.equal(publicApiAllowed('/api/chain/restore', 'POST'), true)
+  assert.equal(publicApiAllowed('/api/chain/restore', 'GET'), false)
+  assert.equal(publicApiAllowed('/api/chain/import', 'POST'), false)
   assert.equal(publicApiAllowed('/api/avatar/ask', 'POST'), true)
   assert.equal(publicApiAllowed('/api/avatar/ask', 'GET'), false)
   assert.equal(machineApi('/api/ingest'), true)

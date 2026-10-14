@@ -132,18 +132,34 @@ The live tables are just a view of the ledger.
 - **Restore.** `POST /api/chain/restore` (the "Restore from chain" button, and automatically when a page finds a table empty) replays the ledger,
   verifies the hash chain (a broken chain is refused, nothing is written), and puts back every row's last non-deleted state. It is idempotent: rows already
   present are left alone. A deliberate delete is therefore recorded, but can be undone by a restore; that is the point of "always persists".
-- **Replication.** After each event it is mirrored, best effort and without blocking the write, to a second store: an R2 bucket bound as `CHAIN_MIRROR`
-  (not bound by default; the no-op mirror is used until you add the binding). `GET /api/chain/ledger?since=N` publishes the events publicly (read-only) and
-  `scripts/chain-export.mjs` pulls them to the Maxwell node (`export`), checks them (`verify`) and pushes them back (`import`, signed like `/api/ingest`).
+- **Replication.** After each event it is mirrored, best effort and without blocking the write, to a second store: the R2 bucket
+  `rabbitos-chain-mirror`, bound as `CHAIN_MIRROR` in `cloudflare.config.ts`. Where there is no binding (local development, Node, the Cloud Run image) the
+  no-op mirror is used and nothing breaks. `GET /api/chain/ledger?since=N` publishes the events and `GET /api/chain/head` returns
+  `{length, headHash, updatedAt}`; both are open to everyone, GET only, CORS `*`, and rate limited. The Maxwell node keeps its own verified copy with
+  `research-agents/chain_pull.py` (or `scripts/chain-export.mjs export`), and `/ledger` is the public explorer with an in-browser verifier.
   Restore also reads the mirror, so it can rebuild even a lost Supabase ledger, but only if the combined chain verifies.
+  - **R2 mirror setup (one time, run by the owner):** `npx wrangler r2 bucket create rabbitos-chain-mirror`, then deploy so the binding exists.
+    Check with `npx wrangler r2 bucket list`. Until then the mirror is a no-op.
 - **What is never on the ledger.** Only whitelisted columns of the tables above. Contact records, API keys, per-person settings, guest passes and the
   twin's name and date of birth are never written to it, the public route re-sanitises every payload, and the import route rejects events carrying anything else.
+
+**What "public" means here.** The ledger is fully public, by the owner's decision. Anyone can read every event in full (`/ledger`,
+`/api/chain/ledger`), verify the hash chain themselves, and mirror all of it, forever. Once someone has copied an event it **cannot be recalled**: a later
+delete only adds a tombstone event, and no copy anywhere is touched. Do not put anything in a table that opens to the ledger that you would not want
+copied for good. The protected list (contact records, API keys, per-person settings, guest passes, owners, the twin's name and date of birth, key
+material) is never written to the ledger, and every payload is re-sanitised on the way out. "Public" does not make it a consensus blockchain: see below.
 
 **What this is not.** It is a tamper-evident, replicated, hash-chained log you control. It is not a decentralized public blockchain: there is no consensus
 among strangers, and someone with database superuser rights could still disable the triggers and rewrite it. Tampering is *detectable* by comparing against the
 mirror or the Maxwell copy, not impossible. **What survives:** if the live tables are wiped, the ledger restores them. If Supabase is lost but the R2 mirror is
 intact, the mirror restores both. If Supabase AND the mirror are both lost, only a copy pulled by the Maxwell node (`chain-export.mjs export`, run regularly)
 remains, so schedule that pull. Data written after your last export from a total double loss is gone.
+
+#### Anchoring (optional, not built)
+Today nothing about this ledger is recorded on any public chain, so its only protection against quiet rewriting is that many people can hold copies and
+compare head hashes. A possible future step is to publish the head hash (or `ledgerRoot()`, the Merkle root over a run of event hashes) in an XRPL memo on a
+schedule, using the same flow as the existing `xrpl_memo_anchors` table. That would give a timestamped, third-party-witnessed point that the ledger
+cannot later contradict. **This is not implemented**: no code writes ledger heads to XRPL yet, and nothing here should be read as anchored.
 
 ### 8. Person data vault (opt-in)
 A member may attach their own data to their account (for example a sequence file they own) to use with the
