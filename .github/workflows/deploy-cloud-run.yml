@@ -1,0 +1,64 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: rabbitsoftware-io
+  REGION: us-west2
+  SERVICE: rabbit-web
+  IMAGE: us-west2-docker.pkg.dev/rabbitsoftware-io/rabbit-software/rabbit-web
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HAS_GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS != '' }}
+    steps:
+      - name: Skip when GCP credentials are not configured
+        if: env.HAS_GCP_CREDENTIALS != 'true'
+        run: echo "::notice::Deploy skipped. Add the GCP_CREDENTIALS, NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY repository secrets."
+
+      - uses: actions/checkout@v4
+        if: env.HAS_GCP_CREDENTIALS == 'true'
+
+      - id: auth
+        if: env.HAS_GCP_CREDENTIALS == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        if: env.HAS_GCP_CREDENTIALS == 'true'
+
+      - name: Configure Docker
+        if: env.HAS_GCP_CREDENTIALS == 'true'
+        run: gcloud auth configure-docker us-west2-docker.pkg.dev --quiet
+
+      - name: Build and push
+        if: env.HAS_GCP_CREDENTIALS == 'true'
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+            -t $IMAGE:${{ github.sha }} \
+            -t $IMAGE:latest \
+            .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+      - name: Deploy to Cloud Run
+        if: env.HAS_GCP_CREDENTIALS == 'true'
+        run: |
+          gcloud run deploy $SERVICE \
+            --project $PROJECT_ID \
+            --image $IMAGE:${{ github.sha }} \
+            --platform managed \
+            --region $REGION \
+            --allow-unauthenticated \
+            --port 8080 \
+            --quiet
