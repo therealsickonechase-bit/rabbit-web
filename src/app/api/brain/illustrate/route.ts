@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers'
+import { getAi } from '@/lib/runtime-env'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { ILLUSTRATION_STYLES, LEVELS, RHYTHMS, illustrationPrompt } from '@/lib/body-api'
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   if (recent.length >= HOURLY_CAP) return no(429, 'Hourly illustration limit reached. Try again later.')
   if (recent.length && now - recent[recent.length - 1] < MIN_GAP_MS) return no(429, 'One illustration at a time: wait a few seconds.')
 
-  const ai = env.AI as Ai | undefined
+  const ai = (await getAi()) as Ai | undefined
   if (!ai) return no(503, 'Image generation is not available on this server.')
   const { scenario, system, organ, style, mood } = parsed.data
   const prompt = illustrationPrompt(scenario as never, system as never, organ, style, mood)

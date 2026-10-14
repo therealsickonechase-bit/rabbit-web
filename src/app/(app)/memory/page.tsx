@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { env } from 'cloudflare:workers'
+import { getAi } from '@/lib/runtime-env'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionRole, requireOwner, requireMember } from '@/lib/auth/session'
@@ -10,7 +10,7 @@ import { primaryGene } from '@/lib/twin-stats'
 import { PUBLIC_SOURCES } from '@/lib/public-feed'
 
 const SOURCES = [...PUBLIC_SOURCES, 'crispr_guide']
-const ai = () => env.AI as AiLike | undefined
+const ai = async () => (await getAi()) as AiLike | undefined
 
 const NOTICE: Record<string, { ok: boolean; text: string }> = {
   embedded: { ok: true, text: 'Embedded the next batch of records.' },
@@ -24,7 +24,7 @@ const NOTICE: Record<string, { ok: boolean; text: string }> = {
 async function embedNext() {
   'use server'
   await requireOwner()
-  const binding = ai()
+  const binding = await ai()
   if (!binding) redirect('/memory?msg=noai')
   const admin = createAdminClient()
   const [recs, done] = await Promise.all([
@@ -89,7 +89,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
   let results: { id: string; source: string; title: string; url: string | null; similarity: number }[] = []
   let searchError = false
   if (q && q.length >= 3) {
-    const binding = ai()
+    const binding = await ai()
     if (!binding) searchError = true
     else {
       try {

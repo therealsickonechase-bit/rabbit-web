@@ -45,10 +45,13 @@ export default defineConfig(({ mode }) => {
       CONTACT_PUBLIC_KEY: bindings.secret(),
       CONTACT_HASH_KEY: bindings.secret(),
       // Auth emails go out through Cloudflare Email Sending, from this one address only.
-      EMAIL: bindings.sendEmail({ allowedSenderAddresses: ['accounts@mail.rabbitsoftware.io'] }),
       APP_URL: bindings.text('https://app.rabbitsoftware.io'),
-      // Workers AI: makes the embeddings behind semantic search (@cf/baai/bge-base-en-v1.5).
-      AI: bindings.ai(),
+      // Remote-only bindings need a Cloudflare API token, so the self-hosted workerd container (RABBIT_SELF_HOSTED=1) omits them.
+      ...(process.env.RABBIT_SELF_HOSTED === '1' ? {} : {
+        EMAIL: bindings.sendEmail({ allowedSenderAddresses: ['accounts@mail.rabbitsoftware.io'] }),
+        // Workers AI: makes the embeddings behind semantic search (@cf/baai/bge-base-en-v1.5).
+        AI: bindings.ai(),
+      }),
     },
   }),
   };

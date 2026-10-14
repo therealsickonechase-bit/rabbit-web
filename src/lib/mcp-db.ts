@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers'
+import { getAi } from '@/lib/runtime-env'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { orFilter } from '@/lib/ask'
 import { guideDigest, type GuideRow } from '@/lib/crispr-sim'
@@ -21,7 +21,7 @@ export function makeDb(): Db {
       return r.data ?? []
     },
     async semanticSearch(query, limit) {
-      const ai = env.AI as AiLike | undefined
+      const ai = (await getAi()) as AiLike | undefined
       if (!ai) return null
       const [v] = await embedTexts(ai, [query])
       const m = await sb.rpc('match_records', { query_embedding: toVectorLiteral(v), match_count: limit, only_sources: READABLE.filter((s) => s !== 'crispr_guide') })

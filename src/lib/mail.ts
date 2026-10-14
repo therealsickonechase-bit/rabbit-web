@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers'
+import { runtimeEnv } from '@/lib/runtime-env'
 
 // Sender must be on a domain onboarded to Cloudflare Email Sending (mail.rabbitsoftware.io).
 // The EMAIL binding is also restricted to this address in cloudflare.config.ts.
@@ -19,7 +19,8 @@ interface MailBinding {
 }
 
 export async function sendMail(message: { to: string; subject: string; text: string; html: string }) {
-  const mailer = env.EMAIL as MailBinding | undefined
+  // Cloudflare Email Sending is a Workers binding; off Workers there is no mailer until one is wired in.
+  const mailer = (await runtimeEnv()).EMAIL as MailBinding | undefined
   if (!mailer) throw new Error('email binding is not configured')
   await mailer.send({ to: message.to, from: MAIL_FROM, replyTo: MAIL_REPLY_TO, subject: message.subject, text: message.text, html: message.html })
 }
