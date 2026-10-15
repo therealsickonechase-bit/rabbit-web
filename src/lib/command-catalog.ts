@@ -458,8 +458,101 @@ const RA: CatalogEntry[] = [
   ]),
 ]
 
+// ---- Google Cloud, the hub MCP, the status feed, the weekly audit, the platform map and the research web ----
+// Setup scripts print what they would do with -WhatIf and change nothing; the run entries are the real thing and are owner-only.
+const GCP_DIR = 'scripts/powershell'
+const gcpScript = (id: string, file: string, label: string, description: string, opts: { whatIf?: boolean; extra?: string } = {}): Seed[] => {
+  const whatIf = opts.whatIf !== false
+  const extra = opts.extra ? ` ${opts.extra}` : ''
+  return [
+    ...(whatIf ? [{ id: `gcp-${id}-preview`, group: 'Google Cloud setup (run on your PC)', label: `${label}: preview`, scope: 'owner' as const, risk: 'network' as const,
+      command: `pwsh -File ${GCP_DIR}/${file}${extra} -WhatIf`, description: `Prints what ${file} would do and changes nothing (it may read from Google Cloud). ${description}` }] : []),
+    { id: `gcp-${id}-run`, group: 'Google Cloud setup (run on your PC)', label: `${label}: run`, scope: 'owner' as const, risk: 'deploy' as const,
+      command: `pwsh -File ${GCP_DIR}/${file}${extra}`, description: `Changes Google Cloud (project rabbitsoftware-io). Safe to run again. ${description}` },
+  ]
+}
+
+const HUB_URL = 'https://rabbitos-hub-mcp-vxx5lz7c5a-wl.a.run.app'
+const hubCall = (tool: string, args = '{}') =>
+  `curl -fsS ${HUB_URL}/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"${tool}","arguments":${args}}}' | jq -r '.result.content[0].text'`
+
+const PLATFORM_WEB: CatalogEntry[] = [
+  ...seed('rabbit-web', 'docs/gcp-platform.md', [
+    ...gcpScript('standby', 'Setup-GcpStandby.ps1', 'Standby website', 'Refreshes the Cloud Run copy of rabbitsoftware.io; re-run after the site changes.'),
+    ...gcpScript('shell', 'Setup-GcpShell.ps1', 'Visitor shell on Google Cloud', 'Builds the shell image and the allowlist proxy VM, then deploys the Cloud Run service.'),
+    ...gcpScript('shell-staging', 'Setup-GcpShellStaging.ps1', 'Visitor shell staging test', 'Tests the GCP shell through a separate Worker; the live guest shell is not touched.'),
+    ...gcpScript('hub', 'Setup-GcpHub.ps1', 'Hub MCP', 'Builds and deploys the hub (all tools, including research_search).'),
+    ...gcpScript('observability', 'Setup-GcpObservability.ps1', 'Logs, metrics, analytics', 'Log metrics, the BigQuery sink and alert policies.'),
+    ...gcpScript('monitoring', 'Setup-GcpMonitoring.ps1', 'Uptime checks and budget', 'Six uptime checks and the budget alert. No preview mode.', { whatIf: false }),
+    ...gcpScript('qa', 'Setup-GcpQaWorkflow.ps1', 'Weekly audit workflow', 'Cloud Run job, Workflow and the Monday Scheduler trigger.'),
+    ...gcpScript('qa-now', 'Setup-GcpQaWorkflow.ps1', 'Weekly audit, run once now', 'Same, then runs the audit once.', { whatIf: false, extra: '-RunNow' }),
+    ...gcpScript('status', 'Setup-GcpStatusFeed.ps1', 'Live status feed', 'Rebuilds the status recorder (every 5 minutes), the public bucket and the watchdog alert.'),
+    ...gcpScript('gke', 'Setup-GcpGke.ps1', 'Optional Kubernetes cluster', 'Creates a billed cluster. Cloud Run covers today\'s needs; only if you want it.'),
+    { id: 'gcp-switch-shell-gcp', group: 'Google Cloud setup (run on your PC)', label: 'Guest shell: switch to Google Cloud', scope: 'owner', risk: 'deploy',
+      command: `pwsh -File ${GCP_DIR}/Switch-GuestShellBackend.ps1 -To gcp`, description: 'Points the live guest shell Worker at the Google Cloud service.' },
+    { id: 'gcp-switch-shell-cloudflare', group: 'Google Cloud setup (run on your PC)', label: 'Guest shell: switch back to Cloudflare (revert)', scope: 'owner', risk: 'deploy',
+      command: `pwsh -File ${GCP_DIR}/Switch-GuestShellBackend.ps1 -To cloudflare`, description: 'The first thing to try if the guest shell breaks on Google Cloud.' },
+    { id: 'gcp-daily-backups', group: 'Google Cloud setup (run on your PC)', label: 'Daily backups and chain mirror, once now', scope: 'owner', risk: 'deploy',
+      command: `pwsh -File ${GCP_DIR}/Run-DailyBackups.ps1`, description: 'What the 3:00 AM scheduled task runs: the rabbit web miner, chain mirror to the public bucket, private backups.' },
+  ]),
+  ...seed('rabbit-web', 'scripts/powershell/New-HubKey.ps1', [
+    { id: 'hub-key-list', group: 'Hub and MCP', label: 'Hub keys: list names', scope: 'owner', risk: 'network',
+      command: `pwsh -File ${GCP_DIR}/New-HubKey.ps1 -List`, description: 'Shows key names only, never keys.' },
+    { id: 'hub-key-new', group: 'Hub and MCP', label: 'Hub keys: create one (copied to the clipboard)', scope: 'owner', risk: 'deploy',
+      command: `pwsh -File ${GCP_DIR}/New-HubKey.ps1 -Name laptop`, description: 'Gives the owner role to a tool that sends the key. The key is never printed. Change the name for each device.' },
+    { id: 'hub-key-revoke', group: 'Hub and MCP', label: 'Hub keys: revoke one', scope: 'owner', risk: 'deploy',
+      command: `pwsh -File ${GCP_DIR}/New-HubKey.ps1 -Revoke laptop`, description: 'Use at once if a key leaks.' },
+  ]),
+  ...seed('rabbit-web', 'scripts', [
+    { id: 'web-export-commands', source: 'scripts/export-command-catalog.mjs', group: 'Hub and MCP', label: 'Export this catalog to the hub', scope: 'owner', risk: 'local',
+      command: 'node scripts/export-command-catalog.mjs', description: 'Writes the hub\'s commands.json from this file; then redeploy the hub (Setup-GcpHub.ps1). Refuses if anything looks like a secret.' },
+    { id: 'web-export-sql-tree', source: 'scripts/export-supabase-tree.mjs', group: 'Status, audit and platform map', label: 'Supabase tree from the migrations', scope: 'owner', risk: 'local',
+      command: 'node scripts/export-supabase-tree.mjs', description: 'Rebuilds the tree used by the weekly audit report. Add --live to also check what an anonymous reader can see (public key only).' },
+    { id: 'web-export-platform-sql', source: 'scripts/export-platform-graph-sql.mjs', group: 'Status, audit and platform map', label: 'Platform map to Supabase seed SQL', scope: 'owner', risk: 'local',
+      command: 'node scripts/export-platform-graph-sql.mjs', description: 'Writes supabase/seed/platform_graph.seed.sql. Nothing is sent; you run the migration and the seed by hand in the Supabase SQL editor.' },
+  ]),
+  // Read-only calls any visitor can make from the guest shell: GET the public chain head, or POST fixed JSON-RPC to the hub's read-only tools.
+  ...seed('rabbit-web', 'workers/hub-mcp/src/hub.mjs', [
+    { id: 'hub-help', group: 'Hub and MCP (read-only)', label: 'Hub: help for navigating the platform', scope: 'public', risk: 'network',
+      command: hubCall('hub_help'), description: 'Start here. Lists every help topic: services, tools, commands, shells, agents, research, troubleshooting.' },
+    { id: 'hub-help-services', group: 'Hub and MCP (read-only)', label: 'Hub: every service and how to check it', scope: 'public', risk: 'network',
+      command: hubCall('hub_help', '{"topic":"services"}'), description: 'What each service does, its address, how to check it and which command fixes it.' },
+    { id: 'hub-briefing', group: 'Hub and MCP (read-only)', label: 'Hub: briefing for AI assistants', scope: 'public', risk: 'network',
+      command: hubCall('hub_briefing'), description: 'The rules and the map an assistant should read first.' },
+    { id: 'hub-status', group: 'Hub and MCP (read-only)', label: 'Hub: are the parts answering', scope: 'public', risk: 'network',
+      command: hubCall('hub_status'), description: 'Checks the app, chain, data hub, website, mirror, standby and shells right now.' },
+    { id: 'hub-selftest', group: 'Hub and MCP (read-only)', label: 'Hub: self-test', scope: 'public', risk: 'network',
+      command: hubCall('hub_selftest'), description: 'The hub checks itself and the services it depends on.' },
+    { id: 'hub-chain-consistency', group: 'Hub and MCP (read-only)', label: 'Hub: do the chain copies agree', scope: 'public', risk: 'network',
+      command: hubCall('chain_consistency'), description: 'Compares the app (Supabase) and the Google Cloud mirror.' },
+    { id: 'hub-commands-search', group: 'Hub and MCP (read-only)', label: 'Hub: search the command catalog (guest role)', scope: 'public', risk: 'network',
+      command: hubCall('commands_search', '{"role":"guest","q":"test"}'), description: 'Change "test" to what you want to do. Guest role shows only commands that work in the sandbox.' },
+    { id: 'hub-research-sources', group: 'Research web', label: 'Research web: sources and how data flows', scope: 'public', risk: 'network',
+      command: hubCall('research_sources'), description: 'PubMed, Europe PMC, ClinicalTrials.gov, openFDA, then agents, chain, Supabase, data hub and the shell.' },
+    { id: 'hub-research-pubmed', group: 'Research web', label: 'Research web: search PubMed live', scope: 'public', risk: 'network',
+      command: hubCall('research_search', '{"source":"pubmed","query":"BRCA1 breast cancer","limit":5}'), description: 'Change the query. Nothing is stored; sources: pubmed, europepmc, clinicaltrials, openfda.' },
+    { id: 'hub-research-feed', group: 'Research web', label: 'Research web: the stored research feed', scope: 'public', risk: 'network',
+      command: hubCall('research_feed'), description: 'Counts and latest items the owner\'s agents ingested.' },
+    { id: 'web-chain-head', source: 'docs/rabbitos.md', group: 'Hub and MCP (read-only)', label: 'Public chain head', scope: 'public', risk: 'network',
+      command: 'curl -fsS https://app.rabbitsoftware.io/api/chain/head | jq', description: 'Length and head hash of the public chain.' },
+  ]),
+]
+
+const PLATFORM_CF: CatalogEntry[] = [
+  ...seed('rabbitsoftware-cloudflare', 'workers', [
+    { id: 'cf-test-hub', source: 'workers/hub-mcp/package.json', group: 'Platform tests', label: 'Test: hub MCP (tools, catalog, research, access)', scope: 'owner', risk: 'local',
+      command: 'cd workers/hub-mcp && npm test', description: 'Offline. Includes the safety rules: read-only tools, bad input refused, draft never runs.' },
+    { id: 'cf-test-qa', source: 'workers/qa-audit/package.json', group: 'Platform tests', label: 'Test: weekly audit, status feed and platform map', scope: 'owner', risk: 'local',
+      command: 'cd workers/qa-audit && npm test', description: 'Offline. Checks scoring, the report, the status feed and the platform graph file.' },
+    { id: 'cf-qa-local', source: 'workers/qa-audit/src/run.mjs', group: 'Platform tests', label: 'Run the audit once on this computer', scope: 'owner', risk: 'network',
+      command: 'cd workers/qa-audit && node src/run.mjs --out ./out', description: 'Crawls both sites (reads only) and writes out/report.html and out/report.json. Nothing is uploaded unless REPORT_BUCKET is set.' },
+    { id: 'cf-test-shell-gcp', source: 'workers/public-shell-gcp/package.json', group: 'Platform tests', label: 'Test: visitor shell service for Google Cloud', scope: 'owner', risk: 'local',
+      command: 'cd workers/public-shell-gcp && npm test', description: 'Offline protocol and session tests.' },
+  ]),
+]
+
 /** The whole catalog, in a fixed order: project, then the order written above. */
-export const CATALOG: readonly CatalogEntry[] = [...RABBIT_WEB, ...CLOUDFLARE, ...RA]
+export const CATALOG: readonly CatalogEntry[] = [...RABBIT_WEB, ...PLATFORM_WEB, ...CLOUDFLARE, ...PLATFORM_CF, ...RA]
 
 export const publicEntries = (entries: readonly CatalogEntry[] = CATALOG) => entries.filter((e) => e.scope === 'public')
 

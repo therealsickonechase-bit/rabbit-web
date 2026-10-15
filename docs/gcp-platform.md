@@ -64,3 +64,10 @@ The map of every part and connection, with the research flow, is `workers/qa-aud
 6. **Hub MCP and the shell:** `research_sources` explains the flow; `research_search` (pubmed, europepmc, clinicaltrials, openfda) searches a source live through the hub, GET only, fixed hosts, nothing stored. The shell needs no new egress host because it only talks to the hub. To keep a finding, the owner's agents ingest it.
 
 `research_search` is in the code and tested; it goes live when the hub is redeployed with `Setup-GcpHub.ps1`.
+
+## Finding your way: commands, help and the catalog
+
+- **One catalog** (`src/lib/command-catalog.ts`) records the commands for every service: Google Cloud setup (each script has a `-WhatIf` preview and a run entry), hub keys, tests, the status feed, the weekly audit, the platform map, and read-only calls to the hub. `node scripts/export-command-catalog.mjs` copies it to the hub; redeploy the hub to publish it. The same file feeds the app's /commands page.
+- **`hub_help`** (hub tool, no key needed): topics overview, services, tools, commands, shells, agents, research, troubleshooting. `services` lists each service with its address, how to check it and, for the owner role, the command that fixes or changes it.
+- **Roles:** guests see only commands that work in the throwaway sandbox (including read-only hub calls with `curl`); owner commands (all deploys and key handling) are drafted and checked by `command_draft`, never run by the hub.
+- In the guest shell, an assistant starts with `hub_help`, then `hub_briefing` and `hub_status`.

@@ -66,7 +66,7 @@ test('public entries are safe: no deploy, secret, token or env names', () => {
     assert.equal(e.needs, undefined, `${e.id}: public commands need no environment`)
     assert.equal(runsIn(e), 'sandbox')
     // only paths that exist in the public sandbox image: /workspace/rabbit-web, /workspace/rabbitsoftware-site (site/ only), the helpers, and the visitor's home
-    assert.ok(/^(cd \/workspace\/(rabbit-web|rabbitsoftware-site) && |rm -rf ~\/rabbit-web && cp -r --no-preserve=mode \/workspace\/rabbit-web ~\/rabbit-web && cd ~\/rabbit-web|ledger$|repos$|curl -fsS ("https:\/\/app\.rabbitsoftware\.io\/api\/data\/[a-z_]+\?limit=50"|https:\/\/app\.rabbitsoftware\.io\/api\/data) \| jq$|rabbit-net check$|pwsh --version$)/.test(e.command), `${e.id}: ${e.command}`)
+    assert.ok(/^(cd \/workspace\/(rabbit-web|rabbitsoftware-site) && |rm -rf ~\/rabbit-web && cp -r --no-preserve=mode \/workspace\/rabbit-web ~\/rabbit-web && cd ~\/rabbit-web|ledger$|repos$|curl -fsS https:\/\/app\.rabbitsoftware\.io\/api\/chain\/head \| jq$|curl -fsS https:\/\/rabbitos-hub-mcp-vxx5lz7c5a-wl\.a\.run\.app\/mcp -H 'content-type: application\/json' -H 'accept: application\/json, text\/event-stream' -d '\{[^']*\}' \| jq -r '\.result\.content\[0\]\.text'$|curl -fsS ("https:\/\/app\.rabbitsoftware\.io\/api\/data\/[a-z_]+\?limit=50"|https:\/\/app\.rabbitsoftware\.io\/api\/data) \| jq$|rabbit-net check$|pwsh --version$)/.test(e.command), `${e.id}: ${e.command}`)
   }
   // things that deploy, hold secrets or need a private checkout are never public
   for (const e of CATALOG.filter((x) => x.risk === 'deploy' || x.risk === 'secret')) assert.equal(e.scope, 'owner', e.id)
@@ -168,4 +168,29 @@ test('search and AI context', () => {
   const ctx = aiContext()
   assert.ok(ctx.includes('cf-ledger: Show the public ledger'))
   for (const e of CATALOG.filter((x) => x.command.length >= 12)) assert.ok(!ctx.includes(e.command), `${e.id} command text leaked into the AI context`)
+})
+
+// Public hub calls: a fixed JSON-RPC POST to one of the hub's read-only tools, nothing else.
+const HUB_READ_TOOLS = ['hub_help', 'hub_briefing', 'hub_status', 'hub_selftest', 'chain_consistency', 'commands_search', 'research_sources', 'research_search', 'research_feed']
+test('public hub entries call only read-only hub tools with fixed JSON bodies', () => {
+  const calls = publicEntries().filter((e) => e.command.includes('/mcp'))
+  assert.ok(calls.length >= 8)
+  for (const e of calls) {
+    const body = JSON.parse(/ -d '(.*)' \| jq/.exec(e.command)[1])
+    assert.equal(body.method, 'tools/call', e.id)
+    assert.ok(HUB_READ_TOOLS.includes(body.params.name), `${e.id}: ${body.params.name}`)
+    assert.ok(!/command_draft|shell_propose/.test(e.command), e.id)
+  }
+})
+
+test('every Google Cloud setup script named in the catalog exists and its run entries are owner-only deploys', () => {
+  const root = roots['rabbit-web']
+  const gcp = CATALOG.filter((e) => e.id.startsWith('gcp-'))
+  assert.ok(gcp.length >= 20)
+  for (const e of gcp) {
+    const file = /scripts\/powershell\/[\w-]+\.ps1/.exec(e.command)[0]
+    if (existsSync(join(root, 'scripts', 'powershell'))) assert.ok(existsSync(join(root, file)), `${e.id}: ${file}`)
+    assert.equal(e.scope, 'owner', e.id)
+    assert.ok(e.id.endsWith('-preview') ? e.command.endsWith('-WhatIf') : e.risk === 'deploy', e.id)
+  }
 })
