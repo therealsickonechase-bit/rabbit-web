@@ -494,7 +494,7 @@ const PLATFORM_WEB: CatalogEntry[] = [
       command: `pwsh -File ${GCP_DIR}/Switch-GuestShellBackend.ps1 -To gcp`, description: 'Points the live guest shell Worker at the Google Cloud service.' },
     { id: 'gcp-switch-shell-cloudflare', group: 'Google Cloud setup (run on your PC)', label: 'Guest shell: switch back to Cloudflare (revert)', scope: 'owner', risk: 'deploy',
       command: `pwsh -File ${GCP_DIR}/Switch-GuestShellBackend.ps1 -To cloudflare`, description: 'The first thing to try if the guest shell breaks on Google Cloud.' },
-    { id: 'gcp-backup-verify', group: 'Google Cloud setup (run on your PC)', label: 'Cloud backup: compare with the local backup', scope: 'owner', risk: 'network',
+    { id: 'backup-verify-cloud', group: 'Google Cloud setup (run on your PC)', label: 'Cloud backup: compare with the local backup', scope: 'owner', risk: 'network',
       command: `pwsh -File ${GCP_DIR}/Test-CloudBackup.ps1`, description: 'Read-only. Checks the manifest of the cloud run, that the Supabase dump is valid and the right size, and the Cloudflare counts.' },
     { id: 'gcp-daily-backups', group: 'Google Cloud setup (run on your PC)', label: 'Daily backups and chain mirror, once now', scope: 'owner', risk: 'deploy',
       command: `pwsh -File ${GCP_DIR}/Run-DailyBackups.ps1`, description: 'What the 3:00 AM scheduled task runs: the rabbit web miner, chain mirror to the public bucket, private backups.' },
