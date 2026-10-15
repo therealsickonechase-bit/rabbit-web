@@ -155,11 +155,17 @@ mirror or the Maxwell copy, not impossible. **What survives:** if the live table
 intact, the mirror restores both. If Supabase AND the mirror are both lost, only a copy pulled by the Maxwell node (`chain-export.mjs export`, run regularly)
 remains, so schedule that pull. Data written after your last export from a total double loss is gone.
 
-#### Anchoring (optional, not built)
-Today nothing about this ledger is recorded on any public chain, so its only protection against quiet rewriting is that many people can hold copies and
-compare head hashes. A possible future step is to publish the head hash (or `ledgerRoot()`, the Merkle root over a run of event hashes) in an XRPL memo on a
-schedule, using the same flow as the existing `xrpl_memo_anchors` table. That would give a timestamped, third-party-witnessed point that the ledger
-cannot later contradict. **This is not implemented**: no code writes ledger heads to XRPL yet, and nothing here should be read as anchored.
+#### Anchoring
+**Bitcoin (built 2026-10-15).** The Cloud Run job `rabbit-anchor` (workers/anchor-job in rabbitsoftware-cloudflare, set up by `scripts/powershell/Setup-GcpAnchor.ps1`) runs every
+6 hours. When the public ledger head or the Maxwell chain head changed, it builds one small public document (`anchor.json`: ledger length and head hash, Maxwell length, head hash and
+index, the date), sends its SHA-256 to the public OpenTimestamps calendars, and stores the proof (`anchor.json.ots`) under `anchors/<id>/` in the public ledger bucket, with
+`anchors/index.json` and `anchors/latest.json`. Later runs upgrade pending proofs once Bitcoin has confirmed them (status `pending` then `confirmed`, with the Bitcoin block height).
+Anyone can check a proof with the standard `ots verify`. What it proves: the document existed by that Bitcoin block. It does not prove the contents are true. The Maxwell miners record
+the newest anchor (`anchor:bitcoin` leaf), so each new anchor and each confirmation also grows the Maxwell chain.
+
+**XRPL (not built).** Publishing ledger heads in an XRPL memo with the existing `xrpl_memo_anchors` table is still only a possible step: no code writes to XRPL, and the Overview page
+still says "not anchored" for XRPL. **Ethereum anchoring is not built** either (it needs funded gas and transaction signing from the wallet key). The wallet is receive-only: the withdrawal
+tool is not built yet.
 
 ### 8. Person data vault (opt-in)
 A member may attach their own data to their account (for example a sequence file they own) to use with the
