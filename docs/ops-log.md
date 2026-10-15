@@ -90,3 +90,10 @@ Other logs that already exist (not duplicated here):
 - **Undo:** Cloud Run: gcloud run services delete rf-nexus-preview --region us-west2, then delete service account rabbit-rfnexus-runner. Worker: redeploy from tools/rf-nexus-preview (commit b045b8f) with wrangler deploy
 - **Ref:** scripts/powershell/Setup-GcpRfNexus.ps1, workers/rf-nexus-gcp
 - **Note:** URL https://rf-nexus-preview-vxx5lz7c5a-wl.a.run.app
+
+### 2026-10-15 23:59 UTC - Ethereum and XRPL anchoring
+- **Did:** Built and deployed Cloud Run job rabbit-anchor-chains (every 6 h at :30). New HSM key rabbit-wallet/anchor-signer (separate from the donation key); account rabbit-anchor-chains may sign with that key only and write only anchors/. Posts the anchor digest to Ethereum (self-send with data) and an XRPL AccountSet memo once funded. Bitcoin: re-ran rabbit-anchor; proof still pending (calendars confirm in hours)
+- **Checked:** 50 wallet tests pass; XRPL blob, hash and signature identical to the official xrpl library; job ran live and reported funded:false for both addresses and sent nothing; job account confirmed to have no access to the donation key
+- **Undo:** gcloud run jobs delete rabbit-anchor-chains; gcloud scheduler jobs delete rabbit-anchor-chains-6h; remove the account rabbit-anchor-chains; schedule destruction of key version anchor-signer/1 (recoverable 30 days)
+- **Ref:** scripts/powershell/Setup-GcpAnchorChains.ps1, workers/wallet/anchor-chains.mjs
+- **Note:** Anchoring addresses: ETH 0x32bA3432Caff0dac6C88D58Fb2875dc721986b3d, XRPL rN8pnpYCaZEQAXE5kL1GC9ThpJYZ8Rd1nX. Waiting for the owner to fund them

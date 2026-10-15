@@ -163,9 +163,13 @@ index, the date), sends its SHA-256 to the public OpenTimestamps calendars, and 
 Anyone can check a proof with the standard `ots verify`. What it proves: the document existed by that Bitcoin block. It does not prove the contents are true. The Maxwell miners record
 the newest anchor (`anchor:bitcoin` leaf), so each new anchor and each confirmation also grows the Maxwell chain.
 
-**XRPL (not built).** Publishing ledger heads in an XRPL memo with the existing `xrpl_memo_anchors` table is still only a possible step: no code writes to XRPL, and the Overview page
-still says "not anchored" for XRPL. **Ethereum anchoring is not built** either (it needs funded gas and transaction signing from the wallet key). The wallet's public pages are receive-only;
-the withdrawal tool (`workers/wallet/withdraw.mjs`, see `docs/wallet.md`) is built and tested but has not yet been used with real funds.
+**Ethereum and XRPL (code built and deployed 2026-10-15; switched on when you fund the two addresses).** The Cloud Run job `rabbit-anchor-chains` (workers/wallet/anchor-chains.mjs, set up by
+`scripts/powershell/Setup-GcpAnchorChains.ps1`) runs every 6 hours, 30 minutes after the Bitcoin job. It posts the SAME digest as the Bitcoin anchor in one Ethereum transaction (zero value, sent to itself,
+data = `RBOS` + version 1 + digest) and one XRP Ledger AccountSet memo, and records `anchors/<id>/ethereum.json`, `xrpl.json` and `anchors/chains.json` in the public ledger bucket. It signs with a
+SEPARATE hardware key, `rabbit-wallet/anchor-signer`, that can hold only a little gas money; the donation key is never used by automation. Until the anchoring addresses are funded it sends nothing and
+`chains.json` says `funded:false`. Guards: Ethereum gas cap 60 gwei, XRPL fee cap 1000 drops, at most one transaction per chain per 20 hours. Anchoring addresses (public): Ethereum
+`0x32bA3432Caff0dac6C88D58Fb2875dc721986b3d`, XRP Ledger `rN8pnpYCaZEQAXE5kL1GC9ThpJYZ8Rd1nX`. The XRPL serialization was checked against the official `xrpl` library (identical bytes, hash, and signature verification).
+The existing `xrpl_memo_anchors` table is not used. The wallet's public pages are receive-only; the withdrawal tool (`workers/wallet/withdraw.mjs`, see `docs/wallet.md`) is built and tested but has not yet been used with real funds.
 
 ### 8. Person data vault (opt-in)
 A member may attach their own data to their account (for example a sequence file they own) to use with the
