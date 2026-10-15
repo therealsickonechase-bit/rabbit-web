@@ -48,7 +48,8 @@ Invoke-IfLive 'create VPC, subnet and firewall rules' {
         @('rabbit-shell-iap-ssh', @('--direction', 'INGRESS', '--action', 'ALLOW', '--rules', 'tcp:22', '--source-ranges', '35.235.240.0/20', '--target-tags', 'egress-proxy', '--priority', '900'))
     )
     foreach ($r in $rules) {
-        if (-not (Exists compute firewall-rules describe $r[0] --project $Project)) { Invoke-Gcloud compute firewall-rules create $r[0] --project $Project --network $net @($r[1]) }
+        $ruleName = $r[0]; $ruleArgs = $r[1]
+        if (-not (Exists compute firewall-rules describe $ruleName --project $Project)) { Invoke-Gcloud compute firewall-rules create $ruleName --project $Project --network $net @ruleArgs }
         else { Write-Host "firewall rule exists: $($r[0])" }
     }
 }
@@ -121,6 +122,6 @@ Invoke-IfLive 'build the image in Cloud Build and deploy' {
         --set-env-vars "PTY_BRIDGE_SECRET=$secret,EGRESS_PROXY_URL=http://${proxyIp}:3128" --allow-unauthenticated --quiet
     $url = (& gcloud run services describe $service --project $Project --region $Region --format 'value(status.url)').Trim()
     Write-Host "Service URL: $url"
-    Write-Host ("health: " + (Invoke-WebRequest "$url/healthz" -UseBasicParsing -TimeoutSec 60).Content)
+    Write-Host ("health: " + (Invoke-WebRequest "$url/health" -UseBasicParsing -TimeoutSec 60).Content)
 }
 Write-Host "`nDone. The live guest shell and Cloudflare were not changed." -ForegroundColor Green
