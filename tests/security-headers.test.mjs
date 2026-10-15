@@ -40,7 +40,7 @@ test('the CSP still allows what the features need', () => {
   assert.ok(!cspValue().includes('upgrade-insecure-requests'))      // would break ws://127.0.0.1 from an https page
 })
 
-test('the CSP is report-only everywhere and enforced only on the listed public pages', () => {
+test('the CSP is report-only by default and enforced on the pages that were measured clean in a real browser', () => {
   assert.equal(CSP_HEADER, 'Content-Security-Policy-Report-Only')
   assert.ok(get('Content-Security-Policy-Report-Only'))
   assert.equal(get('Content-Security-Policy'), undefined)             // never enforced by the catch-all rule
@@ -49,8 +49,10 @@ test('the CSP is report-only everywhere and enforced only on the listed public p
   const enforced = rules.slice(1, 1 + ENFORCED_CSP_PATHS.length)
   assert.deepEqual(enforced.map((r) => r.source), ENFORCED_CSP_PATHS)
   for (const r of enforced) { assert.equal(r.headers.length, 1); assert.equal(r.headers[0].key, 'Content-Security-Policy'); assert.equal(r.headers[0].value, cspValue()) }
-  // the signed-in pages stay report-only until they are exercised
-  for (const p of ['/', '/brain', '/downloads', '/twin', '/settings', '/api/health']) assert.ok(!ENFORCED_CSP_PATHS.includes(p), p)
+  // pages not yet measured stay report-only: the redirecting root, settings, APIs, the owner console (its policy adds the AI provider origins) and the new donate page
+  for (const p of ['/', '/settings', '/api/health', '/cloudshell', '/donate']) assert.ok(!ENFORCED_CSP_PATHS.includes(p), p)
+  // the measured pages are on the list, each exactly once
+  for (const p of ['/dashboard', '/research', '/ask', '/brain', '/twin', '/connections', '/memory', '/crispr', '/collections', '/tasks', '/agents', '/chain', '/ledger', '/data', '/cloudshell-public', '/commands', '/downloads', '/login', '/guide']) assert.equal(ENFORCED_CSP_PATHS.filter((x) => x === p).length, 1, p)
 })
 
 test('the CSP allows Cloudflare Web Analytics, which Cloudflare injects into every page (found with a real browser)', () => {

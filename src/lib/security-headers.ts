@@ -1,10 +1,10 @@
 // Security headers for every response the console sends. Pure data, tested in tests/security-headers.test.mjs; next.config.ts applies it.
 //
 // Enforced everywhere: HSTS, nosniff, no framing, referrer policy, permissions policy.
-// Content-Security-Policy: ENFORCED on the public pages (ENFORCED_CSP_PATHS), which were loaded in a real browser and produced no violations,
-// and Report-Only everywhere else: the signed-in pages use inline scripts, Supabase, Hugging Face, GitHub and WebSockets to services on the
-// visitor's own computer and cannot be exercised automatically, so violations are shown in the browser console instead of breaking anything.
-// When the console stays quiet while using Brain Network, add the remaining paths to ENFORCED_CSP_PATHS or switch CSP_HEADER.
+// Content-Security-Policy: ENFORCED on every page that was loaded in a real browser (Edge, headless) with no violations (ENFORCED_CSP_PATHS), and
+// Report-Only everywhere else (new pages, the owner's /cloudshell with its AI provider origins, anything not yet measured): violations are shown in the
+// browser console instead of breaking anything. 2026-10-15: all 19 app pages loaded with zero violations, and 12 view-only clicks on /brain (3D) and
+// the /data controls added none. To enforce another page, load it in a browser first (see docs/security-hardening.md), then add it to ENFORCED_CSP_PATHS.
 
 export interface HeaderRule { key: string; value: string }
 
@@ -43,7 +43,12 @@ export const cspValue = (d: Record<string, string[]> = CSP_DIRECTIVES) => Object
 export const CSP_HEADER = 'Content-Security-Policy-Report-Only'
 
 /** Public pages where the CSP is enforced (not just reported). Each was loaded in a headless browser with no violations. */
-export const ENFORCED_CSP_PATHS = ['/login', '/signup', '/guide', '/guest', '/auth/confirm']
+export const ENFORCED_CSP_PATHS = [
+  '/login', '/signup', '/guide', '/guest', '/auth/confirm',
+  // measured clean in a real browser on 2026-10-15
+  '/dashboard', '/research', '/ask', '/brain', '/twin', '/connections', '/memory', '/crispr', '/collections', '/tasks', '/agents', '/chain', '/ledger', '/data',
+  '/cloudshell-public', '/commands', '/downloads',
+]
 
 /** AI provider origins the owner CloudShell console's AI coder panel calls directly from the browser. Added ONLY on AI_CODER_PATHS, never site-wide. */
 export const AI_CODER_ORIGINS = ['https://generativelanguage.googleapis.com', 'https://api.anthropic.com']
