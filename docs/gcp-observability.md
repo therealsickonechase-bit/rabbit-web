@@ -24,34 +24,34 @@ A log sink, `rabbit-analytics`, copies two things into BigQuery (tables are part
 
 **No request logs go in, so no visitor IP address is stored.** The proxy log shows the shell's internal address and the host asked for, not the visitor.
 
-Tables appear after the first matching log arrives (a few minutes). Example queries (BigQuery console, dataset `rabbit_logs`; table names start with `run_googleapis_com_stdout` and `squid_access`):
+Tables appear after the first matching log arrives (a few minutes). Example queries (BigQuery console, dataset `rabbit_logs`; tables `run_googleapis_com_stdout` and `squid_access`, partitioned by day):
 
 ```sql
 -- Terminals started per day
 SELECT DATE(timestamp) AS day, COUNT(*) AS sessions
-FROM `rabbitsoftware-io.rabbit_logs.run_googleapis_com_stdout_*`
+FROM `rabbitsoftware-io.rabbit_logs.run_googleapis_com_stdout`
 WHERE resource.labels.service_name = 'rabbit-visitor-shell' AND JSON_VALUE(json_payload, '$.event') = 'started'
 GROUP BY day ORDER BY day DESC;
 
 -- Why sessions ended
 SELECT JSON_VALUE(json_payload, '$.reason') AS reason, COUNT(*) AS n
-FROM `rabbitsoftware-io.rabbit_logs.run_googleapis_com_stdout_*`
+FROM `rabbitsoftware-io.rabbit_logs.run_googleapis_com_stdout`
 WHERE resource.labels.service_name = 'rabbit-visitor-shell' AND JSON_VALUE(json_payload, '$.event') = 'end'
 GROUP BY reason ORDER BY n DESC;
 
 -- Which blocked hosts do visitors ask for most? (a data-driven view of what the allowlist might need)
-SELECT REGEXP_EXTRACT(text_payload, r'TCP_DENIED/\d+ \d+ CONNECT ([^: ]+)') AS host, COUNT(*) AS tries
-FROM `rabbitsoftware-io.rabbit_logs.squid_access_*`
-WHERE text_payload LIKE '%TCP_DENIED%'
+SELECT REGEXP_EXTRACT(JSON_VALUE(json_payload, '$.message'), r'TCP_DENIED/\d+ \d+ CONNECT ([^: ]+)') AS host, COUNT(*) AS tries
+FROM `rabbitsoftware-io.rabbit_logs.squid_access`
+WHERE JSON_VALUE(json_payload, '$.message') LIKE '%TCP_DENIED%'
 GROUP BY host ORDER BY tries DESC LIMIT 20;
 ```
 
-If a table name differs, open the dataset in the console and copy the exact name.
+If a table is missing, it appears after the first matching log arrives (a few minutes).
 
 ## Reading logs directly
 
 - Logs Explorer, filter `resource.labels.service_name="rabbit-visitor-shell"` (or `rabbitos-hub-mcp`).
-- Blocked egress: `logName="projects/rabbitsoftware-io/logs/squid_access" AND textPayload:"TCP_DENIED"`.
+- Blocked egress: `logName="projects/rabbitsoftware-io/logs/squid_access" AND jsonPayload.message:"TCP_DENIED"`.
 
 ## The proxy VM's account
 

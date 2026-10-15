@@ -44,12 +44,16 @@ $metrics = [ordered]@{
     shell_sessions_started = @{ d = 'Visitor terminals started on the Cloud Run shell'; f = "$run AND resource.labels.service_name=`"rabbit-visitor-shell`" AND jsonPayload.event=`"started`"" }
     shell_errors           = @{ d = 'Errors in the Cloud Run visitor shell'; f = "$run AND resource.labels.service_name=`"rabbit-visitor-shell`" AND (severity>=ERROR OR jsonPayload.event=(`"spawn_error`" OR `"fatal`"))" }
     hub_errors             = @{ d = 'Errors in the hub MCP'; f = "$run AND resource.labels.service_name=`"rabbitos-hub-mcp`" AND (severity>=ERROR OR jsonPayload.event=`"error`")" }
-    egress_denied          = @{ d = 'Requests the egress allowlist proxy refused'; f = "resource.type=`"gce_instance`" AND logName=`"projects/$Project/logs/squid_access`" AND textPayload:`"TCP_DENIED`"" }
+    # The Ops Agent stores each Squid line as jsonPayload.message (not textPayload).
+    egress_denied          = @{ d = 'Requests the egress allowlist proxy refused'; f = "resource.type=`"gce_instance`" AND logName=`"projects/$Project/logs/squid_access`" AND jsonPayload.message:`"TCP_DENIED`"" }
 }
 foreach ($name in $metrics.Keys) {
     Invoke-IfLive "create log-based metric $name" {
-        if (Exists logging metrics describe $name --project $Project) { Write-Host "metric exists: $name" }
-        else { Invoke-Gcloud logging metrics create $name --project $Project --description $metrics[$name].d --log-filter $metrics[$name].f; Write-Host "created metric: $name" }
+        # Create, or bring an existing metric up to date (a metric's filter can be corrected; counting restarts from the change).
+        if (Exists logging metrics describe $name --project $Project) {
+            Invoke-Gcloud logging metrics update $name --project $Project --description $metrics[$name].d --log-filter $metrics[$name].f
+            Write-Host "updated metric: $name"
+        } else { Invoke-Gcloud logging metrics create $name --project $Project --description $metrics[$name].d --log-filter $metrics[$name].f; Write-Host "created metric: $name" }
     }
 }
 
