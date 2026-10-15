@@ -515,6 +515,16 @@ const PLATFORM_WEB: CatalogEntry[] = [
     { id: 'web-export-platform-sql', source: 'scripts/export-platform-graph-sql.mjs', group: 'Status, audit and platform map', label: 'Platform map to Supabase seed SQL', scope: 'owner', risk: 'local',
       command: 'node scripts/export-platform-graph-sql.mjs', description: 'Writes supabase/seed/platform_graph.seed.sql. Nothing is sent; you run the migration and the seed by hand in the Supabase SQL editor.' },
   ]),
+  ...seed('rabbit-web', 'scripts/powershell/Register-ResearchTasks.ps1', [
+    { id: 'research-tasks-preview', group: 'Research web', label: 'Research loop: preview the scheduled tasks (run on your PC)', scope: 'owner', risk: 'local',
+      command: `pwsh -File ${GCP_DIR}/Register-ResearchTasks.ps1 -WhatIf`, description: 'Shows the two Windows scheduled tasks (sync every 30 minutes, task worker every 5) and changes nothing.' },
+    { id: 'research-tasks-register', group: 'Research web', label: 'Research loop: register the scheduled tasks (run on your PC)', scope: 'owner', risk: 'local',
+      command: `pwsh -File ${GCP_DIR}/Register-ResearchTasks.ps1`, description: 'Creates "RabbitOS Research Sync" and "RabbitOS Task Worker" for your Windows sign-in. Add -Remove to delete them.' },
+    { id: 'research-sync-once', group: 'Research web', label: 'Research loop: one sync pass now (run on your PC)', scope: 'owner', risk: 'secret',
+      command: `pwsh -File ${GCP_DIR}/Run-ResearchSync.ps1 -Mode Sync`, needs: ['RABBIT_URL', 'RABBIT_INGEST_SECRET'], description: 'Pushes the agents\' public findings to RabbitOS and pulls the chain back. Reads the two variables from research-agents\\.env; nothing is printed. Log: ~\\RabbitOS\\logs.' },
+    { id: 'research-tasks-once', group: 'Research web', label: 'Research loop: one task-worker pass now (run on your PC)', scope: 'owner', risk: 'secret',
+      command: `pwsh -File ${GCP_DIR}/Run-ResearchSync.ps1 -Mode Tasks`, needs: ['RABBIT_URL', 'RABBIT_INGEST_SECRET'], description: 'Picks up queued task proposals from the app and runs them in the agents.' },
+  ]),
   // Read-only calls any visitor can make from the guest shell: GET the public chain head, or POST fixed JSON-RPC to the hub's read-only tools.
   ...seed('rabbit-web', 'workers/hub-mcp/src/hub.mjs', [
     { id: 'hub-help', group: 'Hub and MCP (read-only)', label: 'Hub: help for navigating the platform', scope: 'public', risk: 'network',
