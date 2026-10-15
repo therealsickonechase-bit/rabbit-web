@@ -51,3 +51,16 @@ Cloud Run scales to zero. The always-on cost is the small proxy VM (an e2-micro)
 3. Hub key leaked: `New-HubKey.ps1 -Revoke <name>`.
 4. Alert emails come from these policies: "a key URL is down", "a GCP service is down", "GCP errors and abuse signals", "weekly audit needs attention", "status recorder stopped".
 5. To read the latest audit: Cloud Storage console, `rabbitsoftware-io-reports`, `latest.html`; or `gcloud storage cat gs://rabbitsoftware-io-reports/latest.json`.
+
+## The research web: sources, agents, chain, data, shell
+
+The map of every part and connection, with the research flow, is `workers/qa-audit/data/platform-graph.json` (in rabbitsoftware-cloudflare). The weekly audit report draws it; `node scripts/export-platform-graph-sql.mjs` turns it into Supabase tables (`supabase/migrations/20261015000000_platform_graph.sql`, then `supabase/seed/platform_graph.seed.sql`, both applied by hand).
+
+1. **Public sources:** PubMed, Europe PMC, ClinicalTrials.gov, openFDA, NIH RePORTER, ClinVar, St. Jude. Documented APIs only.
+2. **Research agents** on the owner's computer search them and keep records locally.
+3. **Maxwell chain:** findings are anchored as hashes (proof of existence and time, not of truth).
+4. **Signed ingest** sends public records, topics, runs and labelled AI summaries to the app (Supabase). Personal data never leaves the computer.
+5. **Data hub** and pages serve them read-only.
+6. **Hub MCP and the shell:** `research_sources` explains the flow; `research_search` (pubmed, europepmc, clinicaltrials, openfda) searches a source live through the hub, GET only, fixed hosts, nothing stored. The shell needs no new egress host because it only talks to the hub. To keep a finding, the owner's agents ingest it.
+
+`research_search` is in the code and tested; it goes live when the hub is redeployed with `Setup-GcpHub.ps1`.
