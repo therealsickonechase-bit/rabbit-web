@@ -47,13 +47,15 @@ $steps = @(
 )
 foreach ($s in $steps) {
     Log "START $($s.Name)"
+    $clock = [Diagnostics.Stopwatch]::StartNew()
     try {
-        if ($s.Block) { $out = & $s.Block 2>&1 | Out-String }
-        else { $p = $s.Params; $out = & (Join-Path $scripts $s.Script) @p 2>&1 | Out-String }
-        $out.TrimEnd() -split "`r?`n" | Where-Object { $_.Trim() } | ForEach-Object { Add-Content $log "    $_" }
+        # Output goes to the log line by line as it happens, so a step that is slow or is killed by the task time limit still leaves its progress behind.
+        $LASTEXITCODE = 0
+        if ($s.Block) { & $s.Block 2>&1 | Out-String -Stream | Where-Object { $_.Trim() } | ForEach-Object { Add-Content $log "    $_" } }
+        else { $p = $s.Params; & (Join-Path $scripts $s.Script) @p 2>&1 | Out-String -Stream | Where-Object { $_.Trim() } | ForEach-Object { Add-Content $log "    $_" } }
         if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
-        Log "OK    $($s.Name)"
-    } catch { $failed++; Log "FAIL  $($s.Name): $($_.Exception.Message)" }
+        Log ("OK    {0} ({1:N0} min)" -f $s.Name, $clock.Elapsed.TotalMinutes)
+    } catch { $failed++; Log ("FAIL  {0} after {1:N0} min: {2}" -f $s.Name, $clock.Elapsed.TotalMinutes, $_.Exception.Message) }
 }
 
 # Keep the newest 30 logs and the newest 7 local dated backup folders (the cloud copies are versioned and kept for a year).

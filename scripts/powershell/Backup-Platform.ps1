@@ -34,6 +34,8 @@ $out = Join-Path $WorkRoot $stamp
 New-Item -ItemType Directory -Force $out | Out-Null
 $results = [System.Collections.Generic.List[object]]::new()
 function Add-Result($name, $ok, $detail) { $results.Add([pscustomobject]@{ Part = $name; Ok = $ok; Detail = $detail }) }
+# Progress lines (with the time) so a log shows where a slow or killed run stopped.
+function Step($m) { Write-Host ("[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss'), $m) }
 function Get-EnvValue($file, $name) {
     $line = Get-Content $file | Where-Object { $_ -match "^$name=" } | Select-Object -First 1
     if (-not $line) { return $null }
@@ -42,6 +44,7 @@ function Get-EnvValue($file, $name) {
 
 # ---- Supabase: full pg_dump through Docker (schemas public, auth, storage) -----------------------------------------
 if ($Supabase) {
+    Step 'Supabase dump'
     try {
         $url = Get-EnvValue $EnvFile 'SUPABASE_DB_URL'
         if (-not $url) { throw 'SUPABASE_DB_URL not found in .env.local' }
@@ -68,6 +71,7 @@ if ($Supabase) {
 
 # ---- Cloudflare: D1 export, KV key/values, R2 objects ------------------------------------------------------------
 if ($Cloudflare) {
+    Step 'Cloudflare: D1, KV, R2'
     Push-Location $CloudflareRepo
     try {
         $cf = Join-Path $out 'cloudflare'; New-Item -ItemType Directory -Force "$cf\d1", "$cf\kv", "$cf\r2" | Out-Null
@@ -123,6 +127,7 @@ if ($Cloudflare) {
 
 # ---- Git repositories: one bundle each (full history, all branches and tags) --------------------------------------
 if ($Repos) {
+    Step 'Git repository bundles'
     try {
         $rd = Join-Path $out 'repos'; New-Item -ItemType Directory -Force $rd | Out-Null; $n = 0
         foreach ($d in Get-ChildItem $ProjectsRoot -Directory) {
@@ -134,6 +139,7 @@ if ($Repos) {
     } catch { Add-Result 'git-repos' $false $_.Exception.Message }
 }
 
+Step 'Upload'
 # ---- Upload ----------------------------------------------------------------------------------------------------
 $total = (Get-ChildItem $out -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
 if ($DryRun) { Add-Result 'upload' $true ("skipped (dry run); {0:N2} MB ready in {1}" -f ($total / 1MB), $out) }
