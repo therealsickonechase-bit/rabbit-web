@@ -38,6 +38,8 @@ function Import-MaxwellEnv {
 $steps = @(
     # Maxwell first: anchor the public research records into the chain (adds a block only when the research changed), then mirror new blocks.
     @{ Name = 'Maxwell: research anchor'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python maxwell_research_anchor.py --apply } finally { Pop-Location } } },
+    # The rabbit web data miner: a public snapshot of the whole web (pages, services, datasets, chain copies, research counts), anchored as one Merkle root (a block only when something changed).
+    @{ Name = 'Maxwell: rabbit web snapshot'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python rabbitweb_miner.py --apply } finally { Pop-Location } } },
     @{ Name = 'Maxwell: mirror new blocks to the public ledger'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; python maxwell_chain_sync.py --once } finally { Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; Pop-Location } } },
     @{ Name = 'Google: public ledger + datasets'; Script = 'Sync-RabbitGcs.ps1'; Params = @{ Ledger = $true; Exports = $true } },
     @{ Name = 'Google: Maxwell files';            Script = 'Sync-RabbitGcs.ps1'; Params = @{ Maxwell = $true } },
