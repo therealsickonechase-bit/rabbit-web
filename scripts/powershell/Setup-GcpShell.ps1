@@ -25,7 +25,7 @@ $WhatIfPreference = $false
 $net = 'rabbit-shell-net'; $subnet = 'rabbit-shell-subnet'; $proxyName = 'rabbit-egress-proxy'; $proxyIp = '10.20.0.10'
 $service = 'rabbit-visitor-shell'; $sa = "rabbit-shell-runner@$Project.iam.gserviceaccount.com"
 $allowed = 'registry.npmjs.org', 'registry.yarnpkg.com', 'pypi.org', 'files.pythonhosted.org', 'github.com', 'raw.githubusercontent.com', 'codeload.github.com',
-    'objects.githubusercontent.com', 'api.anthropic.com', 'generativelanguage.googleapis.com', 'api.githubcopilot.com', 'api.github.com', 'app.rabbitsoftware.io'
+    'objects.githubusercontent.com', 'api.anthropic.com', 'generativelanguage.googleapis.com', 'api.githubcopilot.com', 'api.github.com', 'app.rabbitsoftware.io', 'rabbitos-hub-mcp-vxx5lz7c5a-wl.a.run.app', 'rabbitsoftware-io-ledger-public.storage.googleapis.com'
 
 function Step($m) { Write-Host "`n== $m" -ForegroundColor Cyan }
 function Invoke-Gcloud { & gcloud @args; if ($LASTEXITCODE -ne 0) { throw "gcloud $($args[0..3] -join ' ') failed (exit $LASTEXITCODE)" } }
@@ -84,8 +84,17 @@ try {
             Invoke-Gcloud compute instances create $proxyName --project $Project --zone $Zone --machine-type e2-micro --subnet $subnet --private-network-ip $proxyIp `
                 --tags egress-proxy --image-family debian-12 --image-project debian-cloud --boot-disk-size 10GB --metadata-from-file "startup-script=$startupFile"
         } else {
-            Write-Host 'proxy VM exists; refreshing its allowlist'
-            Invoke-Gcloud compute instances add-metadata $proxyName --project $Project --zone $Zone --metadata-from-file "startup-script=$startupFile"
+            # The proxy reads its startup script only at boot, so a changed allowlist needs the metadata updated AND a restart. Unchanged: leave the VM alone.
+            $vm = & gcloud compute instances describe $proxyName --project $Project --zone $Zone --format json | ConvertFrom-Json
+            $current = ($vm.metadata.items | Where-Object key -eq 'startup-script' | Select-Object -First 1).value
+            $wanted = (Get-Content $startupFile -Raw)
+            if (($current -replace "`r`n", "`n").Trim() -eq ($wanted -replace "`r`n", "`n").Trim()) {
+                Write-Host 'proxy VM exists; the allowlist is already current'
+            } else {
+                Write-Host 'proxy VM exists; the allowlist changed: updating it and restarting the VM (egress is down for about two minutes)'
+                Invoke-Gcloud compute instances add-metadata $proxyName --project $Project --zone $Zone --metadata-from-file "startup-script=$startupFile"
+                Invoke-Gcloud compute instances reset $proxyName --project $Project --zone $Zone
+            }
         }
     }
 } finally { Remove-Item $startupFile -Force -ErrorAction SilentlyContinue }
