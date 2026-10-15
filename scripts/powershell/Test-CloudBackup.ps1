@@ -19,6 +19,9 @@ $ErrorActionPreference = 'Stop'
 $fail = 0
 function Check([string]$name, [bool]$ok, [string]$detail = '') { if (-not $ok) { $script:fail++ }; Write-Host ("{0}  {1}{2}" -f $(if ($ok) { 'PASS' } else { 'FAIL' }), $name, $(if ($detail) { " - $detail" } else { '' })) -ForegroundColor $(if ($ok) { 'Green' } else { 'Red' }) }
 $base = "gs://$Bucket/platform-cloud/$Date"
+# Each run writes to its own time-stamped folder (platform-cloud/<date>/<HHMMSS>Z/); check the newest one. The very first run used the date folder directly.
+$runs = @(& gcloud storage ls "$base/" --project $Project 2>$null | Where-Object { $_ -match '/\d{6}Z/$' } | Sort-Object)
+if ($runs.Count -gt 0) { $base = $runs[-1].TrimEnd('/') }
 $local = Join-Path $LocalRoot $Date
 
 Write-Host "Cloud:  $base`nLocal:  $local`n"
