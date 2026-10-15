@@ -10,7 +10,7 @@ For anyone who writes about, presents, or answers questions about RabbitSoftware
 | Audience | What they want to know | Lead with |
 |---|---|---|
 | Curious researchers and students | Can I explore public biomedical literature with sources, without handing over my files? | RabbitOS opens with no account; every record links to its source; local tools stay local. |
-| Developers and open-source people | Can I read the code and run it? What is the chain really? | UPL-1.0 source, the status page, the chain explainer's "check it yourself" steps, the throwaway cloud terminal. |
+| Developers and technical readers | What is the chain really? Can I check it myself? | The status page, the chain explainer's "check it yourself" steps, the throwaway cloud terminal. **Do not say "open source" while the repositories are private** (checked 2026-10-15: the organisation has no public repos). |
 | Blockchain-curious readers | Is this a coin? Is it decentralized? | No coin. A tamper-evident log with Bitcoin timestamps. Plainly not a decentralized public blockchain. |
 | Journalists and partners | Who is behind it and what is true? | The press kit: facts, limits, what we do and do not claim, and how to verify. |
 | Potential donors | What does my gift do? Is it safe? | Voluntary gifts to hosting and development; not an investment; how to verify the addresses. |
@@ -26,7 +26,7 @@ The public story is built from the author page (`about.html`), which the owner r
 1. **Check the work.** Every answer keeps its source; every change leaves a record anyone can verify.
 2. **Your data stays yours.** Personal data stays on your device; the public chain holds only fingerprints and public records.
 3. **Honest about limits.** Research prototypes are labeled; AI summaries are labeled unverified; a timestamp shows when, not whether it is true.
-4. **Open and inspectable.** Code, status and chain are public, so claims can be tested.
+4. **Checkable.** The status page, ledger, Maxwell chain and Bitcoin timestamps are public, so claims can be tested. (Source code is licensed UPL-1.0 but the repositories are private right now; say "licensed", not "open source".)
 
 ## Words to use and not use
 | Use | Avoid (and why) |
