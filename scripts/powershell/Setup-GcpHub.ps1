@@ -43,6 +43,6 @@ Invoke-IfLive 'build workers\hub-mcp in Cloud Build and deploy to Cloud Run' {
     Write-Host "MCP URL: $url/mcp"
     Write-Host ("health: " + (Invoke-WebRequest "$url/health" -UseBasicParsing -TimeoutSec 60).Content)
     $code = try { (Invoke-WebRequest "$url/mcp" -Method Post -Body '{}' -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 30).StatusCode } catch { 0 }
-    Write-Host "POST without a key answers: $code (expected 401)"
+    Write-Host "POST without a key answers: $code (expected 200: anonymous callers get the public tools)"
 }
 Write-Host "`nDone. Nothing else was changed." -ForegroundColor Green
