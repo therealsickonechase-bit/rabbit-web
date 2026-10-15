@@ -62,6 +62,21 @@ export function inputChunks(data: string, maxChars = 4096): string[] {
   return out
 }
 
+export const AGENT_PROMPT_MAX = 2000
+
+/**
+ * The command that starts a coding agent with a first prompt. Control characters (a newline would run the line) become spaces, the text is
+ * single-quoted, and a leading "-" is prefixed so it can never be read as a flag. The caller types it WITHOUT Enter: the visitor runs it.
+ * Returns null for an empty prompt.
+ */
+export function agentPromptCommand(agent: 'claude' | 'gemini' | 'copilot', prompt: string): string | null {
+  let text = prompt.replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, ' ').trim().slice(0, AGENT_PROMPT_MAX)
+  if (!text) return null
+  if (text.startsWith('-')) text = `Task: ${text}`
+  const quoted = `'${text.replace(/'/g, `'\\''`)}'`
+  return agent === 'claude' ? `claude ${quoted}` : `${agent} -i ${quoted}`
+}
+
 /** Buttons that type a command into the terminal. */
 export const QUICK_START = [
   { label: 'Run gemini', command: 'gemini' },

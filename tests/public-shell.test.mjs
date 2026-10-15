@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { QUICK_START, cleanKeys, helloFrame, inputChunks, protocols, sessionError, shellBase, wsUrl } from '../src/lib/public-shell.ts'
+import { QUICK_START, agentPromptCommand, cleanKeys, helloFrame, inputChunks, protocols, sessionError, shellBase, wsUrl } from '../src/lib/public-shell.ts'
 import { appPage } from '../src/lib/open-access.ts'
 import { pageMethodAllowed, publicApiAllowed } from '../src/lib/account-free.ts'
 
@@ -50,4 +50,16 @@ test('the page never writes keys to localStorage or the server', () => {
   const page = readFileSync(new URL('../src/components/PublicShell.tsx', import.meta.url), 'utf8')
   assert.ok(!/localStorage/.test(page))
   assert.ok(!/console\.(log|info|warn|error)\([^)]*[kK]ey/.test(page))
+})
+
+test('the agent prompt command is one quoted line that cannot run anything by itself', () => {
+  assert.equal(agentPromptCommand('claude', 'fix the bug'), "claude 'fix the bug'")
+  assert.equal(agentPromptCommand('gemini', 'explain'), "gemini -i 'explain'")
+  assert.equal(agentPromptCommand('copilot', "it's ok"), "copilot -i 'it'\\''s ok'")
+  // a newline or carriage return would press Enter in the terminal: it must become a space
+  assert.equal(agentPromptCommand('claude', 'a\nrm -rf ~\r\nb'), "claude 'a rm -rf ~ b'")
+  assert.ok(!/[\r\n]/.test(agentPromptCommand('claude', 'x y\u0003z') ?? ''))
+  assert.equal(agentPromptCommand('claude', '--dangerously-skip-permissions'), "claude 'Task: --dangerously-skip-permissions'")
+  assert.equal(agentPromptCommand('claude', '   \n '), null)
+  assert.ok((agentPromptCommand('claude', 'x'.repeat(9000)) ?? '').length <= 2000 + 10)
 })

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import type { Terminal } from '@xterm/xterm'
 import type { FitAddon } from '@xterm/addon-fit'
 import {
-  GUIDE, KEY_FIELDS, LIMITS_TEXT, QUICK_START, TERM_FONT, TERM_SCROLLBACK, TERM_STYLES, TERM_STYLE_LABEL, accentColor, cleanKeys, helloFrame, inputChunks,
+  AGENT_PROMPT_MAX, GUIDE, KEY_FIELDS, LIMITS_TEXT, QUICK_START, agentPromptCommand, TERM_FONT, TERM_SCROLLBACK, TERM_STYLES, TERM_STYLE_LABEL, accentColor, cleanKeys, helloFrame, inputChunks,
   inputFrame, normalizeTermStyle, protocols, resizeFrame, sessionClock, sessionError, shellBase, terminalTheme, welcomeBanner, wsUrl,
   type Keys, type TermStyle,
 } from '@/lib/public-shell'
@@ -41,6 +41,8 @@ export default function PublicShell() {
   const [message, setMessage] = useState('')
   const [humanOk, setHumanOk] = useState(false)
   const [drawer, setDrawer] = useState(false)
+  const [showKeys, setShowKeys] = useState(false)
+  const [ask, setAsk] = useState('')
   const [commands, setCommands] = useState(false)
   const [keys, setKeys] = useState<Record<string, string>>({})
   const [style, setStyle] = useState<TermStyle>('linux')
@@ -216,6 +218,18 @@ export default function PublicShell() {
         </div>
         <p className="text-muted">{describePermission('public')} The button only types <code>{agent}</code>; press Enter yourself. Saved in this browser only. The style toggle changes colors and the banner only. Start PowerShell types <code>pwsh</code> (PowerShell 7, press Enter yourself); the login shell is bash, and PowerShell uses the normal connection through the sandbox allowlist. ping, DNS tools, traceroute and port scanners are intentionally not installed here.</p>
       </div>
+      <div className="rounded-lg border border-line bg-surface p-4 text-sm space-y-2">
+        <label className="block font-semibold" htmlFor="agent-ask">Ask the {AGENT_LABEL[agent]} coding agent</label>
+        <textarea id="agent-ask" value={ask} onChange={(e) => setAsk(e.target.value)} maxLength={AGENT_PROMPT_MAX} rows={3} placeholder="Describe the task, for example: build a small script that reads the public ledger and checks every hash link."
+          className="w-full rounded-md border border-line bg-canvas px-3 py-2 text-sm" />
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" disabled={!live || !agentPromptCommand(agent, ask)} onClick={() => { const c = agentPromptCommand(agent, ask); if (c) fill(c) }}
+            className="rounded-md bg-accent text-white px-3 py-1 disabled:opacity-50">Put prompt in terminal</button>
+          <button type="button" disabled={!live} onClick={() => fill('rabbit-save')} className="rounded-md border border-line px-3 py-1 disabled:opacity-50">Save my files</button>
+          <button type="button" disabled={!live} onClick={() => fill('rabbit-restore')} className="rounded-md border border-line px-3 py-1 disabled:opacity-50">Restore my files</button>
+        </div>
+        <p className="text-muted">The prompt is typed into the terminal as <code>{agent}</code> with your text; press Enter yourself to run it. Needs your API key (or <code>copilot</code> login) first. Save prints your <code>~/work</code> files as one text block you can keep; Restore reads it back in a new session. Nothing is stored on the server.</p>
+      </div>
       {message && <p className="text-sm text-muted" role="status">{message}</p>}
 
       {drawer && (
@@ -224,7 +238,7 @@ export default function PublicShell() {
           {KEY_FIELDS.map((f) => (
             <label key={f.name} className="block text-sm">
               <span className="block mb-1">{f.label}</span>
-              <input type="password" autoComplete="off" spellCheck={false} value={keys[f.name] ?? ''} onChange={(e) => setKeys((k) => ({ ...k, [f.name]: e.target.value }))}
+              <input type={showKeys ? 'text' : 'password'} autoComplete="off" spellCheck={false} value={keys[f.name] ?? ''} onChange={(e) => setKeys((k) => ({ ...k, [f.name]: e.target.value }))}
                 className="w-full rounded-md border border-line bg-canvas px-3 py-2 font-mono text-sm" />
             </label>
           ))}
@@ -233,7 +247,10 @@ export default function PublicShell() {
             type <code>/login</code>; it prints a one-time code and a URL to open in your own browser (device flow). The token must be a fine-grained personal access
             token with the &quot;Copilot Requests&quot; permission, and is used only inside your sandbox process.
           </p>
-          <button type="button" onClick={() => setKeys({})} className="rounded-md border border-line px-3 py-1 text-sm">Clear keys</button>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setShowKeys((v) => !v)} aria-pressed={showKeys} className="rounded-md border border-line px-3 py-1 text-sm">{showKeys ? 'Hide keys' : 'Show keys'}</button>
+            <button type="button" onClick={() => setKeys({})} className="rounded-md border border-line px-3 py-1 text-sm">Clear keys</button>
+          </div>
         </div>
       )}
 
