@@ -70,7 +70,7 @@ function splitTop(body: string): string[] {
 }
 
 function parseColumn(def: string): Column | null {
-  const m = /^"?([a-z_][a-z0-9_]*)"?\s+(.+)$/is.exec(def)
+  const m = /^"?([a-z_][a-z0-9_]*)"?\s+([\s\S]+)$/i.exec(def)
   if (!m) return null
   const rest = m[2].replace(/\s+/g, ' ')
   const type = /^(.*?)(?=\s+(?:not\s+null|null|default|primary|references|check|unique|generated|constraint|collate)\b|$)/i.exec(rest)?.[1].trim() ?? rest
