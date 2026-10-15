@@ -1,6 +1,7 @@
 import { requireViewer, viewerClient } from '@/lib/auth/session'
 import { COLS } from '@/lib/open-access'
 import { Badge, Card, PageHeader, Stat, Table, Td, short, when } from '@/components/ui'
+import DonateCard from '@/components/DonateCard'
 
 const GATE = { cortisol: 0.75, gsr: 0.05, arousal: 0.6 }
 
@@ -105,6 +106,8 @@ export default async function OverviewPage() {
             ))}
           </Table>
         </Card>
+
+        <DonateCard compact />
       </div>
     </>
   )

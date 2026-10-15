@@ -45,6 +45,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <AutoRefresh intervalMs={30_000} />
           <div className="flex items-center gap-3 text-sm">
             <span className="text-xs rounded border border-line px-2 py-0.5 text-muted">Open to everyone</span>
+            <Link href="/donate" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Donate</Link>
             <Link href="/guide" className="rounded-md border border-line px-3 py-1 text-sm hover:bg-canvas">Guide</Link>
           </div>
         </header>
