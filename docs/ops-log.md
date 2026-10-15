@@ -77,3 +77,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 17 site tests and donate --check pass; story, blockchain, press, donate return 200 on the live domain (blockchain was briefly a cached 404); headless Edge shows 0 CSP violations on all 5 pages; live numbers fill (ledger events 8, services 11 of 11, research records 395)
 - **Undo:** Redeploy the previous Pages deployment from the Cloudflare dashboard (Deployments, Rollback)
 - **Ref:** wrangler pages deploy site
+
+### 2026-10-15 23:24 UTC - App preflight
+- **Did:** Ran type check, lint of src/tests/scripts and all 369 unit tests before any app deploy; updated the open_access migration test to allow the new read-only platform_graph migration
+- **Checked:** tests 369 of 369 pass; eslint of src, tests, scripts reports no errors; tsc errors are only in stale generated .next types
+- **Undo:** git revert the test change
+- **Note:** Nothing deployed; app deploy still waits for the owner's go-ahead
