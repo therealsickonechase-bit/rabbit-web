@@ -84,7 +84,14 @@ Invoke-IfLive 'deploy the job (512 MiB, 10-minute limit, one retry)' {
 
 Step 'Workflow rabbit-qa'
 Invoke-IfLive 'deploy workflow.yaml' {
-    Invoke-Gcloud workflows deploy rabbit-qa --project $Project --location $Region --source (Join-Path $AuditDir 'workflow.yaml') --service-account $wf --description 'Weekly audit of rabbitsoftware.io and RabbitOS' --quiet
+    # A just-created service account or a just-enabled API can take a minute to be usable here, so retry.
+    $deployed = $false
+    foreach ($try in 1..6) {
+        & gcloud workflows deploy rabbit-qa --project $Project --location $Region --source (Join-Path $AuditDir 'workflow.yaml') --service-account $wf --description 'Weekly audit of rabbitsoftware.io and RabbitOS' --quiet
+        if ($LASTEXITCODE -eq 0) { $deployed = $true; break }
+        Write-Host "workflow deploy not ready yet (attempt $try of 6); waiting"; Start-Sleep -Seconds 15
+    }
+    if (-not $deployed) { throw 'Could not deploy the workflow.' }
 }
 
 Step 'Weekly trigger (Mondays 09:00, Los Angeles time)'
@@ -116,7 +123,13 @@ Invoke-IfLive 'create metrics qa_reports, qa_high_findings, qa_failed and the al
     function Cond($display, $metric) { @{ displayName = $display; conditionThreshold = @{ filter = "metric.type=`"logging.googleapis.com/user/$metric`" AND resource.type=`"cloud_run_job`""; aggregations = @(@{ alignmentPeriod = '3600s'; perSeriesAligner = 'ALIGN_SUM' }); comparison = 'COMPARISON_GT'; thresholdValue = 0; duration = '0s'; trigger = @{ count = 1 } } } }
     $body = @{ displayName = $name; combiner = 'OR'; enabled = $true; conditions = @((Cond 'The audit found high-severity issues' 'qa_high_findings'), (Cond 'The audit failed to run' 'qa_failed')); notificationChannels = @($channel.name)
         documentation = @{ mimeType = 'text/markdown'; content = 'The weekly RabbitOS and rabbitsoftware.io audit found high-severity issues or failed. Open the latest report: gs://rabbitsoftware-io-reports/latest.html (Cloud Storage console), or ask the hub for the audit summary. Logs: Logs Explorer, Cloud Run job rabbit-qa.' } } | ConvertTo-Json -Depth 20
-    [void](Invoke-RestMethod -Method Post -Uri "$mon/alertPolicies" -Headers $h -ContentType 'application/json' -Body $body)
+    # Monitoring can take up to ten minutes to see a brand-new log-based metric, so retry while it says "not found".
+    $created = $false
+    foreach ($try in 1..24) {
+        try { [void](Invoke-RestMethod -Method Post -Uri "$mon/alertPolicies" -Headers $h -ContentType 'application/json' -Body $body); $created = $true; break }
+        catch { if ("$($_.ErrorDetails.Message)" -notmatch 'Cannot find metric') { throw }; Write-Host "metric not visible to Monitoring yet (attempt $try of 24); waiting"; Start-Sleep -Seconds 30 }
+    }
+    if (-not $created) { throw 'Monitoring still cannot see the new metrics; run this script again in a few minutes.' }
     Write-Host "created alert policy: $name"
 }
 
