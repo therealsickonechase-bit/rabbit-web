@@ -66,7 +66,7 @@ Invoke-IfLive "build $AuditDir as $image" { Invoke-Gcloud builds submit $AuditDi
 
 Step 'Cloud Run jobs'
 Invoke-IfLive 'deploy rabbit-status; refresh rabbit-qa to the new image' {
-    Invoke-Gcloud run jobs deploy rabbit-status --project $Project --region $Region --image $image --service-account $jobSa --command node --args 'src/status.mjs' --memory 256Mi --cpu 1 --task-timeout 120s --max-retries 0 --set-env-vars "STATUS_BUCKET=$Bucket" --quiet
+    Invoke-Gcloud run jobs deploy rabbit-status --project $Project --region $Region --image $image --service-account $jobSa --command node --args 'src/status.mjs' --memory 512Mi --cpu 1 --task-timeout 120s --max-retries 0 --set-env-vars "STATUS_BUCKET=$Bucket" --quiet
     if (Exists run jobs describe rabbit-qa --project $Project --region $Region) { Invoke-Gcloud run jobs update rabbit-qa --project $Project --region $Region --image $image --quiet }
     Bind "serviceAccount:$schSa" 'roles/run.invoker' 'job' 'rabbit-status'
 }

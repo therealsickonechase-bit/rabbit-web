@@ -12,6 +12,14 @@ One page. Project `rabbitsoftware-io`, region `us-west2`. Production (the websit
 | App mirror | Read mirror of the app | Cloud Run `rabbit-web`, `rabbit-web-workerd` (`run.rabbitsoftware.io`) | existing |
 | **Visitor shell** | A throwaway terminal per guest, with claude, gemini, copilot, bash, PowerShell, Python, Node, gcc, sqlite | Cloud Run `rabbit-visitor-shell`, behind a private network and an allowlist proxy VM | `Setup-GcpShell.ps1` |
 | **Hub MCP** | One tool server for AI assistants: links, status, public chain and data, website pages, the guest/owner command catalog, safe command drafting | Cloud Run `rabbitos-hub-mcp` | `Setup-GcpHub.ps1`; keys: `New-HubKey.ps1` |
+| **Live status feed** | Every 5 minutes: which public services answer, whether the chain copies agree, the public data tree; plus a 24-hour history | Cloud Run job `rabbit-status` writes `gs://rabbitsoftware-io-status-public` (world-readable, CORS for rabbitsoftware.io only); the page is `rabbitsoftware.io/status.html` | `Setup-GcpStatusFeed.ps1` |
+| **Weekly audit** | Crawls rabbitsoftware.io and the app, scores them, lists what to fix first, draws a platform map, a site map and the Supabase tree | Cloud Scheduler (Mondays 09:00 Los Angeles) starts Workflow `rabbit-qa`, which runs Cloud Run job `rabbit-qa`; reports in the private bucket `gs://rabbitsoftware-io-reports` (`latest.html`, `latest.json`, dated copies kept 180 days) | `Setup-GcpQaWorkflow.ps1` |
+| Analytics | Every service event, every refused egress request and every status check, kept 90 days | BigQuery `rabbit_logs` through the log sink `rabbit-analytics` (no IP addresses) | `Setup-GcpObservability.ps1`, `Setup-GcpStatusFeed.ps1` |
+
+### What is public and what is not
+- **Public:** the status feed (service names, up or down, timings, chain lengths, public dataset names and column names) and the status page. The public map shows only public services.
+- **Private:** the audit report and its findings, the Supabase tree, the backups, the proxy VM and everything about the owner's computer.
+- To refresh the Supabase tree after a migration: `node scripts/export-supabase-tree.mjs --live` in rabbit-web, then rebuild the audit job (`Setup-GcpStatusFeed.ps1`). `--live` also re-checks what an anonymous reader can see, using only the project's public key.
 | Watching | Uptime checks, alert emails, a $10 budget | Cloud Monitoring, Billing | `Setup-GcpMonitoring.ps1` |
 
 ## Visitor shell: how a guest gets a terminal
@@ -37,7 +45,9 @@ Cloud Run scales to zero. The always-on cost is the small proxy VM (an e2-micro)
 
 ## If something looks wrong
 
+0. Look at https://rabbitsoftware.io/status.html first. If it says the last report is old, the recorder stopped: check the Cloud Run job `rabbit-status` and the Scheduler job `rabbit-status-5min` (an alert emails you after 30 minutes).
 1. Ask any assistant connected to the hub for `hub_selftest`, or run `hub_status`.
 2. Guest shell broken on GCP: `Switch-GuestShellBackend.ps1 -To cloudflare`.
 3. Hub key leaked: `New-HubKey.ps1 -Revoke <name>`.
-4. Alert emails come from the policies "a key URL is down" and "a GCP service is down".
+4. Alert emails come from these policies: "a key URL is down", "a GCP service is down", "GCP errors and abuse signals", "weekly audit needs attention", "status recorder stopped".
+5. To read the latest audit: Cloud Storage console, `rabbitsoftware-io-reports`, `latest.html`; or `gcloud storage cat gs://rabbitsoftware-io-reports/latest.json`.
