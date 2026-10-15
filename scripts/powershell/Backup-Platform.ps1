@@ -116,7 +116,7 @@ if ($Cloudflare) {
                             Invoke-WebRequest "https://api.cloudflare.com/client/v4/accounts/$($acct.id)/r2/buckets/$($b.name)/objects/$([uri]::EscapeDataString($o.key))" -Headers $h -OutFile $dest
                             $n++
                         }
-                        $cursor = $l.result_info.cursor
+                        $cursor = if ($l.PSObject.Properties['result_info'] -and $l.result_info) { $l.result_info.cursor } else { $null }
                     } while ($cursor)
                 }
                 Add-Result 'cloudflare-r2' $true "$($buckets.Count) buckets, $n objects"
