@@ -21,7 +21,14 @@ $targets = @(
     @{ Name = 'RabbitOS app health';     Host = 'app.rabbitsoftware.io'; Path = '/api/health';     Match = '"status":"ok"' },
     @{ Name = 'RabbitOS ledger head';    Host = 'app.rabbitsoftware.io'; Path = '/api/chain/head'; Match = 'headHash' },
     @{ Name = 'rabbitsoftware.io site';  Host = 'rabbitsoftware.io';     Path = '/';               Match = 'RabbitSoftware' },
-    @{ Name = 'Cloud Run mirror health'; Host = 'run.rabbitsoftware.io'; Path = '/api/health';     Match = '"status":"ok"' }
+    @{ Name = 'Cloud Run mirror health'; Host = 'run.rabbitsoftware.io'; Path = '/api/health';     Match = '"status":"ok"' },
+    @{ Name = 'Hub MCP (Cloud Run)';     Host = 'rabbitos-hub-mcp-vxx5lz7c5a-wl.a.run.app';    Path = '/health'; Match = 'ok' },
+    @{ Name = 'Visitor shell (Cloud Run)'; Host = 'rabbit-visitor-shell-vxx5lz7c5a-wl.a.run.app'; Path = '/health'; Match = 'ok' }
+)
+# Each policy watches a set of the checks above (an existing policy is left as it is; add a new group to cover new checks).
+$policyGroups = @(
+    @{ Policy = 'RabbitOS: a key URL is down'; Names = @('RabbitOS app health', 'RabbitOS ledger head', 'rabbitsoftware.io site', 'Cloud Run mirror health') },
+    @{ Policy = 'RabbitOS: a GCP service is down'; Names = @('Hub MCP (Cloud Run)', 'Visitor shell (Cloud Run)') }
 )
 $existing = (Api GET "$mon/uptimeCheckConfigs").uptimeCheckConfigs
 $ids = @{}
@@ -40,10 +47,11 @@ foreach ($t in $targets) {
 }
 
 # 3. One alert policy, one condition per check (fires when more than one location sees a failure)
-$policyName = 'RabbitOS: a key URL is down'
 $policies = (Api GET "$mon/alertPolicies").alertPolicies
+foreach ($group in $policyGroups) {
+$policyName = $group.Policy
 if (-not ($policies | Where-Object { $_.displayName -eq $policyName })) {
-    $conds = foreach ($t in $targets) {
+    $conds = foreach ($t in ($targets | Where-Object { $group.Names -contains $_.Name })) {
         @{ displayName = "$($t.Name) failing"; conditionThreshold = @{
             filter = "metric.type=`"monitoring.googleapis.com/uptime_check/check_passed`" AND metric.label.check_id=`"$($ids[$t.Name])`" AND resource.type=`"uptime_url`""
             aggregations = @(@{ alignmentPeriod = '1200s'; perSeriesAligner = 'ALIGN_NEXT_OLDER'; crossSeriesReducer = 'REDUCE_COUNT_FALSE'; groupByFields = @('resource.label.*') })
@@ -51,8 +59,9 @@ if (-not ($policies | Where-Object { $_.displayName -eq $policyName })) {
     }
     [void](Api POST "$mon/alertPolicies" @{ displayName = $policyName; combiner = 'OR'; enabled = $true; conditions = @($conds); notificationChannels = @($ch.name)
         documentation = @{ content = 'One of the RabbitOS / rabbitsoftware.io uptime checks is failing. Check the Cloudflare and Cloud Run status, then the daily backup log in C:\Users\odaat\RabbitOS\logs.'; mimeType = 'text/markdown' } })
-    Write-Host 'created alert policy'
-} else { Write-Host 'alert policy exists' }
+    Write-Host "created alert policy: $policyName"
+} else { Write-Host "alert policy exists: $policyName" }
+}
 
 # 4. Monthly budget with email warnings (the billing admins and this account are notified by default)
 $bud = (Api GET "https://billingbudgets.googleapis.com/v1/billingAccounts/$billing/budgets").budgets
