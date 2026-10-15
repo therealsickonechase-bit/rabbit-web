@@ -164,8 +164,8 @@ Anyone can check a proof with the standard `ots verify`. What it proves: the doc
 the newest anchor (`anchor:bitcoin` leaf), so each new anchor and each confirmation also grows the Maxwell chain.
 
 **XRPL (not built).** Publishing ledger heads in an XRPL memo with the existing `xrpl_memo_anchors` table is still only a possible step: no code writes to XRPL, and the Overview page
-still says "not anchored" for XRPL. **Ethereum anchoring is not built** either (it needs funded gas and transaction signing from the wallet key). The wallet is receive-only: the withdrawal
-tool is not built yet.
+still says "not anchored" for XRPL. **Ethereum anchoring is not built** either (it needs funded gas and transaction signing from the wallet key). The wallet's public pages are receive-only;
+the withdrawal tool (`workers/wallet/withdraw.mjs`, see `docs/wallet.md`) is built and tested but has not yet been used with real funds.
 
 ### 8. Person data vault (opt-in)
 A member may attach their own data to their account (for example a sequence file they own) to use with the

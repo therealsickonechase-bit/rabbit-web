@@ -48,7 +48,7 @@ The public story is built from the author page (`about.html`), which the owner r
 - **Who pays for it?** The owner, plus voluntary donations toward hosting and development.
 
 ## Before you promote donations (checklist)
-- [ ] **Withdrawal tool built and tested with a small amount.** The wallet key can sign, but nothing yet turns that into a Bitcoin or Ethereum transaction.
+- [ ] **Withdrawal tool tested with a small real amount.** The tool is built and checked against published test vectors and the real key (`docs/wallet.md`), but no real funds have moved yet. Do the first small round trip before promoting donations.
 - [ ] **A recovery plan.** The wallet key lives in a Google Cloud hardware module and has **no seed phrase**; it cannot be exported or "restored from words". It exists only while the Google project and key version exist, and Google keeps a destroyed key recoverable for 30 days. Decide how to limit that risk (for example sweep larger balances to a hardware wallet you hold yourself, or add a second recovery path).
 - [ ] **Legal and tax stance.** Decide what you are (individual or organization), whether donations are taxable income, and whether anything on the page should say more than "not tax-deductible unless this page says so". This is the owner's decision; get advice for your jurisdiction.
 - [ ] **Privacy policy updated.** `privacy.html` should mention the donate page, that addresses are public, and what the site does and does not log. (Already on the owner's to-do list.)
