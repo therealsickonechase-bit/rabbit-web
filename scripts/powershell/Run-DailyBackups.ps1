@@ -37,6 +37,8 @@ function Import-MaxwellEnv {
 }
 $steps = @(
     # Maxwell first: anchor the public research records into the chain (adds a block only when the research changed), then mirror new blocks.
+    # First, take over any blocks the Cloud Run miner added (the public copy is verified block by block; the app's mirror decides if the two ever disagree).
+    @{ Name = 'Maxwell: adopt the public chain'; Block = { Push-Location $maxwellDir; try { python maxwell_adopt.py --apply } finally { Pop-Location } } },
     @{ Name = 'Maxwell: research anchor'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python maxwell_research_anchor.py --apply } finally { Pop-Location } } },
     # The rabbit web data miner: a public snapshot of the whole web (pages, services, datasets, chain copies, research counts), anchored as one Merkle root (a block only when something changed).
     @{ Name = 'Maxwell: rabbit web snapshot'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python rabbitweb_miner.py --apply } finally { Pop-Location } } },
