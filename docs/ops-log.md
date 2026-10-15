@@ -83,3 +83,10 @@ Other logs that already exist (not duplicated here):
 - **Checked:** tests 369 of 369 pass; eslint of src, tests, scripts reports no errors; tsc errors are only in stale generated .next types
 - **Undo:** git revert the test change
 - **Note:** Nothing deployed; app deploy still waits for the owner's go-ahead
+
+### 2026-10-15 23:33 UTC - RF Nexus preview moved to Google Cloud
+- **Did:** Hosted the RF Nexus static preview on Cloud Run service rf-nexus-preview (public, scale to zero, max 2, runs as rabbit-rfnexus-runner with no roles, no secrets); deleted the Cloudflare Worker rabbitsoftware-rf-nexus-preview
+- **Checked:** 4 server tests pass; live: page 200 with warning banner and editor script removed, /api answers 503, /report.md 404, POST 405; browser CSP only blocks the page's own backend calls as designed; old Worker URL now 404
+- **Undo:** Cloud Run: gcloud run services delete rf-nexus-preview --region us-west2, then delete service account rabbit-rfnexus-runner. Worker: redeploy from tools/rf-nexus-preview (commit b045b8f) with wrangler deploy
+- **Ref:** scripts/powershell/Setup-GcpRfNexus.ps1, workers/rf-nexus-gcp
+- **Note:** URL https://rf-nexus-preview-vxx5lz7c5a-wl.a.run.app
