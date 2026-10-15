@@ -36,7 +36,9 @@ try {
     if ($needsSecret -and -not $env:RABBIT_INGEST_SECRET) { Log 'FAIL  RABBIT_INGEST_SECRET is not set in research-agents\.env'; exit 1 }
 
     $steps = if ($Mode -eq 'Sync') {
-        @(@{ Name = 'rabbit_sync'; Args = @('rabbit_sync.py') }, @{ Name = 'chain_pull'; Args = @('chain_pull.py', '--once') })
+        # adopt cloud-mined Maxwell blocks, send our findings, pull the chain back, then refresh the public ledger copy in Google Cloud (verified before upload) so it never lags the app by more than this interval
+        @(@{ Name = 'maxwell_adopt'; Args = @('maxwell_adopt.py', '--apply') }, @{ Name = 'rabbit_sync'; Args = @('rabbit_sync.py') }, @{ Name = 'chain_pull'; Args = @('chain_pull.py', '--once') },
+          @{ Name = 'ledger_to_gcs'; Exe = 'pwsh'; Args = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'Sync-RabbitGcs.ps1'), '-Ledger') })
     } else {
         @(@{ Name = 'task_worker'; Args = @('task_worker.py', '--once') })
     }
@@ -45,7 +47,7 @@ try {
         $clock = [Diagnostics.Stopwatch]::StartNew()
         $outFile = Join-Path ([IO.Path]::GetTempPath()) ('rs-' + [guid]::NewGuid().ToString('N') + '.txt')
         try {
-            $p = Start-Process -FilePath python -ArgumentList $s.Args -WorkingDirectory $AgentsDir -NoNewWindow -PassThru -RedirectStandardOutput $outFile -RedirectStandardError "$outFile.err"
+            $p = Start-Process -FilePath $(if ($s.Exe) { $s.Exe } else { 'python' }) -ArgumentList $s.Args -WorkingDirectory $AgentsDir -NoNewWindow -PassThru -RedirectStandardOutput $outFile -RedirectStandardError "$outFile.err"
             if (-not $p.WaitForExit($StepLimitMinutes * 60 * 1000)) { try { $p.Kill($true) } catch {}; throw "timed out after $StepLimitMinutes min" }
             foreach ($f in $outFile, "$outFile.err") { if (Test-Path $f) { Get-Content $f -Tail 15 | Where-Object { $_.Trim() } | ForEach-Object { Add-Content $log "    $_" } } }
             if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
