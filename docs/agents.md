@@ -44,7 +44,7 @@ Personal data stays here; only public-source findings are synced to RabbitOS (si
 | CrisprResearchAgent / CrisprResearchSuite | `crispr_research_agent.py`, `crispr_research_suite.py` | CRISPR literature tracking and guide design (text and public data only) |
 | ResearchAgent | `research_agent.py` | the base public-source search |
 | AIParticipant | `ai_gossip.py` | periodic analysis of the network ledger |
-| Task worker | `task_worker.py` | **now also runs in Google Cloud** (above); the PC task can stay as a second worker, the queue gives each task to one worker only, or be disabled |
+| Task worker | `task_worker.py` | **now runs in Google Cloud** (above); the PC task "RabbitOS Task Worker" was **disabled on 2026-10-16** (re-enable with `Enable-ScheduledTask -TaskName 'RabbitOS Task Worker'`; the queue gives each task to one worker only) |
 | Research sync, chain pull | `rabbit_sync.py`, `chain_pull.py` | scheduled task (30 minutes) that sends local findings to RabbitOS and pulls the chain back; reads local files, so it stays on the PC |
 | Maxwell miner (PC) | `rabbitweb_miner.py` | the same miner as the cloud job; both may add blocks |
 
