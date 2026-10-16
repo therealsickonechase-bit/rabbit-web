@@ -105,6 +105,13 @@ export const PROBES = [
     const ok = card.name === 'RabbitOS Research Agent' && card.skills?.length >= 4 && r.result?.kind === 'message'
     return { ok, detail: `${card.name} v${card.version}, ${card.skills?.length} skills, message/send ${r.result ? 'answered' : 'failed'}` }
   } },
+  { group: 'Agents', name: 'the task worker in Google Cloud runs every 5 minutes and succeeds', run: async () => {
+    const ex = JSON.parse(sh('gcloud', ['run', 'jobs', 'executions', 'list', '--job', 'rabbit-task-worker', '--project', P, '--region', 'us-west2', '--limit', '3', '--format=json']))
+    if (!ex.length) return { ok: false, detail: 'no executions yet' }
+    const last = ex[0], when = last.status?.completionTime || last.metadata?.creationTimestamp
+    const m = age(when), ok = (last.status?.succeededCount ?? 0) >= 1
+    return { ok: ok && m < 20 ? true : 'warn', detail: `last run ${mins(m)} ago, ${ok ? 'succeeded' : 'did not succeed'}` }
+  } },
   { group: 'Agents', name: 'the Agent Registry lists the Research Agent and the Hub MCP', run: async () => {
     const tok = sh('gcloud', ['auth', 'print-access-token'])
     const get = async (kind) => (await (await fetch(`https://agentregistry.googleapis.com/v1alpha/projects/${P}/locations/global/${kind}?pageSize=100`, { headers: { authorization: `Bearer ${tok}`, 'x-goog-user-project': P } })).json())[kind] ?? []

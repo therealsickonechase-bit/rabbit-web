@@ -23,6 +23,7 @@ curl -X POST https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app -H "content-t
 | What | Where | What it does | Deploy |
 |---|---|---|---|
 | Visitor shell | Cloud Run `rabbit-visitor-shell` | one throwaway terminal per guest with the `claude`, `gemini` and `copilot` CLIs, behind an allowlist proxy | `Setup-GcpShell.ps1` |
+| **Task worker** (moved from the PC 2026-10-16) | Cloud Run job `rabbit-task-worker` (every 5 minutes) | claims one approved task from the RabbitOS queue, runs it against public sources only (PubMed, Europe PMC, ClinicalTrials.gov, NCBI RefSeq) and sends back a proposal that the owner approves on the website; reads only the ingest secret | `Setup-GcpTaskWorker.ps1` |
 | Maxwell miner | Cloud Run job `rabbit-miner` (nightly) | mines the rabbit web snapshot onto the Maxwell chain | `Setup-GcpMinerJob.ps1` |
 | Bitcoin anchor | job `rabbit-anchor` (every 6 h) | OpenTimestamps proofs of the chain heads | `Setup-GcpAnchor.ps1` |
 | Ethereum and XRPL anchor | job `rabbit-anchor-chains` (parked, paused) | posts the same fingerprint to two more networks once funded | `Setup-GcpAnchorChains.ps1` |
@@ -41,7 +42,8 @@ Personal data stays here; only public-source findings are synced to RabbitOS (si
 | CrisprResearchAgent / CrisprResearchSuite | `crispr_research_agent.py`, `crispr_research_suite.py` | CRISPR literature tracking and guide design (text and public data only) |
 | ResearchAgent | `research_agent.py` | the base public-source search |
 | AIParticipant | `ai_gossip.py` | periodic analysis of the network ledger |
-| Task worker, research sync, chain pull | `task_worker.py`, `rabbit_sync.py`, `chain_pull.py` | scheduled tasks (5 and 30 minutes) that run approved tasks and sync findings |
+| Task worker | `task_worker.py` | **now also runs in Google Cloud** (above); the PC task can stay as a second worker, the queue gives each task to one worker only, or be disabled |
+| Research sync, chain pull | `rabbit_sync.py`, `chain_pull.py` | scheduled task (30 minutes) that sends local findings to RabbitOS and pulls the chain back; reads local files, so it stays on the PC |
 | Maxwell miner (PC) | `rabbitweb_miner.py` | the same miner as the cloud job; both may add blocks |
 
 Run for a while by hand: the one-hour wrapper pattern used on 2026-10-15 (`run_all.py` with a time limit). To put one of these in Google Cloud and in the registry, copy the pattern in `workers/agent-a2a` (an A2A wrapper around a read-only function) and add it to `scripts/agent-registry.json`. An agent that handles personal data should not be deployed.
@@ -53,6 +55,12 @@ Run for a while by hand: the one-hour wrapper pattern used on 2026-10-15 (`run_a
 | Vault agent and note-job queue | Cloudflare Worker `vault-agent` + R2 | approved note snapshots as one-hour scoped jobs (see the vault's `Pathways/` notes) |
 | Tasks worker, owner shell broker, gateway, Qwen gateway | Cloudflare Workers | task queue, owner commands, model routing |
 | Image Space | Hugging Face `rabbitos-eeg-qwen-image` | receives fixed words only |
+
+## What moved to Google Cloud, and what stays on the PC
+
+- **Moved:** the task worker (public sources only, no personal data).
+- **Stays on the PC on purpose:** anything that reads EEG, wearables, labs or self data (the BrainFlow bridge, the self-data hub, the vault agents) and the local-file syncs (`rabbit_sync.py`, `chain_pull.py`).
+- **Can move next, with a design decision:** the research explorers (IntegratedResearchAgent, GrowingResearchAgent, CrisprResearchAgent). They keep their topic queue and corpus in local files, so a cloud copy needs the state moved to the app or to a bucket, and PC and cloud must not overwrite each other.
 
 ## Why the PC agents are not in the registry yet
 
