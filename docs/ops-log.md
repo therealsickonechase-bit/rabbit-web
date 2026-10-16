@@ -128,3 +128,9 @@ Other logs that already exist (not duplicated here):
 - **Undo:** Redeploy earlier revisions (hub: gcloud run services update-traffic rabbitos-hub-mcp --to-revisions <previous>=100); git revert the doc commits; Pages: roll back the deployment
 - **Ref:** workers/qa-audit/data/platform-graph.json, src/lib/command-catalog.ts
 - **Note:** Not deployed: the RabbitOS app (waits for go-ahead) and the Supabase platform_graph migration and seed
+
+### 2026-10-16 00:46 UTC - RabbitOS app deployed; development guide republished
+- **Did:** Ran npm run deploy:vinext (Worker rabbit-web, version 0b8ebda6): ships the guest shell prompt box and key toggle, command catalog page, content-security-policy enforcement on 17 more pages, and hides the paused Donate link, card and page. Republished site/development.md from DEVELOPMENT.md with the publish script (credential check, usernames replaced) and deployed Pages production
+- **Checked:** tsc clean in src; 369 app tests and 18 site tests pass before deploy; live: api/health, dashboard, commands, guide, cloudshell-public, chain return 200, /donate returns 404; headless Edge: 0 CSP violations on all 19 pages (cloudshell-public checked separately because the scanner never reaches network idle there); development.md has no personal username and shows RF Nexus on Cloud Run
+- **Undo:** Cloudflare dashboard, Workers, rabbit-web, Deployments: roll back to the previous version; Pages: roll back the deployment
+- **Ref:** npm run deploy:vinext
