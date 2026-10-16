@@ -121,3 +121,10 @@ Other logs that already exist (not duplicated here):
 - **Checked:** wallet tests 48 pass (3 skipped while paused), site tests 18 pass, app tests 369 pass; live: donate.html, donate and wallet.json return 404; no donation address or link on index, story, blockchain or press; blockchain page still shows the live Bitcoin anchor state with 0 CSP violations and 0 errors
 - **Undo:** Set open true in donations.json, run build-donate.mjs, restore page text from git history (commit before 'Pause donations'), deploy; resume the scheduler job with gcloud scheduler jobs resume rabbit-anchor-chains-6h --location us-west2
 - **Ref:** workers/wallet/donations.json
+
+### 2026-10-16 00:31 UTC - Features, descriptions and commands synced; report to Google Cloud
+- **Did:** Synced the platform map (backup and miner jobs now live; new nodes for the anchoring key, the Ethereum/XRPL job (parked) and RF Nexus; donation edges removed; roadmap brought up to date with new done, paused and waiting items), regenerated the Supabase seed SQL (not applied), updated command descriptions (donation rebuild, anchoring parked, RF Nexus setup; 234 commands), hub help (wallet paused, RF Nexus), messaging guide and developer notes (RF Nexus now on Cloud Run). Redeployed hub (revision 00013), status feed and weekly audit jobs; deployed the site to Pages production; ran the weekly audit once and copied this log to the private reports bucket
+- **Checked:** catalog 13, hub 47, audit 48, site 18 tests pass; hub redeploy health ok; weekly audit run SUCCEEDED: 58 pages, 0 high, 5 medium, 4 low, score 67, 11 of 11 services up, chains agree
+- **Undo:** Redeploy earlier revisions (hub: gcloud run services update-traffic rabbitos-hub-mcp --to-revisions <previous>=100); git revert the doc commits; Pages: roll back the deployment
+- **Ref:** workers/qa-audit/data/platform-graph.json, src/lib/command-catalog.ts
+- **Note:** Not deployed: the RabbitOS app (waits for go-ahead) and the Supabase platform_graph migration and seed
