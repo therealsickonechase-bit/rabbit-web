@@ -172,3 +172,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** public status feed: research records 395 to 574, topics explored 9 to 20, 11 of 11 services up, chains agree; wallet watcher state (08:30 UTC): all four addresses 0, no receipts; Bitcoin anchor confirmed (block 971631); Ethereum/XRPL job paused as intended; project lien present; KMS audit log shows only the owner's own signing tests and my IAM grants; the error log holds only already-fixed setup attempts and the known rabbit-web-workerd database fault
 - **Undo:** Nothing to undo; the agents only read public sources and wrote their normal state files
 - **Ref:** ~/RabbitOS/logs/research-agents-hour-2026-10-16.log
+
+### 2026-10-16 09:41 UTC - Donations reopened on the front page, site and app
+- **Did:** Reopened public donations at the owner's request: workers/wallet/donations.json open=true; rabbitsoftware.io front page shows both addresses with copy buttons and 'Open in wallet' links (bitcoin: and ethereum: links open the visitor's own wallet app), /donate and wallet.json are back, the Donate link and invitations are restored (blockchain page keeps Layer 4 as planned); the app shows the Donate card, link and /donate again (DONATIONS_OPEN=true). Updated docs, catalog, hub help and platform map; redeployed site, app, hub, status and audit jobs; re-applied the map to Supabase. Not promoted yet
+- **Checked:** site 18 tests (1 skipped), wallet 57, app 369, catalog 13, hub 47, audit 48; live headless Edge: front page, /donate, app dashboard and app /donate all show bc1qxudt9x4hcftvwkfryln2qhn4e5g2qvt09mlp56 with Open in wallet links for bitcoin and ethereum, 0 CSP violations, 0 console errors
+- **Undo:** Set open to false in workers/wallet/donations.json, run node workers/wallet/build-donate.mjs, restore the pause page text from git commit 5d29393, deploy site and app
+- **Ref:** workers/wallet/donations.json

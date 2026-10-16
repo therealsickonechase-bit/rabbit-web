@@ -49,8 +49,8 @@ test('the app copy equals the signed source in the wallet worker (when that repo
   assert.deepEqual(JSON.parse(readFileSync(source, 'utf8')), JSON.parse(JSON.stringify(WALLET)))
 })
 
-test('while donations are paused the app shows no Donate card, link or page', () => {
-  assert.equal(DONATIONS_OPEN, false)
+test('the app shows the Donate card, link and page only while donations are open (DONATIONS_OPEN comes from donations.json via the generated module)', () => {
+  assert.equal(typeof DONATIONS_OPEN, 'boolean')
   assert.match(src('src/components/DonateCard.tsx'), /if \(!DONATIONS_OPEN\) return null/)
   assert.match(src('src/app/(app)/donate/page.tsx'), /if \(!DONATIONS_OPEN\) notFound\(\)/)
   assert.match(src('src/app/(app)/layout.tsx'), /\{DONATIONS_OPEN && <Link href="\/donate"/)

@@ -1,6 +1,6 @@
 # RabbitSoftware messaging guide
 
-> **Status 2026-10-16: public donations are paused.** The site and the press kit say the project is not accepting donations at the moment. Do not promote donations. The checklist below is what must be true before reopening (set `open` to true in `workers/wallet/donations.json` in rabbitsoftware-cloudflare).
+> **Status 2026-10-16: donations are OPEN on the site and in the app, but not yet promoted.** Do not push donations in outreach until the checklist below is done (the small round-trip test, the legal and tax stance, privacy page).
 
 For anyone who writes about, presents, or answers questions about RabbitSoftware (the project, at rabbitsoftware.io) and RabbitOS (the hosted workspace, at app.rabbitsoftware.io). The public versions of this material are the pages
 [story.html](../../rabbitsoftware-cloudflare/site/story.html), [blockchain.html](../../rabbitsoftware-cloudflare/site/blockchain.html) and [press.html](../../rabbitsoftware-cloudflare/site/press.html). Where this guide and a page differ, the page wins; fix the guide.
