@@ -10,37 +10,30 @@ env:
   REGION: us-west2
   SERVICE: rabbit-web
   IMAGE: us-west2-docker.pkg.dev/rabbitsoftware-io/rabbit-software/rabbit-web
+  WIF_PROVIDER: projects/1087712653995/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  WIF_SERVICE_ACCOUNT: github-deploy@rabbitsoftware-io.iam.gserviceaccount.com
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      HAS_GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS != '' }}
+      id-token: write
     steps:
-      - name: Skip when GCP credentials are not configured
-        if: env.HAS_GCP_CREDENTIALS != 'true'
-        run: echo "::notice::Deploy skipped. Add the GCP_CREDENTIALS, NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY repository secrets."
-
       - uses: actions/checkout@v4
-        if: env.HAS_GCP_CREDENTIALS == 'true'
 
       - id: auth
-        if: env.HAS_GCP_CREDENTIALS == 'true'
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
 
       - uses: google-github-actions/setup-gcloud@v2
-        if: env.HAS_GCP_CREDENTIALS == 'true'
 
       - name: Configure Docker
-        if: env.HAS_GCP_CREDENTIALS == 'true'
         run: gcloud auth configure-docker us-west2-docker.pkg.dev --quiet
 
       - name: Build and push
-        if: env.HAS_GCP_CREDENTIALS == 'true'
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
@@ -52,13 +45,13 @@ jobs:
           docker push $IMAGE:latest
 
       - name: Deploy to Cloud Run
-        if: env.HAS_GCP_CREDENTIALS == 'true'
         run: |
           gcloud run deploy $SERVICE \
             --project $PROJECT_ID \
             --image $IMAGE:${{ github.sha }} \
             --platform managed \
             --region $REGION \
+            --service-account rabbit-web-runner@$PROJECT_ID.iam.gserviceaccount.com \
             --allow-unauthenticated \
             --port 8080 \
             --quiet

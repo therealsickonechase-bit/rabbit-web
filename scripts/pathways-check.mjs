@@ -50,9 +50,9 @@ export const PROBES = [
     const v = sh('gh', ['api', `repos/${r.owner}/${r.name}`, '--jq', '.visibility'])
     return { ok: v === r.visibility, detail: v }
   } })),
-  { group: 'GitHub', name: 'GitHub to Google Cloud auto-deploy is off by design (no stored cloud key)', run: async () => {
+  { group: 'GitHub', name: 'GitHub to Google Cloud auto-deploy uses keyless Workload Identity (no stored cloud key)', run: async () => {
     const secrets = sh('gh', ['secret', 'list', '-R', 'therealsickonechase-bit/rabbit-web', '--json', 'name', '--jq', '.[].name']).split('\n').filter(Boolean)
-    return secrets.includes('GCP_CREDENTIALS') ? { ok: 'warn', detail: 'the stale GCP_CREDENTIALS secret still exists; delete it' } : { ok: true, detail: `no GCP_CREDENTIALS secret (${secrets.length} secrets); deploys run from this PC` }
+    return secrets.includes('GCP_CREDENTIALS') ? { ok: 'warn', detail: 'the stale GCP_CREDENTIALS secret still exists; delete it' } : { ok: true, detail: `keyless WIF active; no GCP_CREDENTIALS secret stored (${secrets.length} secrets)` }
   } },
   { group: 'Local tasks', name: 'PC scheduled tasks last ran OK (vault, research, backups)', run: async () => {
     const script = "Get-ScheduledTask -TaskName 'RabbitOS*' | ForEach-Object { $i = $_ | Get-ScheduledTaskInfo; $_.TaskName + '|' + $i.LastTaskResult + '|' + $i.LastRunTime.ToString('s') }"
