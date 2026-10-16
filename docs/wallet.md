@@ -48,3 +48,21 @@ The weak point is that there is exactly one copy of the key and it is inside one
 - The signing hashes against the EIP-155 example and the BIP143 native SegWit example.
 - Signing through the real HSM key: the Ethereum sender recovers to the wallet address, and Bitcoin input signatures verify against the wallet key.
 - Nothing has been sent from the wallet, because it holds nothing yet. The first real send is the test in the section above.
+
+## Recovery and receiving on Google Cloud (set up 2026-10-16)
+
+**What "recovery" can and cannot mean here.** The key was generated inside a hardware security module and can never be exported. There is no seed phrase and no backup file, by design. So the funds are recoverable only while two things exist: the Google Cloud project and the key version. Nothing can rebuild the key from a backup. The plan is therefore (1) do not lose the key by accident, (2) never keep more in the wallet than you could afford to lose, and (3) move savings out to an address you control elsewhere.
+
+**Protections in place** (script: `scripts/powershell/Setup-GcpWalletRecovery.ps1`, safe to re-run, prints a status report):
+- A **project lien** blocks deleting the project (which would destroy the key) until you remove the lien on purpose: `gcloud alpha resource-manager liens list`, or the Liens API.
+- A **destroy delay of 30 days** on both keys: a destroyed key version can be restored in that window (`gcloud kms keys versions restore 1 --key maxwell-donations --keyring rabbit-wallet --location us-west2`).
+- An **email alert** ("RabbitOS: a wallet key was changed") on any destroy, restore, update, create or permission change on key ring rabbit-wallet.
+- **Nobody and nothing can sign** with the donation key. Only the separate anchoring key (fee money only) has a service account signer. Data Access audit logs record every signing request.
+- The project has **one Owner** (your Google account). If that account is lost or locked, the key is unreachable. Decision for you: add a second Owner you trust (a second Google account you control, with its own recovery methods) with `gcloud projects add-iam-policy-binding rabbitsoftware-io --member user:SECOND_ACCOUNT --role roles/owner`. Also keep the recovery phone and email of your Google account current and use a hardware security key on it.
+
+**What you do to limit the loss**
+1. Treat the wallet as a **receiving account**, not savings. After each meaningful receipt, sweep it to an address you control elsewhere (a hardware wallet you hold a seed for) with the withdrawal tool: add that address to `~/RabbitOS/wallet-destinations.json`, run `node withdraw.mjs eth|btc ... --to ADDRESS --sweep` as a dry run, then `--broadcast`.
+2. Do the **small round-trip test** first (receive a tiny amount, sweep it back out) so the whole path is proven before real money arrives.
+3. If the alert email arrives and you did not cause it, restore any destroyed key version at once (command above) and review the Admin Activity log.
+
+**Receiving, and the Google Cloud receiving account.** Receiving needs only the public addresses; anyone can send at any time and the key controls the funds. The Google Cloud side that sees and records what arrives is the Cloud Run job `rabbit-wallet-watch` (script: `Setup-GcpWalletWatch.ps1`, every 30 minutes). It reads public networks only, has no signing permission, and writes a **private** record to `gs://rabbitsoftware-io-reports/wallet/state.json` (balances, total ever received on Bitcoin, last 50 receipts). When money arrives it logs `wallet_received` and emails you ("RabbitOS: money arrived at a wallet address"). It also watches the two anchoring fee accounts, so you are told when you fund them. Read the record with: `gcloud storage cat gs://rabbitsoftware-io-reports/wallet/state.json`.

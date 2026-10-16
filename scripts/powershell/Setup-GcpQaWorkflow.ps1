@@ -32,7 +32,7 @@ function Bind($member, $role, [string]$resourceKind, [string]$resource) {
     foreach ($try in 1..6) {
         $out = switch ($resourceKind) {
             'project' { & gcloud projects add-iam-policy-binding $Project --member $member --role $role --condition=None --quiet 2>&1 }
-            'bucket'  { & gcloud storage buckets add-iam-policy-binding "gs://$resource" --member $member --role $role --project $Project 2>&1 }
+            'bucket'  { & gcloud storage buckets add-iam-policy-binding "gs://$resource" --member $member --role $role --project $Project --condition=None 2>&1 }
             'job'     { & gcloud run jobs add-iam-policy-binding $resource --region $Region --project $Project --member $member --role $role --quiet 2>&1 }
         }
         if ($LASTEXITCODE -eq 0) { return }
