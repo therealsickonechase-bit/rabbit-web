@@ -165,7 +165,7 @@ Invoke-IfLive 'build the image in Cloud Build and deploy' {
     Set-Content $cfg -Encoding ascii -Value "steps:`n- name: gcr.io/cloud-builders/docker`n  args: ['build', '-f', 'public-shell-gcp/Dockerfile', '-t', '$image', '.']`nimages: ['$image']`ntimeout: 1800s"
     try { Invoke-Gcloud builds submit $WorkersDir --project $Project --config $cfg --quiet } finally { Remove-Item $cfg -Force -ErrorAction SilentlyContinue }
     Invoke-Gcloud run deploy $service --project $Project --region $Region --image $image --service-account $sa --execution-environment gen2 `
-        --concurrency 1 --min-instances 0 --max-instances 6 --cpu 1 --memory 1Gi --timeout 1800 --port 8080 `
+        --concurrency 1 --min-instances 0 --max-instances 6 --cpu 1 --memory 1Gi --timeout 3600 --port 8080 `
         --network $net --subnet $subnet --network-tags shell-client --vpc-egress all-traffic `
         --set-env-vars "PTY_BRIDGE_SECRET=$secret,EGRESS_PROXY_URL=http://${proxyIp}:3128" --allow-unauthenticated --quiet
     $url = (& gcloud run services describe $service --project $Project --region $Region --format 'value(status.url)').Trim()

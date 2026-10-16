@@ -26,6 +26,7 @@ export function ownerCloudApi(path: string, method: string) {
   if (/^\/api\/(?:cloud-access|cloud-agent\/access)\/request$/.test(path)) return method === 'POST'
   if (/^\/api\/(?:cloud-access|cloud-agent\/access)\/status$/.test(path)) return method === 'GET'
   if (path === '/api/cloud-login') return method === 'POST'
+  if (path === '/api/cloudshell/session') return method === 'GET' || method === 'POST'
   return (path === '/api/cloudshell/execute' && method === 'POST') ||
     (base === '/api/vault/jobs' && method === 'POST') ||
     (/^\/api\/vault\/jobs\/[a-f0-9]{64}(\/result)?$/.test(base) && method === 'GET')
@@ -78,12 +79,22 @@ function exactKeys(value: Record<string, unknown>, keys: string[]) {
 
 export function shellCommand(value: unknown) {
   const input = record(value)
-  exactKeys(input, ['command', 'consent'])
+  exactKeys(input, ['command', 'consent', 'session', 'timeoutSeconds'])
   if (input.consent !== true || typeof input.command !== 'string' || !input.command.trim() ||
       input.command.includes('\0') || bytes(input.command) > COMMAND_BYTES) {
     throw new CloudJobError(400, 'Approve each nonempty command (maximum 4000 UTF-8 bytes).')
   }
-  return { command: input.command, consent: true }
+  const out: { command: string; consent: true; session?: true; timeoutSeconds?: number } = { command: input.command, consent: true }
+  if ('session' in input && typeof input.session !== 'boolean') throw new CloudJobError(400, 'session must be true or false.')
+  if (input.session === true) out.session = true
+  if ('timeoutSeconds' in input) {
+    const n = input.timeoutSeconds
+    if (input.session !== true || typeof n !== 'number' || !Number.isInteger(n) || n < 1 || n > 150) {
+      throw new CloudJobError(400, 'timeoutSeconds (1-150) is only for session commands.')
+    }
+    out.timeoutSeconds = n
+  }
+  return out
 }
 
 export function vaultSnapshot(value: unknown, roots: readonly string[]) {
