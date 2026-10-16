@@ -29,7 +29,7 @@ function Exists { $null = & gcloud @args 2>$null; return ($LASTEXITCODE -eq 0) }
 function Bind($member, $role, [string]$kind, [string]$resource) {
     foreach ($try in 1..6) {   # a brand-new account can take a few seconds to be visible to IAM
         $null = switch ($kind) {
-            'bucket' { & gcloud storage buckets add-iam-policy-binding "gs://$resource" --member $member --role $role --project $Project 2>&1 }
+            'bucket' { & gcloud storage buckets add-iam-policy-binding "gs://$resource" --member $member --role $role --project $Project --condition=None 2>&1 }
             'job'    { & gcloud run jobs add-iam-policy-binding $resource --region $Region --project $Project --member $member --role $role --quiet 2>&1 }
         }
         if ($LASTEXITCODE -eq 0) { return }
@@ -47,7 +47,7 @@ Invoke-IfLive "create the bucket, make its objects world-readable, allow GET fro
         Invoke-Gcloud storage buckets create "gs://$Bucket" --project $Project --location $Region --uniform-bucket-level-access
         Write-Host "created bucket: $Bucket"
     } else { Write-Host "bucket exists: $Bucket" }
-    Invoke-Gcloud storage buckets add-iam-policy-binding "gs://$Bucket" --project $Project --member allUsers --role roles/storage.objectViewer | Out-Null
+    Invoke-Gcloud storage buckets add-iam-policy-binding "gs://$Bucket" --project $Project --member allUsers --role roles/storage.objectViewer --condition=None | Out-Null
     $cors = Join-Path ([IO.Path]::GetTempPath()) ('cors-' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.json')
     try {
         ConvertTo-Json -InputObject @(@{ origin = $origins; method = @('GET', 'HEAD'); responseHeader = @('Content-Type', 'Cache-Control'); maxAgeSeconds = 300 }) -Depth 5 | Set-Content $cors -Encoding ascii

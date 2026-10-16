@@ -155,6 +155,22 @@ export const PROBES = [
     const m = age(f.research.lastReportAt)
     return { ok: m < 60 * 36 ? true : 'warn', detail: `${f.research.records} records, ${f.research.topicsExplored} topics explored, last report ${mins(m)} ago` }
   } },
+  { group: 'Research', name: 'rabbitsoftware.io shows the agents\' latest findings live (no website deploy needed)', run: async () => {
+    const bust = `?cb=${Date.now()}`
+    const get = async (u) => (await fetch(u + bust, { signal: AbortSignal.timeout(20_000) })).json()
+    const [live, appFeed, page] = await Promise.all([
+      get('https://rabbitsoftware-io-status-public.storage.googleapis.com/status/research-live.json'),
+      get('https://app.rabbitsoftware.io/api/public/research-feed'),
+      fetch('https://rabbitsoftware.io/research.html' + bust, { signal: AbortSignal.timeout(20_000) }).then((r) => r.text()),
+    ])
+    let dna = null
+    try { dna = await get('https://rabbitsoftware-io-status-public.storage.googleapis.com/status/dna-live.json') } catch { /* the PC publishes it after each comparison */ }
+    const appTotal = Object.values(appFeed.counts ?? {}).reduce((n, v) => n + (Number.isFinite(v) ? v : 0), 0)
+    const a = age(live.generatedAt), hasPage = page.includes('id="live"') && page.includes('live-research.js')
+    const dnaAge = dna ? age(dna.updatedAt) : Infinity
+    const ok = hasPage && a < 15 && live.total > 0 && Math.abs(live.total - appTotal) < Math.max(50, appTotal * 0.1)
+    return { ok: ok ? (dnaAge < 48 * 60 ? true : 'warn') : false, detail: `page ${hasPage ? 'has' : 'LACKS'} the live section; file refreshed ${mins(a)} ago with ${live.total} records (app feed: ${appTotal}), ${live.topics?.explored ?? '?'} topics explored; variant index summary ${dna ? mins(dnaAge) + ' old' : 'not published yet'}` }
+  } },
   { group: 'Research', name: 'local research store and agents are in place', run: async () => {
     const store = join(PROJECTS, 'research-agents', 'research_store.json')
     if (!existsSync(store)) return { ok: false, detail: 'research_store.json missing' }
