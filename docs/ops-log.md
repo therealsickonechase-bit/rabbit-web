@@ -103,3 +103,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 17 site tests pass; on the live domain headless Edge shows eth/xrpl 'waiting for funds', bitcoin 'submitted, waiting for a Bitcoin block', 0 CSP violations, 0 console errors
 - **Undo:** Pages: roll back the deployment; bucket: gcloud storage buckets update gs://rabbitsoftware-io-ledger-public --clear-cors
 - **Ref:** site/blockchain.html, site/live-facts.js, site/_headers
+
+### 2026-10-16 00:07 UTC - Hub MCP: anchor_status
+- **Did:** Added the read-only hub tool anchor_status (Bitcoin proofs, Ethereum and XRPL anchoring accounts, funded or not, latest transactions), catalog entries for Setup-GcpAnchorChains and its test (232 commands), help entry updated; redeployed rabbitos-hub-mcp on Cloud Run
+- **Checked:** 47 hub tests and 13 catalog tests pass; live call to anchor_status returns the real state; hub self-test 15 of 15
+- **Undo:** Redeploy the previous hub revision: gcloud run services update-traffic rabbitos-hub-mcp --to-revisions <previous>=100
+- **Ref:** workers/hub-mcp, scripts/powershell/Setup-GcpHub.ps1
