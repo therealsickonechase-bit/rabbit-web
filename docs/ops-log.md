@@ -97,3 +97,9 @@ Other logs that already exist (not duplicated here):
 - **Undo:** gcloud run jobs delete rabbit-anchor-chains; gcloud scheduler jobs delete rabbit-anchor-chains-6h; remove the account rabbit-anchor-chains; schedule destruction of key version anchor-signer/1 (recoverable 30 days)
 - **Ref:** scripts/powershell/Setup-GcpAnchorChains.ps1, workers/wallet/anchor-chains.mjs
 - **Note:** Anchoring addresses: ETH 0x32bA3432Caff0dac6C88D58Fb2875dc721986b3d, XRPL rN8pnpYCaZEQAXE5kL1GC9ThpJYZ8Rd1nX. Waiting for the owner to fund them
+
+### 2026-10-16 00:04 UTC - Site: anchoring status on /blockchain
+- **Did:** Added Layer 4 (Ethereum and XRP Ledger notes) to the blockchain page with the two public anchoring addresses (marked not for gifts) and live Bitcoin/Ethereum/XRPL anchor state read from the public ledger bucket; set CORS (GET from rabbitsoftware.io) on rabbitsoftware-io-ledger-public; added that bucket to the site CSP connect-src; deployed to Cloudflare Pages production
+- **Checked:** 17 site tests pass; on the live domain headless Edge shows eth/xrpl 'waiting for funds', bitcoin 'submitted, waiting for a Bitcoin block', 0 CSP violations, 0 console errors
+- **Undo:** Pages: roll back the deployment; bucket: gcloud storage buckets update gs://rabbitsoftware-io-ledger-public --clear-cors
+- **Ref:** site/blockchain.html, site/live-facts.js, site/_headers
