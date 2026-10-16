@@ -216,3 +216,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** remote main equals local main (3e00793c), repo private (anonymous 404); mirror tests 4 pass (excluded folders, empty-clone refusal, failed clone, token never printed); both scripts pass -WhatIf; catalog 13, hub 47, audit 48 tests
 - **Undo:** Vault: git remote set-url origin the legacy-collab URL and delete the new repo with gh repo delete; mirror: not deployed, nothing to undo
 - **Ref:** workers/vault-mirror-job, Setup-GcpVaultMirror*.ps1
+
+### 2026-10-16 10:29 UTC - Obsidian to Google Cloud communication verified; vault GitHub sync repaired
+- **Did:** Verified the whole path end to end: wrote a marker note (Ops/GC link check.md) in the Obsidian vault, ran the vault upload task, re-indexed, and found the note through Vertex AI Search. Found and fixed a break: the PC task 'RabbitOS Vault sync' (every 30 minutes) had been aborting since at least 2026-10-15 23:32 (65 aborts, last vault commit 2026-10-14) because its privacy guard asked GitHub about the hard-coded repository rabbitsoftware-io/obsidian-rabbitos-vault, which the signed-in account cannot see (404). The guard now reads the repository from the vault's own origin (therealsickonechase-bit/obsidian-rabbitos-vault, confirmed private) and still aborts if it cannot confirm private. After the fix the task committed and pushed to the main account (remote main equals local main)
+- **Checked:** marker note in gs://rabbitsoftware-io-vault-private/vault/Ops within 100 s of the upload task (result 0); search for the marker returned the note; vault sync task result 0, local HEAD 99caf8bf equals origin/main; upload bucket holds 2409 objects
+- **Undo:** Restore the old guard line in Tools/sync-vault.ps1 (it would abort again); delete Ops/GC link check.md if unwanted
+- **Ref:** Tools/sync-vault.ps1 in the vault
