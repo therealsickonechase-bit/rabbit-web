@@ -6,6 +6,17 @@ and write the stored data (EEG band samples, daily summaries, twin, chain, agent
 Contact records, API keys and audit writes stay closed; agent tasks proposed here never run on their own. The in-app **Guide**
 () describes the workflow; see [docs/rabbitos.md](docs/rabbitos.md).
 
+## Where the operating docs are
+
+| Doc | What it covers |
+|---|---|
+| [docs/rabbitos.md](docs/rabbitos.md) | The product: pages, data, chain, anchoring (Bitcoin built; Ethereum and XRPL built but parked), agents. |
+| [docs/ops-log.md](docs/ops-log.md) | Every change to the live setup: what, how it was checked, how to undo it. Add entries with `node scripts/ops-log.mjs`. |
+| [docs/security-hardening.md](docs/security-hardening.md) | The ordered security checklist and its results. |
+| [docs/wallet.md](docs/wallet.md) | The hardware-key wallet: receiving record, recovery plan, withdrawal tool. Public donations are paused. |
+| [docs/messaging.md](docs/messaging.md) | What to say and not say about the project, and the checklist before promoting donations. |
+| [docs/gcp-platform.md](docs/gcp-platform.md), [docs/gcp-observability.md](docs/gcp-observability.md), [docs/gcp-standby.md](docs/gcp-standby.md) | Google Cloud services, monitoring and the standby site. |
+
 ## What is in it
 
 | Area | Who | Notes |

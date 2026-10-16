@@ -153,3 +153,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** qa-audit 48 tests pass; map applied (committed)
 - **Undo:** Edit docs/wallet.md; set p-second-owner back to waiting
 - **Ref:** docs/wallet.md
+
+### 2026-10-16 01:30 UTC - App redeployed with the 240-command catalog; README docs map
+- **Did:** Redeployed the RabbitOS app (it serves the command catalog, now 240 commands) and added a documentation map to README.md. Checked all three repos before pushing: no secret-like content in the unpushed commits (only fake test values and public key files), repos private
+- **Checked:** 369 app tests pass, tsc clean in src; live api/health, dashboard, commands, guide 200, /donate 404, /commands shows 240
+- **Undo:** Cloudflare dashboard: roll back the Worker rabbit-web to the previous version
+- **Ref:** npm run deploy:vinext
