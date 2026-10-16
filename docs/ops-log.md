@@ -307,3 +307,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 25 unit tests; live: staged a note and an unsupported task, Run-Echo delivered them, run_staged handled both (noted, unsupported); test data removed
 - **Undo:** Revert the commits in research-agents (task_worker.py, run_all.py, stage_box.py)
 - **Ref:** research-agents/stage_box.py process_inbox
+
+### 2026-10-16 14:29 UTC - Research agents
+- **Did:** Re-enabled the PC scheduled task RabbitOS Task Worker (the cloud worker keeps running; the queue gives each task to one worker only) to test the staged inbox.
+- **Checked:** Staged a note and a research_topic task from the cloud side; Run-Echo delivered both with receipts; the worker handled the task (28 records) and noted the note; a malformed task failed cleanly (KeyError recorded); test data removed
+- **Undo:** Disable-ScheduledTask -TaskName 'RabbitOS Task Worker'
+- **Ref:** stage_box.py, task_worker.py
