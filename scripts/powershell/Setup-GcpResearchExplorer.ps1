@@ -33,7 +33,7 @@ function Retry([scriptblock]$run, [string]$what) {
 $jobSa = "rabbit-research-explorer@$Project.iam.gserviceaccount.com"; $schSa = "rabbit-anchor-scheduler@$Project.iam.gserviceaccount.com"
 $image = "us-west2-docker.pkg.dev/$Project/rabbit-software/explorer-job:latest"
 $secret = 'rabbit-ingest-secret'
-$files = 'cloud_explorer.py', 'task_worker.py', 'stage_box.py', 'echo_link.py', 'dna_fingerprint.py', 'dna_binary_codec.py', 'rabbit_sync.py', 'multi_source_research.py', 'extended_research_sources.py', 'research_matcher.py', 'http_util.py', 'brain_research.py', 'crispr_data.py', 'crispr_guide_design.py'
+$files = 'cloud_explorer.py', 'task_worker.py', 'stage_box.py', 'echo_link.py', 'toolbox.py', 'dna_fingerprint.py', 'dna_binary_codec.py', 'rabbit_sync.py', 'multi_source_research.py', 'extended_research_sources.py', 'research_matcher.py', 'http_util.py', 'brain_research.py', 'crispr_data.py', 'crispr_guide_design.py'
 
 Step 'Check the secret exists (name only) and the files are there'
 $have = Exists secrets versions describe latest --secret $secret --project $Project
