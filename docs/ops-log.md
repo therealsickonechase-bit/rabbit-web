@@ -301,3 +301,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 9 unit tests; live test: staged an item, Run-Echo delivered it to the local inbox and wrote the receipt, then test data removed
 - **Undo:** Remove the staging lines from Run-Echo.ps1; delete echo/stage/ in the reports bucket; revert commits and redeploy
 - **Ref:** research-agents/stage_box.py, Run-Echo.ps1
+
+### 2026-10-16 14:25 UTC - Research agents
+- **Did:** Wired the echo staging into the agents: task_worker.py (agent task_worker) and run_all.py (agent research) now read their local staged inbox on start and every poll/minute via stage_box.process_inbox, handle each item once and write results/<id>.json. Unknown, malformed or failing tasks are recorded, not guessed at.
+- **Checked:** 25 unit tests; live: staged a note and an unsupported task, Run-Echo delivered them, run_staged handled both (noted, unsupported); test data removed
+- **Undo:** Revert the commits in research-agents (task_worker.py, run_all.py, stage_box.py)
+- **Ref:** research-agents/stage_box.py process_inbox
