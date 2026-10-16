@@ -7,7 +7,7 @@
 create table if not exists public.platform_nodes (
   id text primary key,
   label text not null,
-  provider text not null check (provider in ('people','cloudflare','gcp','supabase','owner','external')),
+  provider text not null check (provider in ('research','people','cloudflare','gcp','supabase','owner','external')),
   lane smallint not null check (lane between 0 and 9),
   sort_order smallint not null default 0,
   kind text not null,

@@ -160,7 +160,7 @@ remains, so schedule that pull. Data written after your last export from a total
 6 hours. When the public ledger head or the Maxwell chain head changed, it builds one small public document (`anchor.json`: ledger length and head hash, Maxwell length, head hash and
 index, the date), sends its SHA-256 to the public OpenTimestamps calendars, and stores the proof (`anchor.json.ots`) under `anchors/<id>/` in the public ledger bucket, with
 `anchors/index.json` and `anchors/latest.json`. Later runs upgrade pending proofs once Bitcoin has confirmed them (status `pending` then `confirmed`, with the Bitcoin block height).
-Anyone can check a proof with the standard `ots verify`. What it proves: the document existed by that Bitcoin block. It does not prove the contents are true. The Maxwell miners record
+The first anchor (2026-10-15T214050Z) was confirmed by the scheduled job on its own at 01:00 UTC on 2026-10-16, in Bitcoin block 971631 (a second calendar attested block 971634); it was verified independently by recomputing the document hash and matching the proof's merkle root to the block header. Anyone can check a proof with the standard `ots verify`. What it proves: the document existed by that Bitcoin block. It does not prove the contents are true. The Maxwell miners record
 the newest anchor (`anchor:bitcoin` leaf), so each new anchor and each confirmation also grows the Maxwell chain.
 
 **Ethereum and XRPL (code built and deployed 2026-10-15; PARKED 2026-10-16: the Scheduler job `rabbit-anchor-chains-6h` is paused and the fee accounts are unfunded; resume with `gcloud scheduler jobs resume rabbit-anchor-chains-6h --location us-west2` after funding).** The Cloud Run job `rabbit-anchor-chains` (workers/wallet/anchor-chains.mjs, set up by
