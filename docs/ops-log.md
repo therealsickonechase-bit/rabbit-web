@@ -253,3 +253,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** wrote a test entry and read it back from Cloud Logging (cache sizes included, hf-stage 1735.9 MB in 158 files); all six scripts parse; catalog 13 and hub 49 tests pass
 - **Undo:** Remove the Write-CloudLog lines from the four scripts; delete the sink rabbit-pc-jobs, the bucket pc-jobs, the metric pc_job_failed and the alert policy
 - **Ref:** scripts/powershell/Write-CloudLog.ps1
+
+### 2026-10-16 12:30 UTC - Source control cleaned: 21,574 pending changes explained and resolved
+- **Did:** VS Code showed over 10,000 changes: 21,574 untracked files in research-agents (21,355+ from the .venv-eeg Python virtual environment, 136 from eeg_data/MNE-eegbci-data, 35 in eeg_runs, 8 in data/slc6a4_pkg) and 2 in rabbit-web (.claude/worktrees, a stray Hello-World clone). None of that is source code, so none was committed: added ignore rules (research-agents: .venv*/, eeg_data/, eeg_runs/, selfdata/, twinnet/, data/; rabbit-web: .claude/worktrees/, /Hello-World/). The EEG, self data and datasets are already copied to the private Google Cloud backups bucket by the nightly backup; the virtual environment is reproducible and is not backed up. Committed and pushed the real changes: .gitignore, the Maxwell chain (blocks 4 to 6 mined by the daily backup) and the newest web snapshot. rabbit-web is public, research-agents private
+- **Checked:** git status shows 0 changes and 0 unpushed in rabbit-web, research-agents and rabbitsoftware-cloudflare
+- **Undo:** Remove the added lines from the two .gitignore files (the files become untracked again)
+- **Ref:** .gitignore
