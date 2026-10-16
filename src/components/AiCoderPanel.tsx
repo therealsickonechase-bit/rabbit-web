@@ -207,7 +207,7 @@ ${aiContext()}` : task, secrets())
       </>}
       <label className="flex gap-2 items-start">
         <input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={busy || !configured} />
-        <span>I approve executing this specific command and its network usage in the ephemeral cloud sandbox.</span>
+        <span>I approve executing this specific command and its network usage in the cloud sandbox (the working session, if it is on above).</span>
       </label>
       <div className="flex gap-2">
         <button className={button} disabled={busy || !configured || !consent || (Boolean(review.warn) && !warnConsent)} onClick={run}>Run in CloudShell</button>

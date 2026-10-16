@@ -25,7 +25,7 @@ One page. Project `rabbitsoftware-io`, region `us-west2`. Production (the websit
 ## Visitor shell: how a guest gets a terminal
 
 1. The page (`/cloudshell-public`) shows a human check and talks to the Cloudflare Worker `rabbitsoftware-public-shell`.
-2. The Worker checks the human check and the quotas (one live sandbox per address, 10 idle minutes, 30 minutes total, a daily limit), then opens a terminal.
+2. The Worker checks the human check and the quotas (one live sandbox per address, 15 idle minutes (typing or terminal output counts as activity), 60 minutes total, a daily limit), then opens a terminal.
 3. The terminal is either the **Cloudflare sandbox** (default) or the **GCP service** (when `TERMINAL_BACKEND=gcp`). The GCP service runs one visitor per instance, as an unprivileged user, and exits when the session ends, so the next visitor gets a clean instance.
 4. On GCP, the only way out to the internet is through a proxy VM that allows 13 named hosts (package registries, GitHub, the model APIs and the public RabbitOS app). Anything else, including raw IPs and attempts to go around the proxy, is blocked by the network.
 

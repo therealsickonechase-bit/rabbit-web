@@ -88,7 +88,7 @@ export const QUICK_START = [
 
 export const LIMITS_TEXT = [
   'Public and shared: anyone can open a sandbox, so never type a secret you want to keep.',
-  'Ephemeral: a session ends after 10 idle minutes or 30 minutes in total, and everything in it is deleted.',
+  'Ephemeral: a session ends after 15 minutes with no typing and no output, or 60 minutes in total (you get a warning first), and everything in it is deleted.',
   'Small: a quarter of a vCPU, 1 GiB of memory, limited disk, one sandbox per visitor, a daily command quota.',
   'Limited network: package registries, public GitHub, api.anthropic.com, generativelanguage.googleapis.com, the Copilot CLI hosts and the public ledger only.',
   'Bring your own API key. Keys stay in this tab and are sent only to your own sandbox process; use a low-limit key.',
@@ -175,7 +175,7 @@ export const GUIDE: readonly GuideSection[] = [
     'cd DIR, ls -la, cat FILE, rg PATTERN, git status, git log, node FILE.js, python3 FILE.py',
   ] },
   { title: 'Limits', lines: [
-    'Login shell is bash (type pwsh for PowerShell 7; the PowerShell-look style is colors only). 10 idle minutes or 30 minutes total, then everything is deleted.',
+    'Login shell is bash (type pwsh for PowerShell 7; the PowerShell-look style is colors only). 15 minutes idle (typing or output keeps it alive) or 60 minutes total, then everything is deleted.',
     'Network: package registries, public GitHub, Anthropic, Google AI and Copilot APIs, the public ledger.',
   ] },
 ]
