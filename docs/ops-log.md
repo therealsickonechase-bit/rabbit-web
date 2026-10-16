@@ -277,3 +277,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** explorer unit tests 10 pass and a live dry run chose two real topics; live run exited 0, the app lists ATM and FOXA2 as explored at 13:24 by cloud-explorer; EEG tests 8 pass; EDF reader on real files gave 64 channels, 160 Hz, alpha ratio 2.8; cloud run wrote analysis/eeg/summary.json; catalog 13, hub 49, audit 48 tests pass
 - **Undo:** gcloud scheduler jobs delete rabbit-research-explorer-hourly and rabbit-eeg-analysis-weekly; gcloud run jobs delete rabbit-research-explorer and rabbit-eeg-analysis; delete the two service accounts; delete analysis/eeg/ in the backups bucket
 - **Ref:** scripts/powershell/Setup-GcpResearchExplorer.ps1, Setup-GcpEegAnalysis.ps1, research-agents/cloud_explorer.py
+
+### 2026-10-16 13:44 UTC - PC task worker disabled
+- **Did:** Disabled the Windows scheduled task 'RabbitOS Task Worker' at the owner's request; the cloud task worker (rabbit-task-worker, every 5 minutes) now handles the task queue alone. There is no scheduled explorer task on the PC (the explorers were run by hand), so nothing else to disable; 'RabbitOS Research Sync' stays because it sends the PC's own files to the app
+- **Checked:** cloud task worker ran 3 times in the last 10 minutes, all succeeded; the PC task shows Disabled
+- **Undo:** Enable-ScheduledTask -TaskName 'RabbitOS Task Worker'
+- **Ref:** Windows Task Scheduler
