@@ -159,3 +159,10 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 369 app tests pass, tsc clean in src; live api/health, dashboard, commands, guide 200, /donate 404, /commands shows 240
 - **Undo:** Cloudflare dashboard: roll back the Worker rabbit-web to the previous version
 - **Ref:** npm run deploy:vinext
+
+### 2026-10-16 01:31 UTC - Pushed to GitHub
+- **Did:** Pushed rabbit-web (50 commits) and rabbitsoftware-cloudflare (46 commits) to their private GitHub repositories after a secret scan of the unpushed changes. research-agents (6 local commits) was NOT pushed: GitHub answered 'repository not found' for ringquistchase-collab/research-agents with the signed-in account therealsickonechase-bit
+- **Checked:** git push output shows main updated on both pushed repos; scan found only fake test values and public key files
+- **Undo:** Pushed commits cannot be unpushed cleanly; revert with new commits if needed
+- **Ref:** git push origin main
+- **Note:** research-agents needs either sign-in to the account that owns that repo or its remote corrected
