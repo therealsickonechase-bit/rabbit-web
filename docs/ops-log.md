@@ -197,3 +197,9 @@ Other logs that already exist (not duplicated here):
 - **Undo:** Remove the two anchors from site/index.html and site/press.html and redeploy
 - **Ref:** site/index.html, site/press.html
 - **Note:** The subreddit name is spelled Rabbtisoftware (no second i); confirm it is the intended spelling
+
+### 2026-10-16 10:05 UTC - Repositories made public; website links fixed
+- **Did:** At the owner's request made rabbit-web and rabbitsoftware-cloudflare public on github.com/therealsickonechase-bit after scanning the full history of all branches (no real secrets: only fake test values and the owner's email in docs; no values from the local env files appear anywhere in history). The vault repos (rabbitos-vault, RABBIT-SOFTWARE, RABBITSOFTWARE) stay private (anonymous 404). Added a UPL-1.0 LICENSE to both. Repointed the website links (front page, local, development) to the public repos; the About page now links the GitHub profile and the two public repos; removed the links to repositories that cannot be opened (setup.html component links, MaxwellDNA and two others) because those live under the separate GitHub account ringquistchase-collab that this session cannot access. Added a site test that checks every GitHub link
+- **Checked:** site tests 20 pass; anonymous requests to both repos return 200 and to the vault repos 404
+- **Undo:** Make a repository private again with gh repo edit --visibility private (copies, forks and caches that already exist cannot be recalled); revert the site commit
+- **Ref:** gh repo edit, site/*.html

@@ -1,5 +1,7 @@
 # RabbitSoftware messaging guide
 
+> **Update 2026-10-16: the two main repositories are public** (github.com/therealsickonechase-bit/rabbit-web and rabbitsoftware-cloudflare) under UPL-1.0, an OSI-approved open-source license. "Open source" is now accurate for those two repositories only; keep saying "source code is public" and avoid implying the other projects, the data, the vault or the wallet key are open.
+
 > **Status 2026-10-16: donations are OPEN on the site and in the app, but not yet promoted.** Do not push donations in outreach until the checklist below is done (the small round-trip test, the legal and tax stance, privacy page).
 
 For anyone who writes about, presents, or answers questions about RabbitSoftware (the project, at rabbitsoftware.io) and RabbitOS (the hosted workspace, at app.rabbitsoftware.io). The public versions of this material are the pages
