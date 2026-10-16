@@ -24,6 +24,8 @@ curl -X POST https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app -H "content-t
 |---|---|---|---|
 | Visitor shell | Cloud Run `rabbit-visitor-shell` | one throwaway terminal per guest with the `claude`, `gemini` and `copilot` CLIs, behind an allowlist proxy | `Setup-GcpShell.ps1` |
 | **Task worker** (moved from the PC 2026-10-16) | Cloud Run job `rabbit-task-worker` (every 5 minutes) | claims one approved task from the RabbitOS queue, runs it against public sources only (PubMed, Europe PMC, ClinicalTrials.gov, NCBI RefSeq) and sends back a proposal that the owner approves on the website; reads only the ingest secret | `Setup-GcpTaskWorker.ps1` |
+| **Research explorer** (moved from the PC 2026-10-16) | Cloud Run job `rabbit-research-explorer` (hourly at :20) | stateless: reads the topic queue from the RabbitOS app, explores up to two queued topics on public sources, ingests topic, run and records through the signed ingest; keeps no files | `Setup-GcpResearchExplorer.ps1` |
+| **EEG sample analysis** (private) | Cloud Run job `rabbit-eeg-analysis` (weekly, no URL, not in the registry) | band-power summaries of the PhysioNet EEG sample recordings in the private backups bucket, written to `analysis/eeg/`; IAM lets it read only `eeg_data` and `eeg_runs` and write only `analysis/eeg/` | `Setup-GcpEegAnalysis.ps1` |
 | Maxwell miner | Cloud Run job `rabbit-miner` (nightly) | mines the rabbit web snapshot onto the Maxwell chain | `Setup-GcpMinerJob.ps1` |
 | Bitcoin anchor | job `rabbit-anchor` (every 6 h) | OpenTimestamps proofs of the chain heads | `Setup-GcpAnchor.ps1` |
 | Ethereum and XRPL anchor | job `rabbit-anchor-chains` (parked, paused) | posts the same fingerprint to two more networks once funded | `Setup-GcpAnchorChains.ps1` |
@@ -58,9 +60,11 @@ Run for a while by hand: the one-hour wrapper pattern used on 2026-10-15 (`run_a
 
 ## What moved to Google Cloud, and what stays on the PC
 
-- **Moved:** the task worker (public sources only, no personal data).
-- **Stays on the PC on purpose:** anything that reads EEG, wearables, labs or self data (the BrainFlow bridge, the self-data hub, the vault agents) and the local-file syncs (`rabbit_sync.py`, `chain_pull.py`).
-- **Can move next, with a design decision:** the research explorers (IntegratedResearchAgent, GrowingResearchAgent, CrisprResearchAgent). They keep their topic queue and corpus in local files, so a cloud copy needs the state moved to the app or to a bucket, and PC and cloud must not overwrite each other.
+- **Moved:** the task worker and the research explorer (public sources only, no personal data), and a private analysis of the EEG sample recordings.
+- **The catch, solved:** the explorers used to keep their topic queue and corpus in local files, so a cloud copy could have overwritten the PC's. The cloud explorer keeps **no files**: the RabbitOS app (Supabase) is the shared state. It reads the queued topics from the app, and the signed ingest upserts by id, so a topic that both the PC and the cloud explored is simply refreshed. Nothing is overwritten and nothing is lost. The PC explorers can keep running or be retired; pause the cloud one any time with `gcloud scheduler jobs pause rabbit-research-explorer-hourly --location us-west2`.
+- **File-based syncs:** `rabbit_sync.py` (local files to the app) and `chain_pull.py` (app to local files) are by definition about the PC's files, so they stay on the PC. The cloud does not need them: it reads and writes the app directly, and the nightly backup copies the PC's state files to the private bucket.
+- **About "EEG" in the backup:** `eeg_data` is the public PhysioNet EEG Motor Movement/Imagery sample dataset (27 volunteers), `eeg_runs` holds the classifier trained on it and demo runs, and `selfdata` holds only importer code. The owner's own EEG notes live in the Obsidian vault (`Local/EEG`) and are not uploaded. The cloud EEG analysis reads only the public sample data.
+- **Cannot move:** the BrainFlow bridge needs the physical headset (USB or Bluetooth) and the vault agents work on the local vault; they stay on the PC.
 
 ## Why the PC agents are not in the registry yet
 
