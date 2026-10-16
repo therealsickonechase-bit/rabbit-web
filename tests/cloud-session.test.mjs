@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { ownerCloudApi, shellCommand } from '../src/lib/cloud-jobs.ts'
-import { SESSION_MAX_TIMEOUT, sessionAction, sessionLine, sessionView, shellPayload } from '../src/lib/cloud-session.ts'
+import { SESSION_MAX_TIMEOUT, geminiLine, sessionAction, sessionLine, sessionTools, sessionView, shellPayload } from '../src/lib/cloud-session.ts'
 
 const denied = (fn, status = 400) => { try { fn() } catch (e) { assert.equal(e.status, status); return } assert.fail('expected a refusal') }
 
@@ -63,4 +63,13 @@ test('the status line says what is open, when it ends and why, and never promise
   assert.match(hard, /about 3 minutes \(the 2-hour limit\)/)
   assert.match(sessionLine({ active: true, idleExpiresAt: now + 10_000, hardExpiresAt: now + 9_000_000 }, now), /about 1 minute \(/)
   assert.match(sessionLine({ active: true, idleExpiresAt: now - 1, hardExpiresAt: now + 9_000_000 }, now), /expired/)
+})
+
+test('the Gemini status is two booleans, odd data means not available, and the line never contains a key', () => {
+  assert.deepEqual(sessionTools({ gemini: { installed: true, keyConfigured: true, apiKey: 'AIzaSySECRET' } }), { gemini: { installed: true, keyConfigured: true } })
+  for (const bad of [null, undefined, 'x', [], {}, { gemini: 'yes' }, { gemini: { installed: 'true', keyConfigured: 1 } }]) assert.deepEqual(sessionTools(bad), { gemini: { installed: false, keyConfigured: false } })
+  assert.match(geminiLine(null), /status unknown/)
+  assert.match(geminiLine({ gemini: { installed: true, keyConfigured: false } }), /no API key yet.*Setup-CloudshellGeminiKey\.ps1/)
+  assert.match(geminiLine({ gemini: { installed: true, keyConfigured: true } }), /ready.*gemini -p/)
+  for (const t of [null, { gemini: { installed: true, keyConfigured: false } }, { gemini: { installed: true, keyConfigured: true } }]) assert.ok(!/AIza|GEMINI_API_KEY=/.test(geminiLine(t)))
 })

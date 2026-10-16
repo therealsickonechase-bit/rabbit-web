@@ -6,7 +6,7 @@ import {
   OWNER_HELP, appendScroll, freshCursor, isHelpCommand, outputText, pushHistory, statusText, stepHistory, type HistoryCursor, type ScrollEntry,
 } from '@/lib/terminal-history'
 import AiCoderPanel, { type ShellOutcome } from './AiCoderPanel'
-import { SESSION_DEFAULT_TIMEOUT, SESSION_TIMEOUTS, sessionLine, sessionView, shellPayload, type SessionView } from '@/lib/cloud-session'
+import { SESSION_DEFAULT_TIMEOUT, SESSION_TIMEOUTS, geminiLine, sessionLine, sessionTools, sessionView, shellPayload, type SessionTools, type SessionView } from '@/lib/cloud-session'
 
 const MONO = 'Cascadia Mono, Consolas, Menlo, monospace'
 
@@ -28,6 +28,7 @@ export default function OwnerCloudConsole({ service, configured, roots = [] }: {
   const [keepSession, setKeepSession] = useState(false)
   const [timeoutSeconds, setTimeoutSeconds] = useState<number>(SESSION_DEFAULT_TIMEOUT)
   const [session, setSession] = useState<SessionView | null>(null)
+  const [tools, setTools] = useState<SessionTools | null>(null)
   const [clock, setClock] = useState(() => Date.now())
   const nextId = useRef(1)
   const logEl = useRef<HTMLDivElement>(null)
@@ -39,7 +40,7 @@ export default function OwnerCloudConsole({ service, configured, roots = [] }: {
     let cancelled = false
     fetch('/api/cloudshell/session', { cache: 'no-store', credentials: 'same-origin' })
       .then(response => (response.ok ? response.json() : null))
-      .then(data => { if (!cancelled && data) { const view = sessionView(data.session); setSession(view); if (view.active) setKeepSession(true) } })
+      .then(data => { if (!cancelled && data) { const view = sessionView(data.session); setSession(view); if (data.tools) setTools(sessionTools(data.tools)); if (view.active) setKeepSession(true) } })
       .catch(() => { /* the status line simply stays at "no session" */ })
     return () => { cancelled = true }
   }, [shell, configured])
@@ -213,6 +214,7 @@ export default function OwnerCloudConsole({ service, configured, roots = [] }: {
         </select>
       </label>}
       <p role="status" className="text-sm">{sessionLine(session, clock)}</p>
+      <p className="text-sm">{geminiLine(tools)}</p>
       <div className="flex gap-2">
         <button type="button" className={button} disabled={busy || !configured || !!session?.active} onClick={() => sessionAct('start')}>Open session now (approve)</button>
         <button type="button" className={button} disabled={busy || !configured || !session?.active} onClick={() => sessionAct('end')}>End session and destroy its sandbox</button>

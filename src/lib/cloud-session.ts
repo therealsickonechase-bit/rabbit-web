@@ -44,3 +44,19 @@ export function sessionAction(value: unknown): 'start' | 'end' {
   }
   return v.action
 }
+
+export interface SessionTools { gemini: { installed: boolean; keyConfigured: boolean } }
+
+/** The tools block of the Worker's status, reduced to two booleans. Anything unexpected means "not available". */
+export function sessionTools(value: unknown): SessionTools {
+  const g = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>).gemini : undefined
+  const o = g && typeof g === 'object' && !Array.isArray(g) ? (g as Record<string, unknown>) : {}
+  return { gemini: { installed: o.installed === true, keyConfigured: o.keyConfigured === true } }
+}
+
+/** What the page says about Gemini in the working session. It never shows or asks for the key. */
+export function geminiLine(tools: SessionTools | null | undefined): string {
+  if (!tools?.gemini.installed) return 'Gemini CLI: status unknown (open the session or reload).'
+  if (!tools.gemini.keyConfigured) return 'Gemini CLI is installed in the working session but has no API key yet. Run scripts\\powershell\\Setup-CloudshellGeminiKey.ps1 on your PC once (the key is stored as a Cloudflare secret and never shown).'
+  return 'Gemini CLI is ready in the working session. Try: gemini -p "explain what this folder contains" (non-interactive; it works in /workspace and your key is hidden from output).'
+}

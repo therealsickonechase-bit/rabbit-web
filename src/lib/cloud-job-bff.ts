@@ -1,6 +1,6 @@
 import { requireCloudIdentity } from '@/lib/auth/cloud-identity'
 import { checkCloudGrant, checkCloudJob, linkCloudJob } from './cloud-access'
-import { sessionAction, sessionView } from './cloud-session'
+import { sessionAction, sessionTools, sessionView } from './cloud-session'
 import { CloudJobError, configuredVaultRoots, forwardCloud, readJson, requireWriteOrigin, shellCommand, upstreamConfig, validateVaultResponse, validateVaultResult, vaultJobPath, vaultSnapshot } from './cloud-jobs'
 
 export const privateJson = (value: unknown, status = 200) => Response.json(value, {
@@ -67,8 +67,8 @@ export async function cloudSessionBff(request: Request) {
     } else {
       output = await forwardCloud(config, '/session')
     }
-    const body = output as { session?: unknown; ended?: unknown; limits?: unknown } | null
-    return privateJson({ session: sessionView(body?.session), ...(body?.ended === true ? { ended: true } : {}),
+    const body = output as { session?: unknown; ended?: unknown; limits?: unknown; tools?: unknown } | null
+    return privateJson({ session: sessionView(body?.session), ...(body?.tools === undefined ? {} : { tools: sessionTools(body.tools) }), ...(body?.ended === true ? { ended: true } : {}),
       ...(body?.limits && typeof body.limits === 'object' ? { limits: body.limits } : {}) })
   } catch (error) {
     return privateJson({ error: error instanceof CloudJobError ? error.message : 'Cloud request failed.' },
