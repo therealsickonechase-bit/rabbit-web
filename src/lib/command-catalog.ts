@@ -387,6 +387,14 @@ const RA: CatalogEntry[] = [
     { id: 'ra-task-loop', group: 'Task worker', label: 'task_worker keep polling', scope: 'owner', risk: 'secret',
       command: 'python task_worker.py', needs: ['RABBIT_URL', 'RABBIT_INGEST_SECRET'], description: 'Polls every 20 seconds.' },
   ]),
+  ...seed('research-agents', 'stage_box.py', [
+    { id: 'stage-add', group: 'Echo', label: 'Stage a task or note for an agent', scope: 'owner', risk: 'secret',
+      command: 'python stage_box.py stage --to research --kind task --title "Look at ATM" --body "Summarise new papers"', needs: ['RABBIT_INGEST_SECRET'], description: 'Leaves a signed text item in the private echo/stage folder; the PC copies it to the local inbox of the agent on the next echo step even if the agent is not running.' },
+    { id: 'stage-pending', group: 'Echo', label: 'Staging: what is waiting', scope: 'owner', risk: 'secret',
+      command: 'python stage_box.py pending', needs: ['RABBIT_INGEST_SECRET'], description: 'Per agent: items waiting, received and ignored.' },
+    { id: 'stage-inbox', group: 'Echo', label: 'Staging: local inbox of an agent', scope: 'owner', risk: 'local',
+      command: 'python stage_box.py inbox --agent research', description: 'Items already delivered to this PC for the agent, oldest first (mark handled with the done command).' },
+  ]),
   ...seed('research-agents', 'rabbit_sync.py', [
     { id: 'ra-sync-dry', group: 'Sync to RabbitOS', label: 'rabbit_sync dry run', scope: 'owner', risk: 'local',
       command: 'python rabbit_sync.py --dry-run', description: 'Prints what would be sent; sends nothing.' },

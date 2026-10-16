@@ -39,11 +39,16 @@ if ($l) { $env:RABBIT_INGEST_SECRET = (($l -split '=', 2)[1].Trim().Trim('"').Tr
 $started = Get-Date
 if (-not $env:RABBIT_INGEST_SECRET) { Add-Content $log "[$(Get-Date -Format HH:mm:ss)] FAIL RABBIT_INGEST_SECRET not found in research-agents\.env"; Write-CloudLog -Job 'echo' -Event 'echo_failed' -Ok $false -Fields @{ reason = 'signing key missing' }; exit 1 }
 $out = (& python (Join-Path $AgentsDir 'echo_link.py') --side pc 2>&1 | Out-String).Trim()
+# Staging: items left in the cloud for local agents are copied into ~\RabbitOS\staged\<agent>\ (receipt written back), so agents find them when they next start.
+$stageOut = (& python (Join-Path $AgentsDir 'stage_box.py') deliver 2>&1 | Out-String).Trim()
+$null = (& python (Join-Path $AgentsDir 'stage_box.py') sweep 2>&1 | Out-String)
 Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue
+Add-Content $log "[$(Get-Date -Format HH:mm:ss)] staging: $stageOut"
 Add-Content $log "[$(Get-Date -Format HH:mm:ss)] $out"
 try { $j = $out | ConvertFrom-Json } catch { $j = $null }
 if ($j -and $j.event -in 'echo_heard', 'echo_silent') {
-    Write-CloudLog -Job 'echo' -Event $j.event -Ok $true -Started $started -Fields @{ seq = $j.seq; heardCloud = [bool]$j.heardFrom; cloudAgeSeconds = $j.peerMessageAgeSeconds; cloudAcknowledgedMe = $j.peerAcknowledgedMyPrevious; acknowledgementSeconds = $j.acknowledgementSeconds }
+    try { $sj = $stageOut | ConvertFrom-Json; $stagedN = ($sj.delivered.PSObject.Properties.Value | Measure-Object -Sum).Sum } catch { $stagedN = $null }
+    Write-CloudLog -Job 'echo' -Event $j.event -Ok $true -Started $started -Fields @{ seq = $j.seq; heardCloud = [bool]$j.heardFrom; stagedDelivered = [int]$stagedN; cloudAgeSeconds = $j.peerMessageAgeSeconds; cloudAcknowledgedMe = $j.peerAcknowledgedMyPrevious; acknowledgementSeconds = $j.acknowledgementSeconds }
     exit 0
 }
 Write-CloudLog -Job 'echo' -Event 'echo_failed' -Ok $false -Started $started -Fields @{ reason = ($out -replace '\s+', ' ').Substring(0, [Math]::Min(200, $out.Length)) }

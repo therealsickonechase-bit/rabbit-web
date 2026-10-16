@@ -295,3 +295,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** pathways-check echo probe PASS (both sides heard and acknowledged, fresh); catalog, hub (49) and qa-audit (48) tests pass; hub health ok
 - **Undo:** Revert the commits and redeploy; Supabase graph rows can be re-seeded from the previous seed
 - **Ref:** rabbit-web and rabbitsoftware-cloudflare commits
+
+### 2026-10-16 14:20 UTC - Research agents + Google Cloud
+- **Did:** Added staging to the echo (stage_box.py): tasks and notes for an agent wait, signed, in gs://rabbitsoftware-io-reports/echo/stage/<agent>/; the PC echo step (every 5 min) copies new items into ~/RabbitOS/staged/<agent>/ and writes a receipt, so stopped agents or a PC that was off still receive them. Text only, never executed; expired and old items swept. Catalog 267 commands, docs, hub help and map updated; hub and app redeployed.
+- **Checked:** 9 unit tests; live test: staged an item, Run-Echo delivered it to the local inbox and wrote the receipt, then test data removed
+- **Undo:** Remove the staging lines from Run-Echo.ps1; delete echo/stage/ in the reports bucket; revert commits and redeploy
+- **Ref:** research-agents/stage_box.py, Run-Echo.ps1
