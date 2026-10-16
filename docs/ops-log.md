@@ -222,3 +222,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** marker note in gs://rabbitsoftware-io-vault-private/vault/Ops within 100 s of the upload task (result 0); search for the marker returned the note; vault sync task result 0, local HEAD 99caf8bf equals origin/main; upload bucket holds 2409 objects
 - **Undo:** Restore the old guard line in Tools/sync-vault.ps1 (it would abort again); delete Ops/GC link check.md if unwanted
 - **Ref:** Tools/sync-vault.ps1 in the vault
+
+### 2026-10-16 10:35 UTC - Vault pathways mapped into the platform map
+- **Did:** Read the vault's own pathway notes (Pathways/, Platform/) and wrote docs/vault-pathways.md joining them with the Google Cloud side: 6 pathways that exist (vault to private GitHub repo, to the private bucket, to Vertex AI Search, the undeployed GitHub-to-bucket mirror, the vault-agent job queue, the public architecture map) and the options for a cloud-to-local path. Added the vault repository and the vault search app to the platform map with their connections (59 nodes, 97 connections, 55 roadmap items), applied it to Supabase, redeployed the status and audit jobs, linked the doc from the README. Read-only on the vault; nothing built for the inbound path yet
+- **Checked:** audit 48 tests pass; map applied (committed); pathways 1 to 3 were verified end to end earlier today
+- **Undo:** Revert the commit and re-apply the previous map seed
+- **Ref:** docs/vault-pathways.md
