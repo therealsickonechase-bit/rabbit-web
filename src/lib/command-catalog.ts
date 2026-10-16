@@ -399,6 +399,13 @@ const RA: CatalogEntry[] = [
     { id: 'dna-relay-send', group: 'DNA matching', label: 'Relay DNA findings to the local and cloud agents', scope: 'owner', risk: 'secret',
       command: 'python dna_relay.py', needs: ['RABBIT_INGEST_SECRET'], description: 'Writes dna_index/matches.json and stages the findings (with the echo health line) to the research agent, the task workers and the cloud explorer, including explore-this-gene actions for coverage gaps.' },
   ]),
+  ...seed('research-agents', 'dna_local.py', [
+    { id: 'dna-local-compare', group: 'DNA matching', label: 'Compare a DNA sequence on this PC only', scope: 'owner', risk: 'secret',
+      command: 'python dna_local.py compare --fasta C:\\Private\\my_region.fasta', needs: ['RABBIT_INGEST_SECRET'],
+      description: 'Compares a FASTA sequence (each up to 5,000 bases) with the public variant index on this PC. The sequence and the result never leave it: only an acknowledgement is echoed (time, count, public index root, completed or failed, a seal only this PC can reproduce). Prefer Run-DnaLocal.ps1, which loads the signing key for you.' },
+    { id: 'dna-local-status', group: 'DNA matching', label: 'DNA echo status (announced / acknowledged)', scope: 'owner', risk: 'secret',
+      command: 'python dna_local.py status', needs: ['RABBIT_INGEST_SECRET'], description: 'How many local comparisons were announced and how many the cloud acknowledged, with the typical acknowledgement time. Counts and times only.' },
+  ]),
   ...seed('research-agents', 'stage_box.py', [
     { id: 'stage-add', group: 'Echo', label: 'Stage a task or note for an agent', scope: 'owner', risk: 'secret',
       command: 'python stage_box.py stage --to research --kind task --title "Look at ATM" --body "Summarise new papers"', needs: ['RABBIT_INGEST_SECRET'], description: 'Leaves a signed text item in the private echo/stage folder; the PC copies it to the local inbox of the agent on the next echo step even if the agent is not running.' },
@@ -602,6 +609,8 @@ const PLATFORM_WEB: CatalogEntry[] = [
       command: `pwsh -File ${GCP_DIR}/Run-ResearchSync.ps1 -Mode Tasks`, needs: ['RABBIT_URL', 'RABBIT_INGEST_SECRET'], description: 'Picks up queued task proposals from the app and runs them in the agents.' },
     { id: 'echo-pc-run', group: 'Echo', label: 'Echo: one PC step', scope: 'owner', risk: 'secret',
       command: `pwsh -File ${GCP_DIR}/Run-Echo.ps1`, needs: ['RABBIT_INGEST_SECRET'], description: 'Hears the cloud, acknowledges it and writes the PC\'s signed note to the private echo/ folder. Reads the key from research-agents\\.env; nothing is printed.' },
+    { id: 'dna-local-run', group: 'DNA matching', label: 'Compare a DNA sequence on this PC only (script)', scope: 'owner', risk: 'secret',
+      command: `pwsh -File ${GCP_DIR}/Run-DnaLocal.ps1 -Fasta C:\\Private\\my_region.fasta`, needs: ['RABBIT_INGEST_SECRET'], description: 'Loads only the signing key from research-agents\\.env, runs the local comparison and echoes an acknowledgement. -Status shows announced / acknowledged counts.' },
     { id: 'echo-pc-register', group: 'Echo', label: 'Echo: schedule the PC side', scope: 'owner', risk: 'local',
       command: `pwsh -File ${GCP_DIR}/Run-Echo.ps1 -Register`, description: 'Creates the scheduled task "RabbitOS Echo" (every 5 minutes). -Remove deletes it.' },
   ]),

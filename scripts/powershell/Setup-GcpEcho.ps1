@@ -34,7 +34,7 @@ function Retry([scriptblock]$run, [string]$what) {
 $jobSa = "rabbit-echo@$Project.iam.gserviceaccount.com"; $schSa = "rabbit-anchor-scheduler@$Project.iam.gserviceaccount.com"
 $image = "us-west2-docker.pkg.dev/$Project/rabbit-software/echo-job:latest"
 $secret = 'rabbit-ingest-secret'
-foreach ($f in 'echo_link.py', 'echo_record.py', 'stage_box.py') { if (-not (Test-Path (Join-Path $AgentsDir $f))) { throw "missing $f in $AgentsDir" } }
+foreach ($f in 'echo_link.py', 'echo_record.py', 'stage_box.py', 'dna_echo.py') { if (-not (Test-Path (Join-Path $AgentsDir $f))) { throw "missing $f in $AgentsDir" } }
 
 Step "Service account $jobSa (the echo/ prefix of the reports bucket and one secret)"
 Invoke-IfLive 'create the account, let it read the secret and use echo/ only; confirm it has no project roles' {
@@ -63,6 +63,7 @@ Invoke-IfLive "stage echo_link.py + Dockerfile and build $image" {
         Copy-Item (Join-Path $AgentsDir 'echo_link.py') $stage
         Copy-Item (Join-Path $AgentsDir 'echo_record.py') $stage
         Copy-Item (Join-Path $AgentsDir 'stage_box.py') $stage
+        Copy-Item (Join-Path $AgentsDir 'dna_echo.py') $stage
         Copy-Item (Join-Path $JobDir 'Dockerfile') $stage
         Invoke-Gcloud builds submit $stage --project $Project --tag $image --quiet
     } finally { Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue }
