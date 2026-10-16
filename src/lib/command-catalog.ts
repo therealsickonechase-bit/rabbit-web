@@ -414,6 +414,10 @@ const RA: CatalogEntry[] = [
     { id: 'toolbox-verify', group: 'Toolbox', label: 'Check this PC against the toolbox (drift report)', scope: 'owner', risk: 'network',
       command: 'python toolbox.py verify', description: 'Compares this PC\'s copy of every published file with the manifest hash and lists files that differ or are missing. Changes nothing.' },
   ]),
+  ...seed('research-agents', 'capabilities.py', [
+    { id: 'agent-capabilities', group: 'Toolbox', label: 'What an agent can do (tasks and actions)', scope: 'owner', risk: 'local',
+      command: 'python capabilities.py --agent task_worker', description: 'The task kinds the agent runs (with their parameters) and the actions it carries out: task_worker, research, cloud_task_worker or cloud_explorer. Without --agent it prints all four. python capabilities.py --write refreshes agent-capabilities.json.' },
+  ]),
   ...seed('research-agents', 'stage_box.py', [
     { id: 'stage-add', group: 'Echo', label: 'Stage a task or note for an agent', scope: 'owner', risk: 'secret',
       command: 'python stage_box.py stage --to research --kind task --title "Look at ATM" --body "Summarise new papers"', needs: ['RABBIT_INGEST_SECRET'], description: 'Leaves a signed text item in the private echo/stage folder; the PC copies it to the local inbox of the agent on the next echo step even if the agent is not running.' },

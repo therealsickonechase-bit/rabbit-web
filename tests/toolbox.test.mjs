@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildManifest, commandFileIndex, manifestRoot, pathVerdict, publicSlice, secretVerdict, sha256, verifyManifest } from '../src/lib/toolbox.ts'
+import { buildManifest, commandFileIndex, hubToolbox, manifestRoot, pathVerdict, publicAgents, publicSlice, secretVerdict, sha256, verifyManifest } from '../src/lib/toolbox.ts'
 
 test('only code, scripts and documents qualify by name', () => {
   for (const ok of ['src/lib/toolbox.ts', 'scripts/powershell/Run-Echo.ps1', 'docs/agents.md', 'dna_local.py', 'workers/echo-job/Dockerfile', 'workers/hub-mcp/src/help.mjs', 'workers/qa-audit/data/platform-graph.json']) {
@@ -81,4 +81,35 @@ test('the public slice holds only guest commands and links to files of the two p
   assert.ok(slice.commands[1].files[0].url.startsWith('https://github.com/therealsickonechase-bit/rabbitsoftware-cloudflare/blob/main/workers/hub-mcp/'))
   assert.ok(slice.commands[0].files.every((f) => f.url.includes('tests/a%20b.mjs')))
   assert.deepEqual(Object.keys(slice.commands[0]).sort(), ['command', 'description', 'files', 'group', 'id', 'label'])
+})
+
+const CAPS = { version: 1, agents: [{ id: 'task_worker', where: 'PC', tasks: [{ kind: 'research_topic', about: 'Search.', params: { topic: 'required' } }], actions: [{ id: 'skip_source', about: 'Skip.', target: 'pubmed' }], howToSend: 'python stage_box.py stage --to task_worker' }] }
+
+test('the public slice carries what each agent can do but not the command used to send it work', async () => {
+  const files = [F('rabbit-web', 'a.ts')]
+  const m = await buildManifest(files, [], 1, new Date('2026-10-16T12:00:00Z'))
+  const slice = publicSlice(m, [], {}, CAPS)
+  assert.equal(slice.agents[0].id, 'task_worker')
+  assert.deepEqual(slice.agents[0].tasks[0].params, { topic: 'required' })
+  assert.ok(!JSON.stringify(slice).includes('stage_box'))
+  assert.deepEqual(publicSlice(m, [], {}).agents, [])
+  assert.deepEqual(publicAgents(undefined), [])
+})
+
+test('the hub copy is deterministic, lists only commands that have files, and has no timestamps', async () => {
+  const files = [F('research-agents', 'dna_local.py'), F('rabbit-web', 'docs/agents.md')]
+  const m = await buildManifest(files, [], 3, new Date('2026-10-16T12:00:00Z'))
+  const index = { b: ['research-agents/dna_local.py', 'rabbit-web/docs/agents.md', 'rabbit-web/missing.ts'], a: [], c: ['rabbit-web/docs/agents.md'] }
+  const hub = hubToolbox(m, index, CAPS)
+  assert.deepEqual(Object.keys(hub.files), ['b', 'c'])
+  assert.equal(hub.files.b.length, 2)                                          // an unknown path is dropped
+  assert.equal(hub.counts.commandsWithFiles, 2)
+  assert.equal(hub.root, m.root)
+  assert.equal(JSON.stringify(hub), JSON.stringify(hubToolbox({ ...m, generatedAt: 'another time' }, index, CAPS)))
+  assert.ok(!JSON.stringify(hub).includes('generatedAt'))
+})
+
+test('the capabilities file is allowed into the bundle as platform description', () => {
+  assert.equal(pathVerdict('agent-capabilities.json'), null)
+  assert.notEqual(pathVerdict('some-other.json'), null)
 })

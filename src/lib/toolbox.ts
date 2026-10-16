@@ -10,7 +10,7 @@ export const MAX_FILE_BYTES = 1_000_000
 
 const ALLOWED_EXT = /\.(py|ps1|mjs|ts|tsx|md|sh|yml|yaml)$|(^|\/)Dockerfile$/
 // Data files that are part of the platform description (not personal data).
-const ALLOWED_JSON = [/^workers\/qa-audit\/data\/platform-graph\.json$/, /^workers\/hub-mcp\/data\/commands\.json$/, /^scripts\/agent-registry\.json$/]
+const ALLOWED_JSON = [/^workers\/qa-audit\/data\/platform-graph\.json$/, /^workers\/hub-mcp\/data\/commands\.json$/, /^scripts\/agent-registry\.json$/, /^agent-capabilities\.json$/]
 const DENIED_PATH = [
   /(^|\/)\.env/i, /(^|\/)node_modules\//, /(^|\/)\.git\//, /(^|\/)\.next\//, /(^|\/)\.cloudflare\//, /(^|\/)__pycache__\//,
   /\.(key|pem|pfx|p12|ppk|kdbx|sqlite|db|dump|bundle)$/i, /(^|\/)id_(rsa|ed25519|ecdsa)/i, /wallet\.dat$/i,
@@ -102,10 +102,11 @@ export interface PublicToolbox {
   generatedAt: string
   root: string
   counts: { files: number; commands: number; publicCommands: number }
+  agents: { id: string; where: string; tasks: { kind: string; about: string; params: Record<string, string> }[]; actions: { id: string; about: string; target: string }[] }[]
   commands: { id: string; group: string; label: string; command: string; description: string; files: { repo: string; path: string; sha256: string; url: string }[] }[]
 }
 
-export function publicSlice(manifest: Pick<Manifest, 'root' | 'generatedAt' | 'counts' | 'files'>, commands: CatalogCommand[], index: Record<string, string[]>): PublicToolbox {
+export function publicSlice(manifest: Pick<Manifest, 'root' | 'generatedAt' | 'counts' | 'files'>, commands: CatalogCommand[], index: Record<string, string[]>, capabilities?: Capabilities): PublicToolbox {
   const byKey = new Map(manifest.files.map((f) => [`${f.repo}/${f.path}`, f]))
   const isPublicRepo = (r: string) => (PUBLIC_REPOS as readonly string[]).includes(r)
   const out: PublicToolbox['commands'] = []
@@ -117,5 +118,41 @@ export function publicSlice(manifest: Pick<Manifest, 'root' | 'generatedAt' | 'c
     })
     out.push({ id: c.id, group: String(c.group ?? '').slice(0, 80), label: String(c.label ?? c.id).slice(0, 120), command: c.command.slice(0, 400), description: String(c.description ?? '').slice(0, 300), files })
   }
-  return { version: 1, generatedAt: manifest.generatedAt, root: manifest.root, counts: { files: manifest.counts.files, commands: manifest.counts.commands, publicCommands: out.length }, commands: out }
+  return { version: 1, generatedAt: manifest.generatedAt, root: manifest.root, counts: { files: manifest.counts.files, commands: manifest.counts.commands, publicCommands: out.length }, agents: publicAgents(capabilities), commands: out }
+}
+
+// ---- What each agent can do (research-agents/agent-capabilities.json, generated from capabilities.py and checked against the real handlers by tests) --------------------------------------
+export interface Capabilities {
+  version: number
+  agents: { id: string; where: string; tasks: { kind: string; about: string; params: Record<string, string> }[]; actions: { id: string; about: string; target: string }[]; howToSend?: string }[]
+}
+
+/** The public form: what an agent runs and does, without the command line used to send it work. */
+export function publicAgents(c?: Capabilities): PublicToolbox['agents'] {
+  return (c?.agents ?? []).map((a) => ({
+    id: String(a.id), where: String(a.where).slice(0, 160),
+    tasks: a.tasks.map((t) => ({ kind: String(t.kind), about: String(t.about).slice(0, 200), params: Object.fromEntries(Object.entries(t.params).map(([k, v]) => [String(k), String(v).slice(0, 80)])) })),
+    actions: a.actions.map((x) => ({ id: String(x.id), about: String(x.about).slice(0, 200), target: String(x.target).slice(0, 80) })),
+  }))
+}
+
+// ---- The hub's copy -----------------------------------------------------------------------------------------------------------------------------------------------------------
+// The Hub (a Cloud Run service for AI assistants) bakes this into its image. It is deterministic (no timestamps) so republishing an unchanged bundle changes nothing in git. The hub decides who sees what:
+// guests get only public commands and links into the public repositories, a hub key also sees the private paths.
+export interface HubToolbox {
+  version: 1
+  root: string
+  counts: { files: number; commands: number; commandsWithFiles: number }
+  files: Record<string, { repo: string; path: string; sha256: string }[]>
+  agents: Capabilities['agents']
+}
+
+export function hubToolbox(manifest: Pick<Manifest, 'root' | 'counts' | 'files'>, index: Record<string, string[]>, capabilities?: Capabilities): HubToolbox {
+  const byKey = new Map(manifest.files.map((f) => [`${f.repo}/${f.path}`, f]))
+  const files: HubToolbox['files'] = {}
+  for (const id of Object.keys(index).sort()) {
+    const list = index[id].flatMap((k) => { const f = byKey.get(k); return f ? [{ repo: f.repo, path: f.path, sha256: f.sha256 }] : [] })
+    if (list.length) files[id] = list
+  }
+  return { version: 1, root: manifest.root, counts: { files: manifest.counts.files, commands: manifest.counts.commands, commandsWithFiles: Object.keys(files).length }, files, agents: capabilities?.agents ?? [] }
 }
