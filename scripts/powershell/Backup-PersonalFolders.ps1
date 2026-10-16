@@ -65,7 +65,8 @@ $legacyDocs = Join-Path $HOME 'Documents'
 $sources = [ordered]@{
     'Downloads' = @($downloads)
     'Desktop'   = @([Environment]::GetFolderPath('Desktop'))
-    'Documents' = @([Environment]::GetFolderPath('MyDocuments'), $legacyDocs | Select-Object -Unique)
+    # C:\Users\<you>\Documents (the old, non-OneDrive folder) holds only the Obsidian vault, which has its own upload, and shortcut folders; scanning it walks the vault's linked folders for no gain, so it is not included.
+    'Documents' = @([Environment]::GetFolderPath('MyDocuments'))
     'Pictures'  = @([Environment]::GetFolderPath('MyPictures'), (Join-Path $HOME 'Pictures') | Select-Object -Unique)
     'Music'     = @([Environment]::GetFolderPath('MyMusic'))
     'Videos'    = @([Environment]::GetFolderPath('MyVideos'))

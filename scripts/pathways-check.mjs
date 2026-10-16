@@ -97,6 +97,21 @@ export const PROBES = [
     const m = age(f.generatedAt)
     return { ok: f.up === f.total && m < 15, detail: `${f.up} of ${f.total} up, written ${mins(m)} ago` }
   } },
+  // ---------------------------------------------------------------- agents
+  { group: 'Agents', name: 'the Research Agent (A2A) answers and its card is valid', run: async () => {
+    const base = 'https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app'
+    const card = await (await fetch(`${base}/.well-known/agent-card.json`, { signal: AbortSignal.timeout(20_000) })).json()
+    const r = await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(30_000), body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'message/send', params: { message: { kind: 'message', role: 'user', messageId: 'pathways', parts: [{ kind: 'text', text: 'what sources can you search?' }] } } }) }).then((x) => x.json())
+    const ok = card.name === 'RabbitOS Research Agent' && card.skills?.length >= 4 && r.result?.kind === 'message'
+    return { ok, detail: `${card.name} v${card.version}, ${card.skills?.length} skills, message/send ${r.result ? 'answered' : 'failed'}` }
+  } },
+  { group: 'Agents', name: 'the Agent Registry lists the Research Agent and the Hub MCP', run: async () => {
+    const tok = sh('gcloud', ['auth', 'print-access-token'])
+    const get = async (kind) => (await (await fetch(`https://agentregistry.googleapis.com/v1alpha/projects/${P}/locations/global/${kind}?pageSize=100`, { headers: { authorization: `Bearer ${tok}`, 'x-goog-user-project': P } })).json())[kind] ?? []
+    const [agents, mcp] = await Promise.all([get('agents'), get('mcpServers')])
+    const a = agents.some((x) => x.displayName === 'RabbitOS Research Agent'), m = mcp.some((x) => x.displayName === 'RabbitOS Hub (MCP)')
+    return { ok: a && m ? true : false, detail: `agent ${a ? 'listed' : 'MISSING'}, MCP server ${m ? 'listed' : 'MISSING'} (${agents.length} agents and ${mcp.length} MCP servers visible in the project)` }
+  } },
   // ---------------------------------------------------------------- Hugging Face
   { group: 'Hugging Face', name: 'the image Space (rabbitos-eeg-qwen-image) and the model are public and the Space is running', run: async () => {
     const [space, model] = await Promise.all([

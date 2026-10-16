@@ -1,0 +1,25 @@
+{
+  "about": "What Register-AgentRegistry.ps1 lists in the Google Cloud Agent Registry (project rabbitsoftware-io). Only things that run in Google Cloud and answer a protocol are registered; the full list of agents, including the ones that run on the owner's PC or on Cloudflare, is docs/agents.md.",
+  "location": "global",
+  "entries": [
+    {
+      "id": "rabbit-research-agent",
+      "kind": "agent",
+      "displayName": "RabbitOS Research Agent",
+      "description": "Searches public biomedical research live (PubMed, Europe PMC, ClinicalTrials.gov, openFDA) and returns short lists with links. Read only: stores nothing, holds no secrets, never sees personal data. Runs on Cloud Run as an A2A server.",
+      "baseUrl": "https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app",
+      "cardUrl": "https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app/.well-known/agent-card.json",
+      "protocolBinding": "JSONRPC",
+      "deploy": "pwsh -File scripts/powershell/Setup-GcpResearchAgent.ps1"
+    },
+    {
+      "id": "rabbitos-hub-mcp",
+      "kind": "mcp",
+      "displayName": "RabbitOS Hub (MCP)",
+      "description": "Read-only tool server for AI assistants: platform links and status, the public chain and data hub, live public research search, the command catalog and help, anchoring and Hugging Face status. Public tools need no key.",
+      "baseUrl": "https://rabbitos-hub-mcp-vxx5lz7c5a-wl.a.run.app/mcp",
+      "protocolBinding": "JSONRPC",
+      "deploy": "pwsh -File scripts/powershell/Setup-GcpHub.ps1"
+    }
+  ]
+}
