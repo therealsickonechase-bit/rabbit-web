@@ -331,3 +331,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 70+ Python tests, 52 qa-audit, 49 hub, 13 catalog; live: urgent note woke the task worker which skipped pubmed; cloud explorer (slow_down) and cloud task worker (skip trials) acted and wrote handled receipts; heartbeat notes 0 waiting / 10 delivered / 8 handled. Found and fixed: PC deliver took cloud_* notes; list needs objectListPrefix in IAM conditions.
 - **Undo:** Stop run_all.py; remove STAGE_CLOUD_AGENT from the two jobs and the echo/stage IAM bindings; revert the commits and redeploy the three jobs, hub and site
 - **Ref:** research-agents/stage_box.py, log_feedback.py, task_worker.py, run_all.py
+
+### 2026-10-16 16:05 UTC - Backups + Maxwell
+- **Did:** Checked that the DNA repos (dna-chain, cancer-mutation-blockchain, dna-mirroring-workspace) were already bundled daily with full history into gs://rabbitsoftware-io-backups/platform/<date>/repos/ since 2026-10-14, and that dna_state.json and maxwell_chain.json are in maxwell/current/ (so no new copy job was needed). Added the three repos as Maxwell code leaves (maxwell_links.REPOS) so local and cloud agents' shared chain records their changes, and a pathways-check probe for the DNA backups. Documented in docs/agents.md.
+- **Checked:** pathways-check: 3 of 3 bundles in the 2026-10-16 backup, DNA state and Maxwell chain present; 7 maxwell_links tests pass
+- **Undo:** Remove the three names from REPOS in maxwell_links.py and the probe from pathways-check.mjs
+- **Ref:** research-agents/maxwell_links.py, scripts/pathways-check.mjs

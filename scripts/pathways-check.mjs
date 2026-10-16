@@ -159,6 +159,16 @@ export const PROBES = [
     return { ok: true, detail: `${Object.keys(d.topics || {}).length} topics, ${(d.queue || []).length} queued, ${(d.known_ids || []).length} known ids` }
   } },
   // ---------------------------------------------------------------- blockchain
+  { group: 'Blockchain', name: 'DNA, DNA-binary and cancer-mutation repos: backed up in Google Cloud and anchored in the Maxwell chain', run: async () => {
+    const repos = ['dna-chain', 'cancer-mutation-blockchain', 'dna-mirroring-workspace']
+    const days = sh('gcloud', ['storage', 'ls', 'gs://rabbitsoftware-io-backups/platform/', '--project', P]).split(/\r?\n/).map((l) => l.trim().replace(/\/$/, '').split('/').pop()).filter(Boolean).sort()
+    const day = days[days.length - 1]
+    const listing = sh('gcloud', ['storage', 'ls', `gs://rabbitsoftware-io-backups/platform/${day}/repos/`, '--project', P])
+    const missing = repos.filter((r) => !listing.includes(`/${r}.bundle`))
+    const fresh = age(`${day}T23:59:59Z`) < 48 * 60
+    const live = JSON.parse(sh('gcloud', ['storage', 'cat', 'gs://rabbitsoftware-io-backups/maxwell/current/maxwell_chain.json', '--project', P])).blocks?.length ?? 0
+    return { ok: !missing.length && fresh && live > 0 ? true : missing.length ? false : 'warn', detail: `${repos.length - missing.length} of ${repos.length} repo bundles in the ${day} backup${missing.length ? ` (missing: ${missing.join(', ')})` : ''}; dna_state.json and the Maxwell chain (${live} blocks) are in maxwell/current/; the repos are Maxwell code leaves` }
+  } },
   { group: 'Blockchain', name: 'public ledger: app and Google Cloud copy agree', run: async () => {
     const [app, mirror] = await Promise.all([fetch('https://app.rabbitsoftware.io/api/chain/head').then((r) => r.json()), fetch(`${GCS.ledger}/ledger/chain_head.json?cb=${Date.now()}`).then((r) => r.json())])
     return { ok: app.length === mirror.length && app.headHash === mirror.headHash, detail: `length ${app.length}/${mirror.length}, head ${String(app.headHash).slice(0, 10)}` }
