@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { WALLET } from '@/lib/wallet'
+import { DONATIONS_OPEN, WALLET } from '@/lib/wallet'
 
 // Receive-only donation addresses. The text comes from WALLET (generated from the signed wallet.json), never typed here.
 // Nothing is sent from this page; "Open in wallet" uses the bitcoin: / ethereum: link of the visitor's own wallet app.
@@ -14,6 +14,7 @@ const ROWS = [
 export default function DonateCard({ compact = false }: { compact?: boolean }) {
   const [copied, setCopied] = useState('')
   const [note, setNote] = useState('')
+  if (!DONATIONS_OPEN) return null // donations are paused (workers/wallet/donations.json in rabbitsoftware-cloudflare)
 
   async function copy(id: string, address: string) {
     try { await navigator.clipboard.writeText(address); setCopied(id); setNote(''); setTimeout(() => setCopied(''), 1600) }

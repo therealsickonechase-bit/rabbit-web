@@ -115,3 +115,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 17 site tests pass; build-donate --check up to date; live blockchain page shows no addresses, live donate page shows only bc1qxudt9x4hcftvwkfryln2qhn4e5g2qvt09mlp56 and 0x724Dfe717565742b066465813773586df98d9372
 - **Undo:** Roll back the Pages deployment
 - **Ref:** site/blockchain.html
+
+### 2026-10-16 00:19 UTC - Donations paused; Bitcoin anchoring only
+- **Did:** Paused public donations: removed the donate page, wallet.json, the front-page block, nav and text invitations from rabbitsoftware.io (switch: workers/wallet/donations.json open=false, honoured by build-donate.mjs); app hides the Donate link, card and /donate page (DONATIONS_OPEN=false in the generated wallet module; app NOT deployed). Parked Ethereum and XRPL anchoring: paused Scheduler job rabbit-anchor-chains-6h and reworded the blockchain page layer 4 as planned. Bitcoin anchoring continues unchanged. The wallet key and addresses are untouched
+- **Checked:** wallet tests 48 pass (3 skipped while paused), site tests 18 pass, app tests 369 pass; live: donate.html, donate and wallet.json return 404; no donation address or link on index, story, blockchain or press; blockchain page still shows the live Bitcoin anchor state with 0 CSP violations and 0 errors
+- **Undo:** Set open true in donations.json, run build-donate.mjs, restore page text from git history (commit before 'Pause donations'), deploy; resume the scheduler job with gcloud scheduler jobs resume rabbit-anchor-chains-6h --location us-west2
+- **Ref:** workers/wallet/donations.json

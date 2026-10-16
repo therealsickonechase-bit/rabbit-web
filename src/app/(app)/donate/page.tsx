@@ -1,12 +1,14 @@
 import DonateCard from '@/components/DonateCard'
 import { Card, PageHeader } from '@/components/ui'
-import { WALLET } from '@/lib/wallet'
+import { notFound } from 'next/navigation'
+import { DONATIONS_OPEN, WALLET } from '@/lib/wallet'
 
 export const metadata = { title: 'Donate | RabbitOS', description: 'Support RabbitSoftware with a voluntary Bitcoin or Ethereum donation, and how to verify the addresses.' }
 
 const ANCHORS = 'https://rabbitsoftware-io-ledger-public.storage.googleapis.com/anchors/index.json'
 
 export default function DonatePage() {
+  if (!DONATIONS_OPEN) notFound() // donations are paused
   const p = WALLET.proof
   return (
     <>

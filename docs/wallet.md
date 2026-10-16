@@ -1,5 +1,7 @@
 # The RabbitSoftware wallet: how it works and how to use it
 
+> **Donations are paused (2026-10-16).** The donate page, `wallet.json`, the front-page block and the app card are removed while `workers/wallet/donations.json` says `"open": false`. The key and addresses still exist and are unchanged. To reopen: set `open` to true, run `node workers/wallet/build-donate.mjs`, restore the page text edits from git history (commit "Pause donations"), then deploy the site and the app.
+
 Receive addresses are on https://rabbitsoftware.io/donate (and in the RabbitOS app once deployed). The code is `workers/wallet` in rabbitsoftware-cloudflare.
 
 ## What it is

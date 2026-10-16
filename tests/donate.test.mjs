@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { WALLET } from '../src/lib/wallet.ts'
+import { DONATIONS_OPEN, WALLET } from '../src/lib/wallet.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const src = (p) => readFileSync(join(here, '..', p), 'utf8')
@@ -47,4 +47,11 @@ test('the app copy equals the signed source in the wallet worker (when that repo
   const source = join(here, '..', '..', 'rabbitsoftware-cloudflare', 'workers', 'wallet', 'wallet.json')
   if (!existsSync(source)) return
   assert.deepEqual(JSON.parse(readFileSync(source, 'utf8')), JSON.parse(JSON.stringify(WALLET)))
+})
+
+test('while donations are paused the app shows no Donate card, link or page', () => {
+  assert.equal(DONATIONS_OPEN, false)
+  assert.match(src('src/components/DonateCard.tsx'), /if \(!DONATIONS_OPEN\) return null/)
+  assert.match(src('src/app/(app)/donate/page.tsx'), /if \(!DONATIONS_OPEN\) notFound\(\)/)
+  assert.match(src('src/app/(app)/layout.tsx'), /\{DONATIONS_OPEN && <Link href="\/donate"/)
 })

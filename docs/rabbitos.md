@@ -163,7 +163,7 @@ index, the date), sends its SHA-256 to the public OpenTimestamps calendars, and 
 Anyone can check a proof with the standard `ots verify`. What it proves: the document existed by that Bitcoin block. It does not prove the contents are true. The Maxwell miners record
 the newest anchor (`anchor:bitcoin` leaf), so each new anchor and each confirmation also grows the Maxwell chain.
 
-**Ethereum and XRPL (code built and deployed 2026-10-15; switched on when you fund the two addresses).** The Cloud Run job `rabbit-anchor-chains` (workers/wallet/anchor-chains.mjs, set up by
+**Ethereum and XRPL (code built and deployed 2026-10-15; PARKED 2026-10-16: the Scheduler job `rabbit-anchor-chains-6h` is paused and the fee accounts are unfunded; resume with `gcloud scheduler jobs resume rabbit-anchor-chains-6h --location us-west2` after funding).** The Cloud Run job `rabbit-anchor-chains` (workers/wallet/anchor-chains.mjs, set up by
 `scripts/powershell/Setup-GcpAnchorChains.ps1`) runs every 6 hours, 30 minutes after the Bitcoin job. It posts the SAME digest as the Bitcoin anchor in one Ethereum transaction (zero value, sent to itself,
 data = `RBOS` + version 1 + digest) and one XRP Ledger AccountSet memo, and records `anchors/<id>/ethereum.json`, `xrpl.json` and `anchors/chains.json` in the public ledger bucket. It signs with a
 SEPARATE hardware key, `rabbit-wallet/anchor-signer`, that can hold only a little gas money; the donation key is never used by automation. Until the anchoring addresses are funded it sends nothing and
