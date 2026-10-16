@@ -33,7 +33,7 @@ function Retry([scriptblock]$run, [string]$what) {
 $jobSa = "rabbit-research-explorer@$Project.iam.gserviceaccount.com"; $schSa = "rabbit-anchor-scheduler@$Project.iam.gserviceaccount.com"
 $image = "us-west2-docker.pkg.dev/$Project/rabbit-software/explorer-job:latest"
 $secret = 'rabbit-ingest-secret'
-$files = 'cloud_explorer.py', 'task_worker.py', 'rabbit_sync.py', 'multi_source_research.py', 'extended_research_sources.py', 'research_matcher.py', 'http_util.py', 'brain_research.py', 'crispr_data.py', 'crispr_guide_design.py'
+$files = 'cloud_explorer.py', 'task_worker.py', 'stage_box.py', 'echo_link.py', 'rabbit_sync.py', 'multi_source_research.py', 'extended_research_sources.py', 'research_matcher.py', 'http_util.py', 'brain_research.py', 'crispr_data.py', 'crispr_guide_design.py'
 
 Step 'Check the secret exists (name only) and the files are there'
 $have = Exists secrets versions describe latest --secret $secret --project $Project
@@ -45,6 +45,13 @@ Step "Service account $jobSa (reads one secret, nothing else)"
 Invoke-IfLive 'create the account, let it read rabbit-ingest-secret, and confirm it has no project roles' {
     if (-not (Exists iam service-accounts describe $jobSa --project $Project)) { Invoke-Gcloud iam service-accounts create rabbit-research-explorer --project $Project --display-name 'RabbitOS task worker (public sources only)' }
     Retry { & gcloud secrets add-iam-policy-binding $secret --member "serviceAccount:$jobSa" --role roles/secretmanager.secretAccessor --project $Project } 'let the task worker read the ingest secret'
+    # Notes staged for this job (echo/stage/ in the private reports bucket) can be read and answered, and nothing else in the bucket.
+    $condStage = "resource.name.startsWith(""projects/_/buckets/rabbitsoftware-io-reports/objects/echo/stage/"") || api.getAttribute(""storage.googleapis.com/objectListPrefix"", """").startsWith(""echo/stage/"")"
+    $condFile = Join-Path ([IO.Path]::GetTempPath()) ('cond-' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.json')   # the expression contains a comma, so it goes in a file
+    try {
+        ConvertTo-Json -InputObject @{ title = 'only-echo-stage-rabbit-research-explorer-v2'; expression = $condStage } | Set-Content $condFile -Encoding ascii
+        Retry { & gcloud storage buckets add-iam-policy-binding "gs://rabbitsoftware-io-reports" --member "serviceAccount:$jobSa" --role roles/storage.objectAdmin --project $Project --condition-from-file $condFile } 'grant echo/stage/'
+    } finally { Remove-Item $condFile -Force -ErrorAction SilentlyContinue }
     $roles = (& gcloud projects get-iam-policy $Project --flatten 'bindings[].members' --filter "bindings.members:serviceAccount:$jobSa" --format 'value(bindings.role)')
     if ($roles) { throw "The research explorer has project roles ($($roles -join ', ')). It must have none." }
     Write-Host 'confirmed: no project roles'
@@ -64,7 +71,7 @@ Invoke-IfLive "stage $($files.Count) files + Dockerfile and build $image" {
 Step 'Cloud Run job rabbit-research-explorer'
 Invoke-IfLive 'deploy the job (512 MiB, 10 minute limit, no retries) with the ingest secret mounted from Secret Manager' {
     Invoke-Gcloud run jobs deploy rabbit-research-explorer --project $Project --region $Region --image $image --service-account $jobSa --memory 512Mi --cpu 1 --task-timeout 600s --max-retries 0 `
-        --set-secrets "RABBIT_INGEST_SECRET=${secret}:latest" --set-env-vars 'RABBIT_URL=https://app.rabbitsoftware.io,RABBIT_NODE_ID=cloud-explorer,EXPLORER_TOPICS_PER_RUN=2' --quiet
+        --set-secrets "RABBIT_INGEST_SECRET=${secret}:latest" --set-env-vars 'STAGE_CLOUD_AGENT=cloud_explorer,RABBIT_URL=https://app.rabbitsoftware.io,RABBIT_NODE_ID=cloud-explorer,EXPLORER_TOPICS_PER_RUN=2' --quiet
     Retry { & gcloud run jobs add-iam-policy-binding rabbit-research-explorer --region $Region --project $Project --member "serviceAccount:$schSa" --role roles/run.invoker --quiet } 'let the scheduler run the job'
 }
 

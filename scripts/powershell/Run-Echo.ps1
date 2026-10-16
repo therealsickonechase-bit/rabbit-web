@@ -41,11 +41,21 @@ if (-not $env:RABBIT_INGEST_SECRET) { Add-Content $log "[$(Get-Date -Format HH:m
 $out = (& python (Join-Path $AgentsDir 'echo_link.py') --side pc 2>&1 | Out-String).Trim()
 # Staging: items left in the cloud for local agents are copied into ~\RabbitOS\staged\<agent>\ (receipt written back), so agents find them when they next start.
 $stageOut = (& python (Join-Path $AgentsDir 'stage_box.py') deliver 2>&1 | Out-String).Trim()
-$null = (& python (Join-Path $AgentsDir 'stage_box.py') sweep 2>&1 | Out-String)
+$reportOut = (& python (Join-Path $AgentsDir 'stage_box.py') report 2>&1 | Out-String).Trim()     # receipt 2: what the agents did with the notes they got
+$sweepOut = (& python (Join-Path $AgentsDir 'stage_box.py') sweep 2>&1 | Out-String).Trim()
+# Wake on delivery: a note for the task worker starts its scheduled task straight away instead of waiting for its next run (IgnoreNew makes this a no-op if it is already running).
+# run_all.py watches its own inbox every 20 seconds, so it needs no wake-up.
+try {
+    $sj0 = $stageOut | ConvertFrom-Json
+    if ($sj0.delivered.task_worker -gt 0) {
+        $t = Get-ScheduledTask -TaskName 'RabbitOS Task Worker' -ErrorAction SilentlyContinue
+        if ($t -and $t.State -eq 'Ready') { Start-ScheduledTask -TaskName 'RabbitOS Task Worker'; Add-Content $log "[$(Get-Date -Format HH:mm:ss)] woke RabbitOS Task Worker ($($sj0.delivered.task_worker) note(s), urgent: $($sj0.urgent.task_worker))" }
+    }
+} catch { }
 # Log findings: once an hour, send each worker a short note about retrieval problems seen in the logs (only when the note changed since the last one sent).
 if ((Get-Date).Minute -lt 5 -or $env:RABBIT_FEEDBACK_NOW) { $fbOut = (& python (Join-Path $AgentsDir 'log_feedback.py') 2>&1 | Out-String).Trim(); Add-Content $log "[$(Get-Date -Format HH:mm:ss)] feedback: $fbOut" }
 Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue
-Add-Content $log "[$(Get-Date -Format HH:mm:ss)] staging: $stageOut"
+Add-Content $log "[$(Get-Date -Format HH:mm:ss)] staging: $stageOut | handled-report: $reportOut | sweep: $sweepOut"
 Add-Content $log "[$(Get-Date -Format HH:mm:ss)] $out"
 try { $j = $out | ConvertFrom-Json } catch { $j = $null }
 if ($j -and $j.event -in 'echo_heard', 'echo_silent') {

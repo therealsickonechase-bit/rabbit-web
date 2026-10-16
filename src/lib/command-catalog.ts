@@ -390,6 +390,10 @@ const RA: CatalogEntry[] = [
   ...seed('research-agents', 'stage_box.py', [
     { id: 'stage-add', group: 'Echo', label: 'Stage a task or note for an agent', scope: 'owner', risk: 'secret',
       command: 'python stage_box.py stage --to research --kind task --title "Look at ATM" --body "Summarise new papers"', needs: ['RABBIT_INGEST_SECRET'], description: 'Leaves a signed text item in the private echo/stage folder; the PC copies it to the local inbox of the agent on the next echo step even if the agent is not running.' },
+    { id: 'stage-add-action', group: 'Echo', label: 'Stage a note with an action for an agent', scope: 'owner', risk: 'secret',
+      command: 'python stage_box.py stage --to task_worker --severity warn --action skip_source --target pubmed --title "PubMed empty" --body "Returned nothing for 8 queries"', needs: ['RABBIT_INGEST_SECRET'], description: 'Actions: retry, slow_down, requeue_topic, skip_source. An agent runs one only if it registered that exact action; otherwise it records the note. Severity: info, warn, urgent.' },
+    { id: 'stage-report', group: 'Echo', label: 'Report what the agents did with their notes', scope: 'owner', risk: 'secret',
+      command: 'python stage_box.py report', needs: ['RABBIT_INGEST_SECRET'], description: 'Writes the handled receipts for notes the local agents have processed (the echo task does this every 5 minutes).' },
     { id: 'stage-pending', group: 'Echo', label: 'Staging: what is waiting', scope: 'owner', risk: 'secret',
       command: 'python stage_box.py pending', needs: ['RABBIT_INGEST_SECRET'], description: 'Per agent: items waiting, received and ignored.' },
     { id: 'stage-inbox', group: 'Echo', label: 'Staging: local inbox of an agent', scope: 'owner', risk: 'local',

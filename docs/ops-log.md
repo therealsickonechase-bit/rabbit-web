@@ -325,3 +325,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 6 unit tests; live: notes staged, delivered by the echo, and recorded as noted by run_all (research) and the task worker; cloud jobs showed 0 failures, the only real retrieval problem was one 15-minute ledger_to_gcs timeout
 - **Undo:** Stop python run_all.py; remove the feedback line from Run-Echo.ps1; revert the commits and redeploy the hub
 - **Ref:** research-agents/log_feedback.py
+
+### 2026-10-16 15:54 UTC - Research agents + Google Cloud
+- **Did:** Echo notes v2: structured notes (severity info/warn/urgent, fixed actions retry/slow_down/requeue_topic/skip_source, target word), merging of identical waiting notes, urgent-first delivery, a second 'handled' receipt, wake-on-delivery of the PC task worker (Run-Echo.ps1), cloud agents cloud_task_worker and cloud_explorer reading their notes straight from the bucket (new conditional IAM echo/stage/ incl. list prefix, images rebuilt), per-source yield logging (yield.jsonl and task_yield events) with log_feedback sending skip_source / broaden-terms notes, note counts on the public heartbeat, run_all.py restarted (actions requeue_topic and slow_down, 20 s inbox poll), cached gcloud token for the echo. Catalog 271, map, hub and site redeployed.
+- **Checked:** 70+ Python tests, 52 qa-audit, 49 hub, 13 catalog; live: urgent note woke the task worker which skipped pubmed; cloud explorer (slow_down) and cloud task worker (skip trials) acted and wrote handled receipts; heartbeat notes 0 waiting / 10 delivered / 8 handled. Found and fixed: PC deliver took cloud_* notes; list needs objectListPrefix in IAM conditions.
+- **Undo:** Stop run_all.py; remove STAGE_CLOUD_AGENT from the two jobs and the echo/stage IAM bindings; revert the commits and redeploy the three jobs, hub and site
+- **Ref:** research-agents/stage_box.py, log_feedback.py, task_worker.py, run_all.py

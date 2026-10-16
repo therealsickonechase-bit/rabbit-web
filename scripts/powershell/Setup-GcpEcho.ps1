@@ -34,14 +34,19 @@ function Retry([scriptblock]$run, [string]$what) {
 $jobSa = "rabbit-echo@$Project.iam.gserviceaccount.com"; $schSa = "rabbit-anchor-scheduler@$Project.iam.gserviceaccount.com"
 $image = "us-west2-docker.pkg.dev/$Project/rabbit-software/echo-job:latest"
 $secret = 'rabbit-ingest-secret'
-foreach ($f in 'echo_link.py', 'echo_record.py') { if (-not (Test-Path (Join-Path $AgentsDir $f))) { throw "missing $f in $AgentsDir" } }
+foreach ($f in 'echo_link.py', 'echo_record.py', 'stage_box.py') { if (-not (Test-Path (Join-Path $AgentsDir $f))) { throw "missing $f in $AgentsDir" } }
 
 Step "Service account $jobSa (the echo/ prefix of the reports bucket and one secret)"
 Invoke-IfLive 'create the account, let it read the secret and use echo/ only; confirm it has no project roles' {
     if (-not (Exists iam service-accounts describe $jobSa --project $Project)) { Invoke-Gcloud iam service-accounts create rabbit-echo --project $Project --display-name 'RabbitOS echo (PC and cloud acknowledgement)' }
     Retry { & gcloud secrets add-iam-policy-binding $secret --member "serviceAccount:$jobSa" --role roles/secretmanager.secretAccessor --project $Project } 'let the echo job read the signing key'
-    $cond = "resource.name.startsWith(""projects/_/buckets/$Bucket/objects/echo/"")"
-    Retry { & gcloud storage buckets add-iam-policy-binding "gs://$Bucket" --member "serviceAccount:$jobSa" --role roles/storage.objectAdmin --project $Project --condition "expression=$cond,title=only-echo-prefix" } 'grant echo/ access'
+    # Reading and writing objects under echo/ AND listing that prefix (listing is authorised by the list prefix, not by an object name).
+    $cond = "resource.name.startsWith(""projects/_/buckets/$Bucket/objects/echo/"") || api.getAttribute(""storage.googleapis.com/objectListPrefix"", """").startsWith(""echo/"")"
+    $condFile = Join-Path ([IO.Path]::GetTempPath()) ('cond-' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.json')   # the expression contains a comma, so it goes in a file
+    try {
+        ConvertTo-Json -InputObject @{ title = 'only-echo-prefix-v2'; expression = $cond } | Set-Content $condFile -Encoding ascii
+        Retry { & gcloud storage buckets add-iam-policy-binding "gs://$Bucket" --member "serviceAccount:$jobSa" --role roles/storage.objectAdmin --project $Project --condition-from-file $condFile } 'grant echo/ access'
+    } finally { Remove-Item $condFile -Force -ErrorAction SilentlyContinue }
     # The heartbeat chart: this account may write exactly one public object, status/echo.json, and nothing else in the status bucket.
     $condPub = "resource.name.startsWith(""projects/_/buckets/$StatusBucket/objects/status/echo.json"")"
     Retry { & gcloud storage buckets add-iam-policy-binding "gs://$StatusBucket" --member "serviceAccount:$jobSa" --role roles/storage.objectAdmin --project $Project --condition "expression=$condPub,title=only-echo-heartbeat" } 'grant the heartbeat object'
@@ -57,6 +62,7 @@ Invoke-IfLive "stage echo_link.py + Dockerfile and build $image" {
     try {
         Copy-Item (Join-Path $AgentsDir 'echo_link.py') $stage
         Copy-Item (Join-Path $AgentsDir 'echo_record.py') $stage
+        Copy-Item (Join-Path $AgentsDir 'stage_box.py') $stage
         Copy-Item (Join-Path $JobDir 'Dockerfile') $stage
         Invoke-Gcloud builds submit $stage --project $Project --tag $image --quiet
     } finally { Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue }
