@@ -395,6 +395,12 @@ const RA: CatalogEntry[] = [
     { id: 'stage-inbox', group: 'Echo', label: 'Staging: local inbox of an agent', scope: 'owner', risk: 'local',
       command: 'python stage_box.py inbox --agent research', description: 'Items already delivered to this PC for the agent, oldest first (mark handled with the done command).' },
   ]),
+  ...seed('research-agents', 'log_feedback.py', [
+    { id: 'feedback-dry', group: 'Echo', label: 'Log findings for the workers (preview)', scope: 'owner', risk: 'network',
+      command: 'python log_feedback.py --dry-run', description: 'Reads the sync logs, staged results and cloud job counts and prints the short note each worker would get. Sends nothing.' },
+    { id: 'feedback-send', group: 'Echo', label: 'Send log findings to the workers', scope: 'owner', risk: 'secret',
+      command: 'python log_feedback.py', needs: ['RABBIT_INGEST_SECRET'], description: 'Stages one short note per worker (research, task_worker) through the echo, only when it changed since the last one. The echo task also does this hourly.' },
+  ]),
   ...seed('research-agents', 'rabbit_sync.py', [
     { id: 'ra-sync-dry', group: 'Sync to RabbitOS', label: 'rabbit_sync dry run', scope: 'owner', risk: 'local',
       command: 'python rabbit_sync.py --dry-run', description: 'Prints what would be sent; sends nothing.' },

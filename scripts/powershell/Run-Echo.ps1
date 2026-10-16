@@ -42,6 +42,8 @@ $out = (& python (Join-Path $AgentsDir 'echo_link.py') --side pc 2>&1 | Out-Stri
 # Staging: items left in the cloud for local agents are copied into ~\RabbitOS\staged\<agent>\ (receipt written back), so agents find them when they next start.
 $stageOut = (& python (Join-Path $AgentsDir 'stage_box.py') deliver 2>&1 | Out-String).Trim()
 $null = (& python (Join-Path $AgentsDir 'stage_box.py') sweep 2>&1 | Out-String)
+# Log findings: once an hour, send each worker a short note about retrieval problems seen in the logs (only when the note changed since the last one sent).
+if ((Get-Date).Minute -lt 5 -or $env:RABBIT_FEEDBACK_NOW) { $fbOut = (& python (Join-Path $AgentsDir 'log_feedback.py') 2>&1 | Out-String).Trim(); Add-Content $log "[$(Get-Date -Format HH:mm:ss)] feedback: $fbOut" }
 Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue
 Add-Content $log "[$(Get-Date -Format HH:mm:ss)] staging: $stageOut"
 Add-Content $log "[$(Get-Date -Format HH:mm:ss)] $out"

@@ -319,3 +319,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 39 python tests (record, link, staging, links, task worker), 51 qa-audit and 49 hub tests pass; live: PC and cloud steps wrote logs, public echo.json served with CORS for rabbitsoftware.io and Cache-Control no-cache, live status page and script contain the chart
 - **Undo:** Disable the alert and delete metric echo_pc_heard; remove the status/echo.json IAM condition and object; redeploy the previous Pages deployment; revert the commits and rebuild the echo job
 - **Ref:** research-agents/echo_record.py, Setup-GcpEcho.ps1, site/status.*
+
+### 2026-10-16 15:08 UTC - Research agents
+- **Did:** Restarted run_all.py (it now loads the echo AI-insight hook and reads its staged inbox). Added log_feedback.py: reads the sync logs, staged results and cloud job counts and stages one short note per worker (research, task_worker) naming failures and likely causes; sent only when the problems change; Run-Echo.ps1 runs it hourly. Catalog 269 commands; hub redeployed.
+- **Checked:** 6 unit tests; live: notes staged, delivered by the echo, and recorded as noted by run_all (research) and the task worker; cloud jobs showed 0 failures, the only real retrieval problem was one 15-minute ledger_to_gcs timeout
+- **Undo:** Stop python run_all.py; remove the feedback line from Run-Echo.ps1; revert the commits and redeploy the hub
+- **Ref:** research-agents/log_feedback.py
