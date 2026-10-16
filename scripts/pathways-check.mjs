@@ -102,8 +102,11 @@ export const PROBES = [
     const base = 'https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app'
     const card = await (await fetch(`${base}/.well-known/agent-card.json`, { signal: AbortSignal.timeout(20_000) })).json()
     const r = await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(30_000), body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'message/send', params: { message: { kind: 'message', role: 'user', messageId: 'pathways', parts: [{ kind: 'text', text: 'what sources can you search?' }] } } }) }).then((x) => x.json())
-    const ok = card.name === 'RabbitOS Research Agent' && card.skills?.length >= 4 && r.result?.kind === 'message'
-    return { ok, detail: `${card.name} v${card.version}, ${card.skills?.length} skills, message/send ${r.result ? 'answered' : 'failed'}` }
+    const t = await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(30_000), body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'message/send', params: { message: { kind: 'message', role: 'user', messageId: 'pathways-toolbox', parts: [{ kind: 'text', text: 'toolbox: chain' }] } } }) }).then((x) => x.json())
+    const tb = t.result?.parts?.find((x) => x.kind === 'data')?.data
+    const hasSkill = card.skills?.some((x) => x.id === 'toolbox')
+    const ok = card.name === 'RabbitOS Research Agent' && card.skills?.length >= 4 && r.result?.kind === 'message' && hasSkill && !!tb?.root
+    return { ok, detail: `${card.name} v${card.version}, ${card.skills?.length} skills, message/send ${r.result ? 'answered' : 'failed'}; toolbox skill ${hasSkill ? 'listed' : 'MISSING'}, ${tb?.commands?.length ?? 0} command(s) for "chain" from bundle ${String(tb?.root ?? '').slice(0, 12) || 'unknown'}` }
   } },
   { group: 'Agents', name: 'the task worker in Google Cloud runs every 5 minutes and succeeds', run: async () => {
     const ex = JSON.parse(sh('gcloud', ['run', 'jobs', 'executions', 'list', '--job', 'rabbit-task-worker', '--project', P, '--region', 'us-west2', '--limit', '3', '--format=json']))

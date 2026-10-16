@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildManifest, commandFileIndex, manifestRoot, pathVerdict, secretVerdict, sha256, verifyManifest } from '../src/lib/toolbox.ts'
+import { buildManifest, commandFileIndex, manifestRoot, pathVerdict, publicSlice, secretVerdict, sha256, verifyManifest } from '../src/lib/toolbox.ts'
 
 test('only code, scripts and documents qualify by name', () => {
   for (const ok of ['src/lib/toolbox.ts', 'scripts/powershell/Run-Echo.ps1', 'docs/agents.md', 'dna_local.py', 'workers/echo-job/Dockerfile', 'workers/hub-mcp/src/help.mjs', 'workers/qa-audit/data/platform-graph.json']) {
@@ -61,4 +61,24 @@ test('each command is tied to the published files it uses', () => {
 
 test('sha256 matches the standard value', async () => {
   assert.equal(await sha256('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
+})
+
+test('the public slice holds only guest commands and links to files of the two public repositories', async () => {
+  const files = [F('rabbit-web', 'tests/a b.mjs'), F('rabbitsoftware-cloudflare', 'workers/hub-mcp/src/hub.mjs'), F('research-agents', 'dna_local.py')]
+  const m = await buildManifest(files, [], 4, new Date('2026-10-16T12:00:00Z'))
+  const cmds = [
+    { id: 'pub', scope: 'public', group: 'Checks', label: 'A public one', command: 'cd /workspace/rabbit-web && node --test "tests/a b.mjs"', project: 'rabbit-web', description: 'd' },
+    { id: 'hub', scope: 'public', label: 'Hub', command: 'curl hub', project: 'rabbitsoftware-cloudflare', source: 'workers/hub-mcp/src/hub.mjs' },
+    { id: 'owner', scope: 'owner', label: 'Owner', command: 'python dna_local.py compare', project: 'research-agents', source: 'dna_local.py' },
+    { id: 'sneaky', scope: 'public', label: 'Mentions the private repo', command: 'cat research-agents/dna_local.py', project: 'research-agents', source: 'dna_local.py' },
+  ]
+  const slice = publicSlice(m, cmds, commandFileIndex(cmds, files))
+  assert.deepEqual(slice.commands.map((c) => c.id), ['pub', 'hub'])
+  assert.equal(slice.counts.publicCommands, 2)
+  assert.equal(slice.root, m.root)
+  const text = JSON.stringify(slice)
+  for (const hidden of ['research-agents', 'dna_local', 'owner', 'Owner']) assert.ok(!text.includes(hidden), hidden)
+  assert.ok(slice.commands[1].files[0].url.startsWith('https://github.com/therealsickonechase-bit/rabbitsoftware-cloudflare/blob/main/workers/hub-mcp/'))
+  assert.ok(slice.commands[0].files.every((f) => f.url.includes('tests/a%20b.mjs')))
+  assert.deepEqual(Object.keys(slice.commands[0]).sort(), ['command', 'description', 'files', 'group', 'id', 'label'])
 })

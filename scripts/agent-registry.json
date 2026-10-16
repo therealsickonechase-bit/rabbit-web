@@ -6,7 +6,7 @@
       "id": "rabbit-research-agent",
       "kind": "agent",
       "displayName": "RabbitOS Research Agent",
-      "description": "Searches public biomedical research live (PubMed, Europe PMC, ClinicalTrials.gov, openFDA) and returns short lists with links. Read only: stores nothing, holds no secrets, never sees personal data. Runs on Cloud Run as an A2A server.",
+      "description": "Searches public biomedical research live (PubMed, Europe PMC, ClinicalTrials.gov, openFDA) and returns short lists with links. It also looks up the public RabbitOS commands and the files behind them (the toolbox). Read only: stores nothing, holds no secrets, never sees personal data. Runs on Cloud Run as an A2A server.",
       "baseUrl": "https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app",
       "cardUrl": "https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app/.well-known/agent-card.json",
       "protocolBinding": "JSONRPC",

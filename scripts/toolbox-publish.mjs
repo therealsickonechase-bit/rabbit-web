@@ -6,10 +6,11 @@ import { execFileSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { REPOS, MAX_FILE_BYTES, buildManifest, commandFileIndex, pathVerdict, secretVerdict, sha256 } from '../src/lib/toolbox.ts'
+import { REPOS, MAX_FILE_BYTES, buildManifest, commandFileIndex, pathVerdict, publicSlice, secretVerdict, sha256 } from '../src/lib/toolbox.ts'
 
 const PROJECTS = join(homedir(), 'Projects')
 const BUCKET = 'gs://rabbitsoftware-io-backups/toolbox'
+const PUBLIC_OBJECT = 'gs://rabbitsoftware-io-status-public/status/toolbox-public.json'   // the public slice, read by the Research Agent (A2A) service
 const PROJECT = 'rabbitsoftware-io'
 const dry = process.argv.includes('--dry-run')
 
@@ -44,6 +45,9 @@ const index = commandFileIndex(commands, files)
 const manifest = await buildManifest(files, skipped.filter((s) => !s.reason.startsWith('not a code') && !s.reason.startsWith('json file')), commands.length, new Date())
 writeFileSync(join(stage, 'manifest.json'), JSON.stringify(manifest))
 writeFileSync(join(stage, 'commands-index.json'), JSON.stringify({ generatedAt: manifest.generatedAt, root: manifest.root, commands: Object.fromEntries(commands.map((c) => [c.id, { scope: c.scope, project: c.project, runsIn: c.runsIn, command: c.command, files: index[c.id] }])) }))
+const slice = publicSlice(manifest, commands, index)
+const slicePath = join(tmpdir(), `toolbox-public-${Date.now()}.json`)
+writeFileSync(slicePath, JSON.stringify(slice))
 mkdirSync(join(homedir(), 'RabbitOS'), { recursive: true })
 writeFileSync(join(homedir(), 'RabbitOS', 'toolbox-manifest.json'), JSON.stringify(manifest))
 
@@ -51,9 +55,11 @@ const reasons = {}
 for (const s of skipped) reasons[s.reason] = (reasons[s.reason] ?? 0) + 1
 const secretHits = skipped.filter((s) => s.reason.startsWith('secret-like')).map((s) => s.path)
 const summary = { event: dry ? 'toolbox_checked' : 'toolbox_published', files: manifest.counts.files, repos: manifest.counts.repos, commands: commands.length, commandsWithFiles: Object.values(index).filter((v) => v.length).length,
-  bytes: files.reduce((n, f) => n + f.bytes, 0), root: manifest.root, skippedByReason: reasons, secretLikeFilesKeptOut: secretHits }
+  bytes: files.reduce((n, f) => n + f.bytes, 0), publicCommands: slice.counts.publicCommands, root: manifest.root, skippedByReason: reasons, secretLikeFilesKeptOut: secretHits }
 if (!dry) {
   execFileSync('gcloud', ['storage', 'rsync', '--recursive', stage, BUCKET, '--project', PROJECT], { stdio: 'ignore', shell: process.platform === 'win32' })
+  execFileSync('gcloud', ['storage', 'cp', slicePath, PUBLIC_OBJECT, '--cache-control=no-cache', '--content-type=application/json', '--project', PROJECT], { stdio: 'ignore', shell: process.platform === 'win32' })
 }
+rmSync(slicePath, { force: true })
 rmSync(stage, { recursive: true, force: true })
 console.log(JSON.stringify(summary))

@@ -22,7 +22,7 @@ const SECRET_LIKE = [
 ]
 
 export interface Entry { repo: string; path: string; sha256: string; bytes: number }
-export interface CatalogCommand { id: string; command: string; project?: string; source?: string; scope?: string; runsIn?: string }
+export interface CatalogCommand { id: string; command: string; project?: string; source?: string; scope?: string; runsIn?: string; group?: string; label?: string; description?: string }
 export interface Manifest {
   version: 1
   generatedAt: string
@@ -89,4 +89,33 @@ export async function buildManifest(files: Entry[], skipped: { path: string; rea
 /** Reads the manifest the way an agent should: refuses a manifest whose root does not match its own file list. */
 export async function verifyManifest(m: Manifest): Promise<boolean> {
   return m?.version === 1 && Array.isArray(m.files) && (await manifestRoot(m.files)) === m.root
+}
+
+// ---- The public slice -------------------------------------------------------------------------------------------------------------------------------------------------------
+// The Research Agent (A2A) service is public and has no sign-in, so it must never be given the private toolbox. Instead the publisher writes this small public slice next to the status feed:
+// only the commands a guest may see (scope "public"), only files from the two PUBLIC repositories (as links to GitHub, with their hashes), and the root and counts of the whole bundle so a caller
+// can tell which bundle it is looking at. No file contents, nothing from research-agents (private), no owner command.
+export const PUBLIC_REPOS = ['rabbit-web', 'rabbitsoftware-cloudflare'] as const
+export const GITHUB_OWNER = 'therealsickonechase-bit'
+export interface PublicToolbox {
+  version: 1
+  generatedAt: string
+  root: string
+  counts: { files: number; commands: number; publicCommands: number }
+  commands: { id: string; group: string; label: string; command: string; description: string; files: { repo: string; path: string; sha256: string; url: string }[] }[]
+}
+
+export function publicSlice(manifest: Pick<Manifest, 'root' | 'generatedAt' | 'counts' | 'files'>, commands: CatalogCommand[], index: Record<string, string[]>): PublicToolbox {
+  const byKey = new Map(manifest.files.map((f) => [`${f.repo}/${f.path}`, f]))
+  const isPublicRepo = (r: string) => (PUBLIC_REPOS as readonly string[]).includes(r)
+  const out: PublicToolbox['commands'] = []
+  for (const c of commands) {
+    if (c.scope !== 'public' || /research-agents/i.test(c.command)) continue
+    const files = (index[c.id] ?? []).flatMap((key) => {
+      const f = byKey.get(key)
+      return f && isPublicRepo(f.repo) ? [{ repo: f.repo, path: f.path, sha256: f.sha256, url: `https://github.com/${GITHUB_OWNER}/${f.repo}/blob/main/${f.path.split('/').map(encodeURIComponent).join('/')}` }] : []
+    })
+    out.push({ id: c.id, group: String(c.group ?? '').slice(0, 80), label: String(c.label ?? c.id).slice(0, 120), command: c.command.slice(0, 400), description: String(c.description ?? '').slice(0, 300), files })
+  }
+  return { version: 1, generatedAt: manifest.generatedAt, root: manifest.root, counts: { files: manifest.counts.files, commands: manifest.counts.commands, publicCommands: out.length }, commands: out }
 }
