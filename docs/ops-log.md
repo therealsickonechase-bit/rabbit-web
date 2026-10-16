@@ -203,3 +203,10 @@ Other logs that already exist (not duplicated here):
 - **Checked:** site tests 20 pass; anonymous requests to both repos return 200 and to the vault repos 404
 - **Undo:** Make a repository private again with gh repo edit --visibility private (copies, forks and caches that already exist cannot be recalled); revert the site commit
 - **Ref:** gh repo edit, site/*.html
+
+### 2026-10-16 10:12 UTC - GitHub migration to the main account
+- **Did:** Moved every local repository whose origin was ringquistchase-collab to a PRIVATE repository of the same name under therealsickonechase-bit, with all branches, tags and history: research-agents (62 commits incl. the 6 that were unpushed, 11 branches), cancer-mutation-blockchain, chat-scripts, dna-chain, dna-mirroring-workspace, email-app, github-vault-sync. The old remote is kept in each repo as legacy-collab and origin now points to the main account; updated the clone URL in cancer-mutation-blockchain. rabbit-web, rabbitsoftware-cloudflare and rabbitos-vault were already on the main account
+- **Checked:** for each repo: main on the new remote equals local main, branch counts listed, all private; gh repo list shows the 7 new repos
+- **Undo:** git remote set-url origin the legacy-collab URL in a repo; delete a migrated repo with gh repo delete
+- **Ref:** migrate-repos.sh
+- **Note:** Not migrated: the Obsidian vault repo (obsidian-rabbitos-vault, 3 GB of history, holds secrets) and repos that exist only under ringquistchase-collab with no local copy (MaxwellDNA, ISLES_2022_FT, Free-AI-Powered-Recording-Transcription, RABBIT-SOFTWARE)
