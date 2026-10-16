@@ -47,7 +47,7 @@ $logDir = Join-Path $HOME 'RabbitOS\logs'; New-Item -ItemType Directory -Force $
 $log = Join-Path $logDir ("hf-gcs-{0}.log" -f (Get-Date -Format 'yyyy-MM-dd'))
 function Log($m) { $line = "[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss'), $m; Add-Content -Path $log -Value $line; Write-Host $line }
 # A scheduled task can start with a shorter PATH than a terminal: add the usual Python Scripts folders (where pip puts hf.exe) and the Google Cloud SDK.
-trap { Log ("FAIL  " + $_.Exception.Message); exit 1 }   # a run started by Task Scheduler has no console, so always leave the reason in the log
+trap { Log ("FAIL  " + $_.Exception.Message); try { . (Join-Path $PSScriptRoot 'Write-CloudLog.ps1'); Write-CloudLog -Job 'huggingface-backup' -Event 'backup_failed' -Ok $false -Fields @{ reason = $_.Exception.Message.Substring(0, [Math]::Min(200, $_.Exception.Message.Length)) } } catch { }; exit 1 }   # a run started by Task Scheduler has no console, so always leave the reason in the log
 foreach ($extra in (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\Scripts'), (Join-Path $env:APPDATA 'Python\Python312\Scripts'), (Join-Path $env:LOCALAPPDATA 'Google\Cloud SDK\google-cloud-sdk\bin')) { if ((Test-Path $extra) -and ($env:PATH -notlike "*$extra*")) { $env:PATH = "$env:PATH;$extra" } }
 foreach ($tool in 'hf', 'gcloud') { if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { Log "FAIL  $tool is not installed or not on PATH (PATH seen by this run: $($env:PATH.Length) characters)"; exit 1 } }
 
@@ -73,6 +73,7 @@ foreach ($b in $buckets) { Log ("  bucket  {0}  {1:N1} MB, {2} files, {3}" -f $b
 foreach ($d in $datasets) { Log ("  dataset {0}  {1}" -f $d.id, $(if ($d.private) { 'private' } else { 'public' })) }
 if ($preview) { Write-Host "`nWhat if: nothing was downloaded or uploaded."; return }
 
+$jobStarted = Get-Date
 $stage = Join-Path $env:LOCALAPPDATA 'RabbitOS\hf-stage'
 New-Item -ItemType Directory -Force $stage | Out-Null
 $failed = 0
@@ -100,4 +101,6 @@ foreach ($d in $datasets) {
     } catch { $failed++; Log "FAIL  dataset ${name}: $($_.Exception.Message)" }
 }
 Log "Hugging Face backup finished; failed items: $failed"
+. (Join-Path $PSScriptRoot 'Write-CloudLog.ps1')
+Write-CloudLog -Job 'huggingface-backup' -Event 'backup_done' -Ok ($failed -eq 0) -Started $jobStarted -Fields @{ buckets = $buckets.Count; datasets = $datasets.Count; failedItems = $failed } -CacheFolders @($stage)
 exit ([int]($failed -gt 0))

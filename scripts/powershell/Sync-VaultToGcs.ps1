@@ -85,5 +85,7 @@ try {
     if ($LASTEXITCODE -ne 0) { Add-Content $log ($out -split "`r?`n" | Select-Object -Last 15 | ForEach-Object { "    $_" }); throw "gcloud storage rsync failed (exit $LASTEXITCODE)" }
     ($out -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -Last 4) | ForEach-Object { Add-Content $log "    $_" }
     Log "uploaded to gs://$Bucket/vault/"
+    . (Join-Path $PSScriptRoot 'Write-CloudLog.ps1')
+    Write-CloudLog -Job 'vault-upload' -Event 'upload_done' -Ok $true -Fields @{ bucket = $Bucket } -CacheFolders @((Join-Path $env:LOCALAPPDATA 'RabbitOS\vault-stage'))
     Get-ChildItem $logDir -Filter 'vault-gcs-*.log' | Sort-Object LastWriteTime -Descending | Select-Object -Skip 14 | Remove-Item -Force -ErrorAction SilentlyContinue
 } finally { $mutex.ReleaseMutex(); $mutex.Dispose() }

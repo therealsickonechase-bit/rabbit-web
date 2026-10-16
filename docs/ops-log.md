@@ -247,3 +247,9 @@ Other logs that already exist (not duplicated here):
 - **Undo:** Backup-HuggingFace.ps1 -Remove deletes the task; delete huggingface/ in the backups bucket (all versions); revert the commit
 - **Ref:** scripts/powershell/Backup-HuggingFace.ps1, docs/huggingface.md
 - **Note:** The Space still lists rabbitsoftware.io as a custom domain with an expired challenge; remove it in the Space settings if unused
+
+### 2026-10-16 12:27 UTC - Google Cloud records the PC jobs and their cache sizes
+- **Did:** Added scripts/powershell/Write-CloudLog.ps1 and wired it into the daily backups, the personal folders backup, the Hugging Face backup and the hourly vault upload: each run now writes one structured entry (job, result, duration, counts and the size of its local cache/staging folders) to Cloud Logging, log rabbit-pc-jobs. Set up with Setup-GcpPcJobLogging.ps1: log bucket pc-jobs (365 days instead of the default 30), a sink, the metric pc_job_failed and an email alert 'a backup or sync on the PC failed'. Never throws: if Google Cloud is unreachable the job carries on. Only names, counts and sizes are logged
+- **Checked:** wrote a test entry and read it back from Cloud Logging (cache sizes included, hf-stage 1735.9 MB in 158 files); all six scripts parse; catalog 13 and hub 49 tests pass
+- **Undo:** Remove the Write-CloudLog lines from the four scripts; delete the sink rabbit-pc-jobs, the bucket pc-jobs, the metric pc_job_failed and the alert policy
+- **Ref:** scripts/powershell/Write-CloudLog.ps1

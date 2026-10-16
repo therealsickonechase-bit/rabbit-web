@@ -13,6 +13,8 @@ New-Item -ItemType Directory -Force $logDir | Out-Null
 $log = Join-Path $logDir ("backup-{0}.log" -f (Get-Date -Format 'yyyy-MM-dd'))
 function Log($m) { ("[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss'), $m) | Tee-Object -FilePath $log -Append }
 $failed = 0
+. (Join-Path $PSScriptRoot 'Write-CloudLog.ps1')
+$jobStarted = Get-Date
 
 Log 'daily backup started'
 # Docker is only needed for the Supabase dump. Start it if needed and wait up to 4 minutes.
@@ -66,4 +68,5 @@ $pb = Join-Path $HOME 'RabbitOS\platform-backup'
 if (Test-Path $pb) { Get-ChildItem $pb -Directory | Sort-Object Name -Descending | Select-Object -Skip 7 | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force } }
 
 Log ("daily backup finished; failed steps: $failed")
+Write-CloudLog -Job 'daily-backups' -Event 'backup_done' -Ok ($failed -eq 0) -Started $jobStarted -Fields @{ failedSteps = $failed; steps = $steps.Count } -CacheFolders @((Join-Path $HOME 'RabbitOS\platform-backup'))
 exit ([int]($failed -gt 0))

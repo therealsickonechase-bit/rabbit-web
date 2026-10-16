@@ -50,3 +50,9 @@ Today every path above is one-way, from the vault outwards. The one inward path 
 | Secrets (`.env` files, tokens, keys) | no | by design; the vault upload also skips files that look like secrets |
 
 So the answer to "is every folder and file sent": no, only the rows marked yes.
+
+## Google Cloud keeps a record of the PC jobs (added 2026-10-16)
+
+Every run of the PC jobs (daily backups, personal folders, Hugging Face, hourly vault upload) writes one entry to the Cloud Logging log `rabbit-pc-jobs` (script `Write-CloudLog.ps1`): job, result, duration, counts, and the **size of its local cache/staging folders** (for example the Hugging Face staging copy is about 1.7 GB). Only names, counts and sizes go in, never file contents. The log is routed into the log bucket `pc-jobs`, which keeps it 365 days, and a failure (`ok=false`) emails the owner. Setup: `Setup-GcpPcJobLogging.ps1`. Read it with:
+
+`gcloud logging read 'logName="projects/rabbitsoftware-io/logs/rabbit-pc-jobs"' --project rabbitsoftware-io --limit 20 --format json`

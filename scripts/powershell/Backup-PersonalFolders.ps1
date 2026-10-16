@@ -77,6 +77,8 @@ $noise = '(^|[\\/])(node_modules|\.venv|__pycache__|RabbitOS Vault)([\\/]|$)|(^|
 $gcloudExclude = '(.*[\\/])?(\.env(\..*)?|id_rsa.*|id_ed25519.*|wallet\.dat)$|.*\.(pem|key|ppk|pfx|p12|kdbx|jks)$|(.*[\\/])?(node_modules|\.venv|__pycache__|RabbitOS Vault)([\\/].*)?$|(.*[\\/])?(Thumbs\.db|desktop\.ini|~\$.*)$|.*\.tmp$'
 
 $failed = 0
+$jobStarted = Get-Date
+$totalFiles = 0; $totalBytes = 0L
 foreach ($area in $sources.Keys) {
     $stage = Join-Path $env:LOCALAPPDATA ("RabbitOS\personal-stage\$area")
     $skippedSecret = @(); $skippedBig = @(); $count = 0; $bytes = 0L
@@ -87,7 +89,7 @@ foreach ($area in $sources.Keys) {
             if ($f.FullName -match $noise.Replace('RabbitOS Vault', 'RabbitOS Vault')) { continue }
             if ($rel -match $secretNames) { $skippedSecret += $rel; continue }
             if ($f.Length -gt $MaxFileBytes) { $skippedBig += $rel; continue }
-            $count++; $bytes += $f.Length
+            $count++; $bytes += $f.Length; $totalFiles++; $totalBytes += $f.Length
         }
     }
     Log ("{0}: {1:N0} files, {2:N2} GB to send; skipped {3} secret-looking and {4} over {5:N0} GB" -f $area, $count, ($bytes / 1GB), $skippedSecret.Count, $skippedBig.Count, ($MaxFileBytes / 1GB))
@@ -134,5 +136,9 @@ if ($preview) {
     $out = & gcloud storage rsync $appStage "gs://$Bucket/personal/AppSettings" --recursive --project $Project 2>&1
     if ($LASTEXITCODE -ne 0) { $failed++; Log ("FAIL  AppSettings: {0}" -f (($out | Select-Object -Last 3) -join ' | ')) } else { Log 'OK    AppSettings' }
 }
-if ($preview) { Write-Host "`nWhat if: nothing was uploaded." } else { Log "personal folders backup finished; failed folders: $failed" }
+if ($preview) { Write-Host "`nWhat if: nothing was uploaded." } else {
+    Log "personal folders backup finished; failed folders: $failed"
+    . (Join-Path $PSScriptRoot 'Write-CloudLog.ps1')
+    Write-CloudLog -Job 'personal-folders' -Event 'backup_done' -Ok ($failed -eq 0) -Started $jobStarted -Fields @{ failedFolders = $failed; filesConsidered = $totalFiles; megabytesConsidered = [math]::Round($totalBytes / 1MB, 1) } -CacheFolders @((Join-Path $env:LOCALAPPDATA 'RabbitOS\personal-stage'))
+}
 exit ([int]($failed -gt 0))
