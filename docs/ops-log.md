@@ -190,3 +190,10 @@ Other logs that already exist (not duplicated here):
 - **Checked:** wallet 60, site 18, app 369 tests; live headless Edge on rabbitsoftware.io, /donate and the app dashboard: all 9 outside links present, 0 CSP violations, 0 console errors
 - **Undo:** Revert the commit and redeploy; or empty the lists in wallet-links.json and rebuild
 - **Ref:** workers/wallet/wallet-links.json
+
+### 2026-10-16 09:59 UTC - Community links on the website
+- **Did:** Added links to the Reddit community (r/Rabbtisoftware, spelled exactly as supplied) and the GitHub profile (therealsickonechase-bit) to the front page resources list and a Community row in the press kit; both open in a new tab with rel noopener noreferrer; deployed Pages production
+- **Checked:** site tests 19 pass (new test covers the links); both links present on / and /press on the live site; GitHub profile answers 200; reddit.com blocks automated checks (HTTP 403), so the subreddit's existence was not verified
+- **Undo:** Remove the two anchors from site/index.html and site/press.html and redeploy
+- **Ref:** site/index.html, site/press.html
+- **Note:** The subreddit name is spelled Rabbtisoftware (no second i); confirm it is the intended spelling
