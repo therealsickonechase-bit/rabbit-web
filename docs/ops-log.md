@@ -178,3 +178,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** site 18 tests (1 skipped), wallet 57, app 369, catalog 13, hub 47, audit 48; live headless Edge: front page, /donate, app dashboard and app /donate all show bc1qxudt9x4hcftvwkfryln2qhn4e5g2qvt09mlp56 with Open in wallet links for bitcoin and ethereum, 0 CSP violations, 0 console errors
 - **Undo:** Set open to false in workers/wallet/donations.json, run node workers/wallet/build-donate.mjs, restore the pause page text from git commit 5d29393, deploy site and app
 - **Ref:** workers/wallet/donations.json
+
+### 2026-10-16 09:50 UTC - Browser-wallet payment button (non-custodial) for Ethereum
+- **Did:** Added 'Send from my wallet' to the front page, /donate and the app card: the visitor's own browser wallet (MetaMask, Coinbase Wallet, Rabby etc., any EIP-1193 provider) is asked to switch to Ethereum mainnet and send the typed ETH amount straight to the donation address (no contract data, amount 0 to 100 ETH, 18 decimals). Bitcoin keeps the bitcoin: 'Open in wallet' link. No payment processor is linked, so every payment lands directly in the Cloud KMS wallet and the watcher records it. Fixed a bug the new test caught: the generated script lost its regex backslashes (copyScript is now String.raw), and the generator now replaces stale scripts and styles on the front page. Deployed site and app
+- **Checked:** wallet 59 tests, site 18, app 369 (4 new in eth-pay.test.mjs); live headless Edge with a stubbed wallet on rabbitsoftware.io and app dashboard: wallet asked for accounts, mainnet switch, then eth_sendTransaction to 0x724D...9372 value 0x2386f26fc10000 (0.01 ETH), 0 CSP violations, 0 console errors; no real transaction made
+- **Undo:** Revert the commit; redeploy site and app
+- **Ref:** workers/wallet/build-donate.mjs, src/lib/eth-pay.ts
