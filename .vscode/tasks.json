@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Pathways: check everything (read only)", "type": "shell", "command": "node scripts/pathways-check.mjs", "group": "test", "presentation": { "reveal": "always", "panel": "dedicated" }, "problemMatcher": [] },
+    { "label": "Pathways: check and save the report to Google Cloud", "type": "shell", "command": "node scripts/pathways-check.mjs --report", "group": "test", "problemMatcher": [] },
+    { "label": "Pathways: check with the vault round trip (about 4 minutes, writes one note)", "type": "shell", "command": "node scripts/pathways-check.mjs --roundtrip --report", "group": "test", "problemMatcher": [] },
+    { "label": "Tests: RabbitOS app", "type": "shell", "command": "npm run test:auth", "group": "test", "problemMatcher": [] },
+    { "label": "Tests: website", "type": "shell", "command": "npm run test:site", "options": { "cwd": "${workspaceFolder}/../rabbitsoftware-cloudflare" }, "group": "test", "problemMatcher": [] },
+    { "label": "Tests: wallet and anchoring", "type": "shell", "command": "node --test test/*.test.mjs", "options": { "cwd": "${workspaceFolder}/../rabbitsoftware-cloudflare/workers/wallet" }, "group": "test", "problemMatcher": [] },
+    { "label": "Ops log: add an entry", "type": "shell", "command": "node scripts/ops-log.mjs --area \"${input:area}\" --did \"${input:did}\" --check \"${input:check}\" --undo \"${input:undo}\"", "problemMatcher": [] }
+  ],
+  "inputs": [
+    { "id": "area", "type": "promptString", "description": "Area (for example Google Cloud, Website, Wallet)" },
+    { "id": "did", "type": "promptString", "description": "What changed" },
+    { "id": "check", "type": "promptString", "description": "How you checked it" },
+    { "id": "undo", "type": "promptString", "description": "How to undo it" }
+  ]
+}

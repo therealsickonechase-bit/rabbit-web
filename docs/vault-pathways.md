@@ -15,6 +15,10 @@ How the Obsidian vault (`C:\Users\odaat\Documents\RabbitOS Vault`) is connected 
 
 Nothing from the vault is public. The website and the app never read note contents; they show architecture and status only.
 
+## One command checks all of it
+
+`node scripts/pathways-check.mjs` (VS Code: Terminal > Run Task > "Pathways: check everything") runs about 30 read-only checks across VS Code and the four local projects, GitHub (owner, visibility, in sync), Google Cloud (services, jobs, schedules, hub self-test, vault copy freshness), the network (sites, status feed), research (records reaching RabbitOS, the local store) and the chains (ledger, Maxwell, Bitcoin anchors, wallet watcher, project lien). `--roundtrip` also follows a marker note from the vault to the Google Cloud bucket and through search; `--report` saves the result to `gs://rabbitsoftware-io-reports/pathways/latest.json`. The same tasks, plus the test suites and an ops-log prompt, are in `.vscode/tasks.json` and in `RabbitOS.code-workspace`.
+
 ## Where objects can flow back to the local vault (events to local)
 
 Today every path above is one-way, from the vault outwards. The one inward path is path 5 (approved job results), and the vault's own repair queue lists the gap: "Cloud-to-local result retention: browser views and machine CLI receipts do not automatically write proposals to source notes." Options for an event path to local, none built yet:

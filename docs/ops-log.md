@@ -228,3 +228,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** audit 48 tests pass; map applied (committed); pathways 1 to 3 were verified end to end earlier today
 - **Undo:** Revert the commit and re-apply the previous map seed
 - **Ref:** docs/vault-pathways.md
+
+### 2026-10-16 10:48 UTC - End-to-end pathway check (VS Code, local, GitHub, Google Cloud, network, research, blockchain)
+- **Did:** Added scripts/pathways-check.mjs: about 30 read-only checks across VS Code and the four local projects, GitHub, Google Cloud, the network, research and the chains, with --report (saves to ~/RabbitOS/logs and gs://rabbitsoftware-io-reports/pathways/latest.json) and --roundtrip (follows one marker note, Ops/Pathway check.md, from the vault to the Google Cloud bucket and through search). Added VS Code tasks (.vscode/tasks.json and the shared RabbitOS.code-workspace): pathway checks, the three test suites, and an ops-log prompt. Updated docs/vault-pathways.md and the catalog (246 commands); redeployed the hub. Found while running it: the PC task RabbitOS Daily Backups was killed by its one-hour limit on 2026-10-15 (the local platform backup step did not finish; the cloud backup job covers Supabase, D1, KV and R2), and the library publisher task RabbitOS GitHub Vault Sync has reported 'repository errors' since 2026-10-14. The vault-agent task, which had failed against the old remote, now succeeds
+- **Checked:** pathway tests 5 pass; full run with round trip: 27 passed, 2 to look at, 0 failed of 29; the marker note reached the bucket and search found it; catalog 13, hub 47 tests
+- **Undo:** Delete scripts/pathways-check.mjs, .vscode/tasks.json and the tasks block in RabbitOS.code-workspace; delete Ops/Pathway check.md from the vault
+- **Ref:** scripts/pathways-check.mjs
