@@ -50,3 +50,7 @@ next-env.d.ts
 # local tools and editor workspace (not part of the app)
 /gprobe/
 /supabase/rabbit-web.code-workspace
+
+# Local Claude Code agent worktrees and a stray tutorial clone; not part of the project
+.claude/worktrees/
+/Hello-World/
