@@ -234,3 +234,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** pathway tests 5 pass; full run with round trip: 27 passed, 2 to look at, 0 failed of 29; the marker note reached the bucket and search found it; catalog 13, hub 47 tests
 - **Undo:** Delete scripts/pathways-check.mjs, .vscode/tasks.json and the tasks block in RabbitOS.code-workspace; delete Ops/Pathway check.md from the vault
 - **Ref:** scripts/pathways-check.mjs
+
+### 2026-10-16 11:07 UTC - Local-to-Google-Cloud coverage audited; EEG backup exception recorded
+- **Did:** Checked what the PC sends to Google Cloud: vault notes hourly (only what the Git sync takes, without Local/EEG and the PC folder view), nightly backup of the public ledger, datasets, Maxwell and research files, Supabase and Cloudflare, and git bundles of the repositories; Downloads, Desktop, OneDrive, AppData and most of Documents are not backed up. Found that the nightly Maxwell step also uploads raw EEG (eeg_data 265 MB, eeg_runs 14 MB) and selfdata to the private backups bucket, which conflicts with the project rule that personal data stays on the PC. The owner chose to keep backing them up, so it is recorded as a deliberate exception in docs/vault-pathways.md. Nothing was changed
+- **Checked:** read of Sync-RabbitGcs.ps1, Sync-VaultToGcs.ps1, the bucket listing and local folder sizes
+- **Undo:** Remove eeg_data, eeg_runs and selfdata from MaxwellDirs in Sync-RabbitGcs.ps1 and delete maxwell/current/eeg_data, eeg_runs and selfdata from the bucket (all versions)
+- **Ref:** docs/vault-pathways.md

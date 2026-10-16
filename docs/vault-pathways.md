@@ -32,3 +32,18 @@ Today every path above is one-way, from the vault outwards. The one inward path 
 - `Local/EEG`, wearables and labs never leave the PC (not uploaded, not mirrored).
 - The Obsidian Git Sync plugin still points at its old GitHub account and token (its auto-sync is off); the scheduled PC task does the GitHub sync instead.
 - The websites have no owner-only vault page; the vault is read from Google Cloud with the owner's own sign-in (`Search-Vault.ps1`).
+
+## What leaves this PC for Google Cloud, and what does not (checked 2026-10-16)
+
+| Local data | Goes to Google Cloud? | Where / how |
+|---|---|---|
+| Obsidian vault notes (about 2,400 files of the 11 GB folder) | yes, hourly | `rabbitsoftware-io-vault-private/vault/`. Only what the Git sync takes: linked libraries (Code, Computer, Repos, GitHub Imports and similar, git-ignored), files over 95 MB and files that look like they hold secrets are not sent. `Local/EEG/` and `Local/RabbitOS folder/` are left out. |
+| Project code (rabbit-web, rabbitsoftware-cloudflare, research-agents) | via GitHub, plus nightly git bundles | GitHub is the copy of record; `platform/<date>/repos` in the backups bucket holds full-history bundles |
+| Public chain ledger and public datasets | yes, nightly | public ledger bucket and `exports/<date>/` in the private backups bucket |
+| Maxwell and research files (corpus, stores, chain, audit trail, sync state) | yes, nightly | `maxwell/current/` in the private backups bucket (rolling, versioned) |
+| **Raw EEG recordings (`eeg_data`, `eeg_runs`) and `selfdata`** | **yes, nightly, by the owner's choice** | `maxwell/current/` in the private backups bucket (owner-only, versioned). **Deliberate exception (owner, 2026-10-16)** to the rule that personal data stays on the PC; the vault upload still leaves EEG out |
+| Supabase, Cloudflare D1/KV/R2 | yes, nightly, from the PC and from a cloud job | `platform/<date>/` and `platform-cloud/<date>/` |
+| Downloads, Desktop, OneDrive, Pictures, AppData, the rest of Documents | no | not part of any backup job; OneDrive has its own cloud |
+| Secrets (`.env` files, tokens, keys) | no | by design; the vault upload also skips files that look like secrets |
+
+So the answer to "is every folder and file sent": no, only the rows marked yes.
