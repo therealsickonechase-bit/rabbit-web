@@ -43,7 +43,10 @@ Today every path above is one-way, from the vault outwards. The one inward path 
 | Maxwell and research files (corpus, stores, chain, audit trail, sync state) | yes, nightly | `maxwell/current/` in the private backups bucket (rolling, versioned) |
 | **Raw EEG recordings (`eeg_data`, `eeg_runs`) and `selfdata`** | **yes, nightly, by the owner's choice** | `maxwell/current/` in the private backups bucket (owner-only, versioned). **Deliberate exception (owner, 2026-10-16)** to the rule that personal data stays on the PC; the vault upload still leaves EEG out |
 | Supabase, Cloudflare D1/KV/R2 | yes, nightly, from the PC and from a cloud job | `platform/<date>/` and `platform-cloud/<date>/` |
-| Downloads, Desktop, OneDrive, Pictures, AppData, the rest of Documents | no | not part of any backup job; OneDrive has its own cloud |
+| **Downloads, Desktop and Documents** (the real Windows folders: `C:Users<you>Downloads`, `OneDriveDesktop`, `OneDriveDocuments`, plus any other files in `C:Users<you>Documents`) | yes, nightly at 01:30 (added 2026-10-16) | `personal/Downloads`, `personal/Desktop`, `personal/Documents` in the private backups bucket (`Backup-PersonalFolders.ps1`, task "RabbitOS Personal folders to Google Cloud"). Adds and updates only; never deletes in the bucket (versioned). Files that look like keys or secrets (`.env`, `*.pem`, `*.key`, `*.ppk`, `*.pfx`, `*.p12`, `id_rsa*`, `*.kdbx`, `wallet.dat`), files over 2 GB, `node_modules` and the vault folder are skipped and listed in the log |
+| **Pictures, Music and Videos** (`OneDrivePictures`, `Music`, `Videos`) | yes, nightly (added 2026-10-16) | `personal/Pictures`, `personal/Music`, `personal/Videos`, same rules as above |
+| **A short list of AppData settings** (VS Code settings, keybindings, snippets and extension list; Windows Terminal settings; `.gitconfig`) | yes, nightly (added 2026-10-16) | `personal/AppSettings/`. **The rest of AppData is deliberately not copied**: it holds browser profiles, cookies, saved logins, cloud-tool tokens (gcloud, GitHub, npm) and gigabytes of caches |
+| The rest of the PC (program files, Windows, other AppData) | no | not part of any backup job |
 | Secrets (`.env` files, tokens, keys) | no | by design; the vault upload also skips files that look like secrets |
 
 So the answer to "is every folder and file sent": no, only the rows marked yes.

@@ -15,6 +15,7 @@ Contact records, API keys and audit writes stay closed; agent tasks proposed her
 | [docs/security-hardening.md](docs/security-hardening.md) | The ordered security checklist and its results. |
 | [docs/wallet.md](docs/wallet.md) | The hardware-key wallet: receiving record, recovery plan, withdrawal tool. Public donations are paused. |
 | [docs/vault-pathways.md](docs/vault-pathways.md) | How the Obsidian vault connects to GitHub, Google Cloud (bucket, search, mirror) and the sites, what was tested, and what is one-way. |
+| [docs/huggingface.md](docs/huggingface.md) | The Hugging Face model, Space, datasets and buckets and how they connect to the platform and the nightly Google Cloud backup. |
 | [docs/messaging.md](docs/messaging.md) | What to say and not say about the project, and the checklist before promoting donations. |
 | [docs/gcp-platform.md](docs/gcp-platform.md), [docs/gcp-observability.md](docs/gcp-observability.md), [docs/gcp-standby.md](docs/gcp-standby.md) | Google Cloud services, monitoring and the standby site. |
 

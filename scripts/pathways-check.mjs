@@ -97,6 +97,23 @@ export const PROBES = [
     const m = age(f.generatedAt)
     return { ok: f.up === f.total && m < 15, detail: `${f.up} of ${f.total} up, written ${mins(m)} ago` }
   } },
+  // ---------------------------------------------------------------- Hugging Face
+  { group: 'Hugging Face', name: 'the image Space (rabbitos-eeg-qwen-image) and the model are public and the Space is running', run: async () => {
+    const [space, model] = await Promise.all([
+      fetch('https://huggingface.co/api/spaces/Therealsickonechase-bit/rabbitos-eeg-qwen-image', { signal: AbortSignal.timeout(20_000) }).then((r) => r.json()),
+      fetch('https://huggingface.co/api/models/Therealsickonechase-bit/Llama-3.2-3B-RabbitSoftware-GGUF', { signal: AbortSignal.timeout(20_000) }).then((r) => r.json()),
+    ])
+    const stage = space.runtime?.stage
+    return { ok: stage === 'RUNNING' && !model.private ? true : 'warn', detail: `Space ${stage} on ${space.runtime?.hardware?.current ?? '?'}, model downloads ${model.downloads ?? '?'}` }
+  } },
+  { group: 'Hugging Face', name: 'your Hugging Face buckets and datasets are backed up in Google Cloud (nightly)', run: async () => {
+    let objs = []
+    try { objs = JSON.parse(sh('gcloud', ['storage', 'ls', '--json', '"gs://rabbitsoftware-io-backups/huggingface/**"', '--project', P])) } catch (e) { if (!/matched no objects/.test(String(e.stderr || e.message))) throw e }
+    const stamps = objs.map((o) => o.metadata?.updated || o.update_time).filter(Boolean).sort()
+    if (!stamps.length) return { ok: 'warn', detail: 'nothing under huggingface/ yet (the first run may still be going)' }
+    const m = age(stamps.pop())
+    return { ok: m < 60 * 40 ? true : 'warn', detail: `${objs.length} objects, newest ${mins(m)} old` }
+  } },
   // ---------------------------------------------------------------- research
   { group: 'Research', name: 'research records reach RabbitOS and the feed is recent', run: async () => {
     const f = await (await fetch(`${GCS.status}?cb=${Date.now()}`)).json()

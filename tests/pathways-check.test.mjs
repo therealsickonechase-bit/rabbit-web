@@ -23,7 +23,7 @@ test('the printed table groups by area and ends with the totals', async () => {
 test('every probe belongs to a group, is named, and covers VS Code, GitHub, Google Cloud, network, research and blockchain', () => {
   for (const p of PROBES) assert.ok(p.group && p.name && typeof p.run === 'function', p.name)
   const groups = new Set(PROBES.map((p) => p.group))
-  for (const g of ['Local (VS Code)', 'Local to GitHub', 'GitHub', 'Google Cloud', 'Network', 'Research', 'Blockchain']) assert.ok(groups.has(g), g)
+  for (const g of ['Local (VS Code)', 'Local to GitHub', 'GitHub', 'Google Cloud', 'Network', 'Hugging Face', 'Research', 'Blockchain']) assert.ok(groups.has(g), g)
   assert.ok(REPOS.every((r) => r.owner === 'therealsickonechase-bit'))
 })
 
