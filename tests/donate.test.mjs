@@ -55,3 +55,17 @@ test('the app shows the Donate card, link and page only while donations are open
   assert.match(src('src/app/(app)/donate/page.tsx'), /if \(!DONATIONS_OPEN\) notFound\(\)/)
   assert.match(src('src/app/(app)/layout.tsx'), /\{DONATIONS_OPEN && <Link href="\/donate"/)
 })
+
+test('the wallet and explorer links open in a new tab safely, use https, and point only at the listed sites', async () => {
+  const { WALLET_LINKS } = await import('../src/lib/wallet-links.ts')
+  const hosts = new Set(['metamask.io', 'www.exodus.com', 'trustwallet.com', 'www.ledger.com', 'trezor.io', 'bitcoin.org', 'ethereum.org'])
+  for (const l of [...WALLET_LINKS.apps, ...WALLET_LINKS.guides]) {
+    const u = new URL(l.url)
+    assert.equal(u.protocol, 'https:', l.name)
+    assert.ok(hosts.has(u.host), `${l.name}: ${u.host} is not on the list`)
+    assert.ok(!u.search, `${l.name}: no tracking or referral parameters`)
+  }
+  const card = src('src/components/DonateCard.tsx')
+  assert.equal((card.match(/target="_blank"/g) ?? []).length, (card.match(/rel="noopener noreferrer"/g) ?? []).length)
+  assert.match(card, /not endorsements/)
+})

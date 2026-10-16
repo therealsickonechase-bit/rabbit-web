@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { payWithBrowserWallet, type Eip1193 } from '@/lib/eth-pay'
 import { DONATIONS_OPEN, WALLET } from '@/lib/wallet'
+import { WALLET_LINKS } from '@/lib/wallet-links'
 
 // Receive-only donation addresses. The text comes from WALLET (generated from the signed wallet.json), never typed here.
 // Nothing is sent from this page; "Open in wallet" uses the bitcoin: / ethereum: link of the visitor's own wallet app.
@@ -54,6 +55,21 @@ export default function DonateCard({ compact = false }: { compact?: boolean }) {
             <button type="button" onClick={pay} className="rounded-md border border-line px-3 py-1 text-xs hover:bg-canvas">Send from my wallet</button>
           </div>
           {payMsg && <p role="status" className="text-xs text-muted">{payMsg}</p>}
+        </div>
+        <div className="space-y-1.5 text-xs text-muted">
+          <p>
+            Check the balances yourself:{' '}
+            <a href={`https://mempool.space/address/${WALLET.bitcoin.address}`} target="_blank" rel="noopener noreferrer" className="underline text-accent">Bitcoin on mempool.space</a>{' · '}
+            <a href={`https://etherscan.io/address/${WALLET.ethereum.address}`} target="_blank" rel="noopener noreferrer" className="underline text-accent">Ethereum on Etherscan</a>.
+          </p>
+          <details>
+            <summary className="cursor-pointer">Do not have a wallet yet?</summary>
+            <p className="mt-1">
+              {WALLET_LINKS.apps.map((a, i) => (<span key={a.name}>{i > 0 && ' · '}<a href={a.url} target="_blank" rel="noopener noreferrer" className="underline text-accent">{a.name}</a> ({a.about})</span>))}. Guides:{' '}
+              {WALLET_LINKS.guides.map((g, i) => (<span key={g.name}>{i > 0 && ' · '}<a href={g.url} target="_blank" rel="noopener noreferrer" className="underline text-accent">{g.name}</a></span>))}.
+              {' '}These are plain links to other sites, not endorsements; RabbitSoftware has no affiliation with them and gets nothing if you use them. Never share your seed phrase or recovery words with anyone.
+            </p>
+          </details>
         </div>
         {note && <p role="status" className="text-xs text-warn">{note}</p>}
         <p className="text-xs text-muted">

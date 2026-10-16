@@ -184,3 +184,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** wallet 59 tests, site 18, app 369 (4 new in eth-pay.test.mjs); live headless Edge with a stubbed wallet on rabbitsoftware.io and app dashboard: wallet asked for accounts, mainnet switch, then eth_sendTransaction to 0x724D...9372 value 0x2386f26fc10000 (0.01 ETH), 0 CSP violations, 0 console errors; no real transaction made
 - **Undo:** Revert the commit; redeploy site and app
 - **Ref:** workers/wallet/build-donate.mjs, src/lib/eth-pay.ts
+
+### 2026-10-16 09:55 UTC - Wallet and explorer links on the donation block
+- **Did:** Added to the front page, /donate and the app card: 'Check the balances yourself' links (mempool.space for the Bitcoin address, Etherscan for the Ethereum address) and a 'Do not have a wallet yet?' list of plain links to MetaMask, Exodus, Trust Wallet, Ledger, Trezor and the bitcoin.org and ethereum.org wallet guides. Links open in a new tab with rel noopener noreferrer, https only, no referral parameters, labelled as not endorsements. List lives in workers/wallet/wallet-links.json and is generated into the pages and the app. Deployed site and app
+- **Checked:** wallet 60, site 18, app 369 tests; live headless Edge on rabbitsoftware.io, /donate and the app dashboard: all 9 outside links present, 0 CSP violations, 0 console errors
+- **Undo:** Revert the commit and redeploy; or empty the lists in wallet-links.json and rebuild
+- **Ref:** workers/wallet/wallet-links.json
