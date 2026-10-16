@@ -337,3 +337,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** pathways-check: 3 of 3 bundles in the 2026-10-16 backup, DNA state and Maxwell chain present; 7 maxwell_links tests pass
 - **Undo:** Remove the three names from REPOS in maxwell_links.py and the probe from pathways-check.mjs
 - **Ref:** research-agents/maxwell_links.py, scripts/pathways-check.mjs
+
+### 2026-10-16 16:19 UTC - Research agents + RabbitOS chain
+- **Did:** Implemented the DNA-binary idea in the research agent and the public chain: research-agents/dna_binary_codec.py (copied from dna-chain) and dna_fingerprint.py (SHA-256 of the 2-bit packed sequence with its length first; DNA view of any hash); task_worker crispr_guides records now carry meta.guide_fingerprint; both cloud job images rebuilt with the two modules; rabbit-web/src/lib/dna-binary.ts (same algorithm, shared test vectors) and the public read-only GET /api/chain/dna (chain head as 128 DNA bases); /api/chain/dna added to the public allow-list; app redeployed.
+- **Checked:** Python 7 fingerprint tests + 9 task worker tests; app 374 tests (5 new, cross-language vectors identical); live: app.rabbitsoftware.io/api/chain/dna returns length 11, head f198beed..., 128 bases, GC 0.5391
+- **Undo:** Remove the route and /api/chain/dna from account-free.ts and redeploy; revert the research-agents commit and rebuild the two cloud jobs
+- **Ref:** research-agents/dna_fingerprint.py, rabbit-web/src/lib/dna-binary.ts

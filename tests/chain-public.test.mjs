@@ -57,7 +57,7 @@ test('latest events are newest first, capped, and re-sanitised', async () => {
 })
 
 test('the public ledger endpoints and page are open to everyone, GET only', () => {
-  for (const p of ['/api/chain/head', '/api/chain/ledger']) {
+  for (const p of ['/api/chain/head', '/api/chain/ledger', '/api/chain/dna']) {
     assert.equal(publicApiAllowed(p, 'GET'), true)
     assert.equal(publicApiAllowed(p, 'OPTIONS'), true)
     for (const m of ['POST', 'PUT', 'DELETE']) assert.equal(publicApiAllowed(p, m), false)

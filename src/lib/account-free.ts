@@ -30,7 +30,7 @@ const OPEN_ROUTES: Record<string, string[]> = {
 const PUBLIC_READS = [
   '/api/public/research-feed', '/api/public/proof', '/api/health',
   '/api/model/body', '/api/model/state', '/api/model/concepts', '/api/model/openapi.json',
-  '/api/chain/head', '/api/chain/ledger',
+  '/api/chain/head', '/api/chain/ledger', '/api/chain/dna',
 ]
 
 /** The read-only data hub: /api/data and /api/data/<dataset>. The route itself 404s unknown datasets. */
