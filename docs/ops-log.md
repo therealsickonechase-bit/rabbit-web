@@ -313,3 +313,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** Staged a note and a research_topic task from the cloud side; Run-Echo delivered both with receipts; the worker handled the task (28 records) and noted the note; a malformed task failed cleanly (KeyError recorded); test data removed
 - **Undo:** Disable-ScheduledTask -TaskName 'RabbitOS Task Worker'
 - **Ref:** stage_box.py, task_worker.py
+
+### 2026-10-16 14:58 UTC - Google Cloud + site + research agents
+- **Did:** Echo record and heartbeat chart: echo_record.py logs every echo step (echo/log), closes each finished day with a signed SHA-256 digest (echo/digest), and the cloud step rebuilds the public status/echo.json (288 five-minute cells, mutual/one-side/none, median network round trip). Status page has a Heartbeat: PC and cloud chart; the daily hash is the Maxwell leaf echo:daily; the AI participant adds the plain-language summary (extra_insight). New metric echo_pc_heard and alert 'RabbitOS: PC echo silent' (no fresh PC note for 3 hours). rabbit-echo may now also write exactly one public object, status/echo.json (conditional IAM). Redeployed echo job, hub, status feed, audit and the site; platform map 70 nodes / 123 edges applied to Supabase.
+- **Checked:** 39 python tests (record, link, staging, links, task worker), 51 qa-audit and 49 hub tests pass; live: PC and cloud steps wrote logs, public echo.json served with CORS for rabbitsoftware.io and Cache-Control no-cache, live status page and script contain the chart
+- **Undo:** Disable the alert and delete metric echo_pc_heard; remove the status/echo.json IAM condition and object; redeploy the previous Pages deployment; revert the commits and rebuild the echo job
+- **Ref:** research-agents/echo_record.py, Setup-GcpEcho.ps1, site/status.*
