@@ -43,6 +43,9 @@ $steps = @(
     @{ Name = 'Maxwell: adopt the public chain'; Block = { Push-Location $maxwellDir; try { python maxwell_adopt.py --apply } finally { Pop-Location } } },
     @{ Name = 'Maxwell: research anchor'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python maxwell_research_anchor.py --apply } finally { Pop-Location } } },
     # The rabbit web data miner: a public snapshot of the whole web (pages, services, datasets, chain copies, research counts), anchored as one Merkle root (a block only when something changed).
+    # The DNA variant index (public ClinVar + RefSeq, every variant checked against its transcript) is rebuilt, compared with the research and the CRISPR guides, and the findings are relayed to the
+    # local and cloud agents through the echo. It runs before the snapshot so the Maxwell leaf dna:index carries today's index root and comparison.
+    @{ Name = 'DNA: variant index, research comparison, relay to agents'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; python dna_variant_index.py build; python dna_relay.py } finally { Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; Pop-Location } } },
     @{ Name = 'Maxwell: rabbit web snapshot'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python rabbitweb_miner.py --apply } finally { Pop-Location } } },
     @{ Name = 'Maxwell: mirror new blocks to the public ledger'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; python maxwell_chain_sync.py --once } finally { Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; Pop-Location } } },
     @{ Name = 'Google: public ledger + datasets'; Script = 'Sync-RabbitGcs.ps1'; Params = @{ Ledger = $true; Exports = $true } },

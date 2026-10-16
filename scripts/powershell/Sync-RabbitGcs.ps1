@@ -43,7 +43,7 @@ $MaxwellFiles = @(
     'maxwell_chain.json', 'network_ledger.json', 'token_ledger.json', 'system_audit.jsonl', '.rabbit_sync_state.json', 'project_manifest.json',
     'dna_state.json'
 )
-$MaxwellDirs = @('data', 'eeg_data', 'eeg_runs', 'selfdata', 'twinnet')
+$MaxwellDirs = @('data', 'eeg_data', 'eeg_runs', 'selfdata', 'twinnet', 'dna_index')
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) { throw 'gcloud is not installed or not on PATH.' }
 New-Item -ItemType Directory -Force $WorkDir | Out-Null
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')

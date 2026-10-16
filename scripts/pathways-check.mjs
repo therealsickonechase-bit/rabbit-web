@@ -169,6 +169,15 @@ export const PROBES = [
     const live = JSON.parse(sh('gcloud', ['storage', 'cat', 'gs://rabbitsoftware-io-backups/maxwell/current/maxwell_chain.json', '--project', P])).blocks?.length ?? 0
     return { ok: !missing.length && fresh && live > 0 ? true : missing.length ? false : 'warn', detail: `${repos.length - missing.length} of ${repos.length} repo bundles in the ${day} backup${missing.length ? ` (missing: ${missing.join(', ')})` : ''}; dna_state.json and the Maxwell chain (${live} blocks) are in maxwell/current/; the repos are Maxwell code leaves` }
   } },
+  { group: 'Blockchain', name: 'DNA variant index: built from public data, compared with research, relayed to the agents', run: async () => {
+    const dir = join(PROJECTS, 'research-agents', 'dna_index')
+    let summary, matches
+    try { summary = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8')) } catch { return { ok: false, detail: 'no index yet: python dna_variant_index.py build' } }
+    try { matches = JSON.parse(readFileSync(join(dir, 'matches.json'), 'utf8')) } catch { matches = null }
+    const built = age(summary.builtAt), compared = matches ? age(matches.builtAt) : Infinity
+    const errors = Object.entries(summary.report ?? {}).filter(([, r]) => r.error).map(([g]) => g)
+    return { ok: !errors.length && built < 48 * 60 && compared < 48 * 60 ? true : 'warn', detail: `${summary.variants} verified variants in ${summary.genes} genes (root ${String(summary.root).slice(0, 12)}), built ${mins(built)} ago; comparison ${matches ? mins(compared) + ' ago, ' + matches.research.variantMentions.length + ' variant mentions, ' + matches.guides.flagged.length + ' guides flagged' : 'not run yet'}${errors.length ? '; failed genes: ' + errors.join(', ') : ''}` }
+  } },
   { group: 'Blockchain', name: 'public ledger: app and Google Cloud copy agree', run: async () => {
     const [app, mirror] = await Promise.all([fetch('https://app.rabbitsoftware.io/api/chain/head').then((r) => r.json()), fetch(`${GCS.ledger}/ledger/chain_head.json?cb=${Date.now()}`).then((r) => r.json())])
     return { ok: app.length === mirror.length && app.headHash === mirror.headHash, detail: `length ${app.length}/${mirror.length}, head ${String(app.headHash).slice(0, 10)}` }

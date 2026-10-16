@@ -387,6 +387,18 @@ const RA: CatalogEntry[] = [
     { id: 'ra-task-loop', group: 'Task worker', label: 'task_worker keep polling', scope: 'owner', risk: 'secret',
       command: 'python task_worker.py', needs: ['RABBIT_URL', 'RABBIT_INGEST_SECRET'], description: 'Polls every 20 seconds.' },
   ]),
+  ...seed('research-agents', 'dna_variant_index.py', [
+    { id: 'dna-index-build', group: 'DNA matching', label: 'Build the DNA variant index (public ClinVar + RefSeq)', scope: 'owner', risk: 'network',
+      command: 'python dna_variant_index.py build', description: 'Downloads RefSeq transcripts and ClinVar pathogenic single-base variants for 32 cancer genes, checks each variant against its transcript and writes dna_index/. About 100 NCBI requests; no personal data.' },
+    { id: 'dna-index-status', group: 'DNA matching', label: 'DNA variant index status', scope: 'owner', risk: 'local',
+      command: 'python dna_variant_index.py status', description: 'Genes, verified variants, 20-mers, the index root hash and when it was built.' },
+  ]),
+  ...seed('research-agents', 'dna_relay.py', [
+    { id: 'dna-relay-dry', group: 'DNA matching', label: 'Compare the index with research and guides (preview)', scope: 'owner', risk: 'network',
+      command: 'python dna_relay.py --dry-run', description: 'Matches the public research records and CRISPR guide candidates to the index and prints the notes it would send to the agents. Sends nothing.' },
+    { id: 'dna-relay-send', group: 'DNA matching', label: 'Relay DNA findings to the local and cloud agents', scope: 'owner', risk: 'secret',
+      command: 'python dna_relay.py', needs: ['RABBIT_INGEST_SECRET'], description: 'Writes dna_index/matches.json and stages the findings (with the echo health line) to the research agent, the task workers and the cloud explorer, including explore-this-gene actions for coverage gaps.' },
+  ]),
   ...seed('research-agents', 'stage_box.py', [
     { id: 'stage-add', group: 'Echo', label: 'Stage a task or note for an agent', scope: 'owner', risk: 'secret',
       command: 'python stage_box.py stage --to research --kind task --title "Look at ATM" --body "Summarise new papers"', needs: ['RABBIT_INGEST_SECRET'], description: 'Leaves a signed text item in the private echo/stage folder; the PC copies it to the local inbox of the agent on the next echo step even if the agent is not running.' },
