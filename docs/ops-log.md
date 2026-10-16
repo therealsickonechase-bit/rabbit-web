@@ -147,3 +147,9 @@ Other logs that already exist (not duplicated here):
 - **Undo:** Lien: delete it with the Resource Manager liens API (name printed by the script); alerts and metrics: delete in Cloud Monitoring and gcloud logging metrics delete wallet_received wallet_watch_failed wallet_key_change; job: gcloud run jobs delete rabbit-wallet-watch and gcloud scheduler jobs delete rabbit-wallet-watch-30min, then delete service account rabbit-wallet-watch
 - **Ref:** scripts/powershell/Setup-GcpWalletWatch.ps1, Setup-GcpWalletRecovery.ps1, workers/wallet/wallet-watch.mjs
 - **Note:** Only one project Owner exists; adding a second is the owner's decision (docs/wallet.md)
+
+### 2026-10-16 01:27 UTC - Wallet decisions recorded
+- **Did:** Recorded the owner's decisions: the wallet is a receiving account only (sweep out what arrives), and no second project Owner yet. Updated docs/wallet.md and the platform map (paused item p-second-owner) and re-applied the map to Supabase
+- **Checked:** qa-audit 48 tests pass; map applied (committed)
+- **Undo:** Edit docs/wallet.md; set p-second-owner back to waiting
+- **Ref:** docs/wallet.md

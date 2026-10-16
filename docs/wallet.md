@@ -60,6 +60,8 @@ The weak point is that there is exactly one copy of the key and it is inside one
 - **Nobody and nothing can sign** with the donation key. Only the separate anchoring key (fee money only) has a service account signer. Data Access audit logs record every signing request.
 - The project has **one Owner** (your Google account). If that account is lost or locked, the key is unreachable. Decision for you: add a second Owner you trust (a second Google account you control, with its own recovery methods) with `gcloud projects add-iam-policy-binding rabbitsoftware-io --member user:SECOND_ACCOUNT --role roles/owner`. Also keep the recovery phone and email of your Google account current and use a hardware security key on it.
 
+**Decisions so far (2026-10-16).** The wallet is a **receiving account only**: nothing is kept there as savings, and anything meaningful that arrives is swept out. A **second Owner is NOT being added yet** (the owner chose to wait); until then the single-Owner risk above stays open and the lien, the 30-day destroy delay and the alert are the protection.
+
 **What you do to limit the loss**
 1. Treat the wallet as a **receiving account**, not savings. After each meaningful receipt, sweep it to an address you control elsewhere (a hardware wallet you hold a seed for) with the withdrawal tool: add that address to `~/RabbitOS/wallet-destinations.json`, run `node withdraw.mjs eth|btc ... --to ADDRESS --sweep` as a dry run, then `--broadcast`.
 2. Do the **small round-trip test** first (receive a tiny amount, sweep it back out) so the whole path is proven before real money arrives.
