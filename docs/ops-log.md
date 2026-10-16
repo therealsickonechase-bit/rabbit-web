@@ -283,3 +283,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** cloud task worker ran 3 times in the last 10 minutes, all succeeded; the PC task shows Disabled
 - **Undo:** Enable-ScheduledTask -TaskName 'RabbitOS Task Worker'
 - **Ref:** Windows Task Scheduler
+
+### 2026-10-16 13:54 UTC - Google Cloud + PC
+- **Did:** Added a PC-to-cloud echo: Cloud Run job rabbit-echo (Scheduler every 5 min, account rabbit-echo with only the ingest secret and the echo/ prefix of the reports bucket) and scheduled task RabbitOS Echo (every 5 min) exchange HMAC-signed counters and nonces through gs://rabbitsoftware-io-reports/echo/. No network path between the two.
+- **Checked:** Ran both sides: cloud heard PC (seq 1), PC heard cloud, cloud confirmed its message was acknowledged in 70 s; status files echo/pc|cloud/status.json
+- **Undo:** Run-Echo.ps1 -Remove; gcloud scheduler jobs delete rabbit-echo-5min; gcloud run jobs delete rabbit-echo; delete service account rabbit-echo
+- **Ref:** Setup-GcpEcho.ps1, Run-Echo.ps1, research-agents/echo_link.py
