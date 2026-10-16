@@ -131,6 +131,17 @@ const RABBIT_WEB: CatalogEntry[] = [
       command: 'Sync-RabbitChain',
       description: 'Run in PowerShell on your PC after Import-Module. Pulls the public ledger into a local .jsonl, verifies the hash chain, refuses a broken one. Uploads nothing.' },
   ]),
+  // Research search from the terminal and Google Antigravity (public Hub research tools; read only).
+  ...seed('rabbit-web', 'scripts/research-search.mjs', [
+    { id: 'web-research-search', group: 'Research', label: 'Research search from the terminal (antigravity)', scope: 'owner', risk: 'network',
+      command: 'node scripts/research-search.mjs antigravity',
+      description: 'Asks the RabbitOS Hub for research_link: live OpenAlex, INSPIRE-HEP, Europe PMC and PubMed results, what RabbitOS stores, and whether the Maxwell research anchor covers it. Add --sources openalex,inspirehep or --json. Read only.' },
+  ]),
+  ...seed('rabbit-web', 'scripts/powershell/Connect-Antigravity.ps1', [
+    { id: 'web-connect-agy', group: 'Research', label: 'Connect Google Antigravity to the RabbitOS Hub', scope: 'owner', risk: 'local',
+      command: 'pwsh -File scripts/powershell/Connect-Antigravity.ps1 -WhatIf',
+      description: 'Registers the Hub MCP with the agy CLI so Antigravity can call research_link and research_search. Public read-only tools, no key. Drop -WhatIf to apply; -Remove undoes it.' },
+  ]),
   ...seed('rabbit-web', 'package.json', [
     { id: 'web-dev', source: 'README.md', group: 'Local development', label: 'Next dev server', scope: 'owner', risk: 'local',
       command: 'npm run dev',
@@ -468,6 +479,12 @@ const RA: CatalogEntry[] = [
       command: 'python brain_research.py', description: 'Searches PubMed and Europe PMC for EEG, chemistry and gene papers; writes brain_records.json.' },
     { id: 'ra-brain-3', group: 'Research', label: 'brain_research, 3 per query', scope: 'owner', risk: 'network',
       command: 'python brain_research.py --per-query 3', description: 'Fewer results per query.' },
+  ]),
+  ...seed('research-agents', 'physics_research.py', [
+    { id: 'ra-physics', group: 'Research', label: 'physics_research (antigravity)', scope: 'owner', risk: 'network',
+      command: 'python physics_research.py', description: 'Searches OpenAlex and INSPIRE-HEP for antigravity and antihydrogen gravity papers; writes physics_records.json for the research sync.' },
+    { id: 'ra-physics-q', group: 'Research', label: 'physics_research for one topic', scope: 'owner', risk: 'network',
+      command: 'python physics_research.py --query "antihydrogen gravity" --per-query 3', description: 'Same, for words you choose.' },
   ]),
   ...seed('research-agents', 'neuro_variants.py', [
     { id: 'ra-neuro', group: 'Research', label: 'neuro_variants', scope: 'owner', risk: 'network',

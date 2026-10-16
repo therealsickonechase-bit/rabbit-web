@@ -391,3 +391,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** cloudshell 37 tests (5 new: env only in session, exact options without a key, redaction, the one-command module has no secrets path, image/settings/instance checks), app 392 tests; the image builds and 'gemini --version' = 0.64.0, runs as root with Node 22, accepts the settings and asks only for GEMINI_API_KEY; Setup-CloudshellGeminiKey.ps1 rejects a malformed key, Google rejected a fake key with HTTP 400 and nothing was saved, -WhatIf and -Remove -WhatIf print the plan; Worker deployed with the new container image (instance_type basic), app deployed; unauthenticated calls are refused (Worker 401, app 403). NOT done: a live Gemini call, because the key has not been supplied yet (the owner runs the script) and the owner Worker token is only in Cloudflare
 - **Undo:** Run Setup-CloudshellGeminiKey.ps1 -Remove; redeploy the previous Worker/image (git revert, npx wrangler deploy --containers-rollout=immediate) to return to the lite instance without Gemini
 - **Ref:** workers/cloudshell/Dockerfile, src/session.mts, scripts/powershell/Setup-CloudshellGeminiKey.ps1
+
+### 2026-10-16 21:41 UTC - Research
+- **Did:** Antigravity research search: Hub tool research_link and sources openalex/inspirehep, A2A Research Agent 1.3.0 link skill, terminal scripts/research-search.mjs, Connect-Antigravity.ps1 (agy mcp add rabbitos-hub; applied on this PC), physics_research.py + rabbit_sync physics_records.json, site search box, status job copies newest Maxwell research anchor into research-live.json, public sources physics_paper/physics_preprint. NOT deployed yet: hub, A2A, status job, app, site.
+- **Checked:** Unit tests: hub 61, qa-audit 69, a2a 15, rabbit-web 392, python physics 5; agy mcp list shows rabbitos-hub enabled
+- **Undo:** Connect-Antigravity.ps1 -Remove; revert the commits; nothing live was changed
+- **Ref:** docs/antigravity.md

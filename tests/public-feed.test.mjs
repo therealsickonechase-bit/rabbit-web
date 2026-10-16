@@ -13,4 +13,5 @@ test('only rabbitsoftware.io may read the feed from a browser', () => {
 test('the feed never exposes private data sources', () => {
   for (const s of ['crispr_guide', 'topic_summary', 'chat', 'notes', 'twin']) assert.ok(!PUBLIC_SOURCES.includes(s), s)
   assert.ok(PUBLIC_SOURCES.includes('clinvar') && PUBLIC_SOURCES.includes('crispr_paper'))
+  assert.ok(PUBLIC_SOURCES.includes('physics_paper') && PUBLIC_SOURCES.includes('physics_preprint'))
 })

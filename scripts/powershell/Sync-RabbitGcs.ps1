@@ -39,7 +39,7 @@ if (-not ($Ledger -or $Exports -or $Maxwell -or $MaxwellPath.Count)) { $Ledger =
 # The Maxwell groups the owner chose (explicit names, nothing discovered): research stores, chain and ledger state, twin state, personal EEG / self data.
 $MaxwellFiles = @(
     'corpus.json', 'research_store.json', 'crispr_records.json', 'crispr_cache.json', 'crispr_store.json',
-    'neuro_records.json', 'neuro_gene_counts.json', 'brain_records.json',
+    'neuro_records.json', 'neuro_gene_counts.json', 'brain_records.json', 'physics_records.json',
     'maxwell_chain.json', 'network_ledger.json', 'token_ledger.json', 'system_audit.jsonl', '.rabbit_sync_state.json', 'project_manifest.json',
     'dna_state.json'
 )
