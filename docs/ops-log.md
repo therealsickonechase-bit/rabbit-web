@@ -166,3 +166,9 @@ Other logs that already exist (not duplicated here):
 - **Undo:** Pushed commits cannot be unpushed cleanly; revert with new commits if needed
 - **Ref:** git push origin main
 - **Note:** research-agents needs either sign-in to the account that owns that repo or its remote corrected
+
+### 2026-10-16 09:01 UTC - Research agents one-hour run; wallet and Google Cloud check
+- **Did:** Ran the research agents (run_all.py through a wrapper: 127.0.0.1 only, one queued topic every 5 minutes) from 20:34 to 21:34 local on 2026-10-15; they stopped cleanly on their own and saved state. Next morning checked the wallet and Google Cloud, read only
+- **Checked:** public status feed: research records 395 to 574, topics explored 9 to 20, 11 of 11 services up, chains agree; wallet watcher state (08:30 UTC): all four addresses 0, no receipts; Bitcoin anchor confirmed (block 971631); Ethereum/XRPL job paused as intended; project lien present; KMS audit log shows only the owner's own signing tests and my IAM grants; the error log holds only already-fixed setup attempts and the known rabbit-web-workerd database fault
+- **Undo:** Nothing to undo; the agents only read public sources and wrote their normal state files
+- **Ref:** ~/RabbitOS/logs/research-agents-hour-2026-10-16.log
