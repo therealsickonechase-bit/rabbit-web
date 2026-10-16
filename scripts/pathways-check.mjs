@@ -112,6 +112,16 @@ export const PROBES = [
     const m = age(when), ok = (last.status?.succeededCount ?? 0) >= 1
     return { ok: ok && m < 20 ? true : 'warn', detail: `last run ${mins(m)} ago, ${ok ? 'succeeded' : 'did not succeed'}` }
   } },
+  { group: 'Agents', name: 'the PC and the cloud hear and acknowledge each other (echo)', run: async () => {
+    const read = (side) => JSON.parse(sh('gcloud', ['storage', 'cat', `gs://rabbitsoftware-io-reports/echo/${side}/status.json`, '--project', P]))
+    let pc, cloud
+    try { pc = read('pc'); cloud = read('cloud') } catch { return { ok: false, detail: 'echo status files not found (is RabbitOS Echo registered and rabbit-echo scheduled?)' } }
+    const ageP = age(pc.checkedAt), ageC = age(cloud.checkedAt)
+    const heard = pc.heardFrom === 'cloud' && cloud.heardFrom === 'pc' && !pc.peerSignatureInvalid && !cloud.peerSignatureInvalid
+    const acked = pc.peerAcknowledgedMyPrevious && cloud.peerAcknowledgedMyPrevious
+    const fresh = ageP < 20 && ageC < 20
+    return { ok: heard && acked && fresh ? true : (heard ? 'warn' : false), detail: `PC checked ${mins(ageP)} ago, cloud ${mins(ageC)} ago; heard each other ${heard}, acknowledged ${acked}${acked ? ` (PC note acknowledged in ${cloud.acknowledgementSeconds}s, cloud note in ${pc.acknowledgementSeconds}s)` : ''}` }
+  } },
   { group: 'Agents', name: 'the Agent Registry lists the Research Agent and the Hub MCP', run: async () => {
     const tok = sh('gcloud', ['auth', 'print-access-token'])
     const get = async (kind) => (await (await fetch(`https://agentregistry.googleapis.com/v1alpha/projects/${P}/locations/global/${kind}?pageSize=100`, { headers: { authorization: `Bearer ${tok}`, 'x-goog-user-project': P } })).json())[kind] ?? []

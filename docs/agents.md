@@ -45,6 +45,7 @@ Personal data stays here; only public-source findings are synced to RabbitOS (si
 | ResearchAgent | `research_agent.py` | the base public-source search |
 | AIParticipant | `ai_gossip.py` | periodic analysis of the network ledger |
 | Task worker | `task_worker.py` | **now runs in Google Cloud** (above); the PC task "RabbitOS Task Worker" was **disabled on 2026-10-16** (re-enable with `Enable-ScheduledTask -TaskName 'RabbitOS Task Worker'`; the queue gives each task to one worker only) |
+| Echo (PC and cloud acknowledge each other) | `echo_link.py` | Cloud Run job `rabbit-echo` and PC task "RabbitOS Echo", both every 5 minutes. They share no network link: each writes a signed note (counter, random ID, time) to `gs://rabbitsoftware-io-reports/echo/` that acknowledges the other's last note, plus a status file. `Setup-GcpEcho.ps1`, `Run-Echo.ps1 -Register` |
 | Research sync, chain pull | `rabbit_sync.py`, `chain_pull.py` | scheduled task (30 minutes) that sends local findings to RabbitOS and pulls the chain back; reads local files, so it stays on the PC |
 | Maxwell miner (PC) | `rabbitweb_miner.py` | the same miner as the cloud job; both may add blocks |
 

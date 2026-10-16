@@ -289,3 +289,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** Ran both sides: cloud heard PC (seq 1), PC heard cloud, cloud confirmed its message was acknowledged in 70 s; status files echo/pc|cloud/status.json
 - **Undo:** Run-Echo.ps1 -Remove; gcloud scheduler jobs delete rabbit-echo-5min; gcloud run jobs delete rabbit-echo; delete service account rabbit-echo
 - **Ref:** Setup-GcpEcho.ps1, Run-Echo.ps1, research-agents/echo_link.py
+
+### 2026-10-16 14:10 UTC - RabbitOS + Google Cloud
+- **Did:** Finished the echo rollout: pathway-check probe, docs/agents.md row, 3 catalog entries (264 commands), hub help entry, platform map nodes/edges (69 nodes, 120 edges, applied to Supabase), redeployed hub, status feed, audit workflow and the app.
+- **Checked:** pathways-check echo probe PASS (both sides heard and acknowledged, fresh); catalog, hub (49) and qa-audit (48) tests pass; hub health ok
+- **Undo:** Revert the commits and redeploy; Supabase graph rows can be re-seeded from the previous seed
+- **Ref:** rabbit-web and rabbitsoftware-cloudflare commits
