@@ -109,3 +109,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 47 hub tests and 13 catalog tests pass; live call to anchor_status returns the real state; hub self-test 15 of 15
 - **Undo:** Redeploy the previous hub revision: gcloud run services update-traffic rabbitos-hub-mcp --to-revisions <previous>=100
 - **Ref:** workers/hub-mcp, scripts/powershell/Setup-GcpHub.ps1
+
+### 2026-10-16 00:10 UTC - Site: single donation address set
+- **Did:** Removed the two anchoring fee-account addresses from the blockchain page text so the only addresses shown on rabbitsoftware.io are the donation wallet's (Cloud KMS key maxwell-donations); they stay in the public status file anchors/chains.json, marked as fee accounts. Confirmed index, donate, wallet.json and the app's wallet.ts all carry the same donation addresses. Redeployed Pages production
+- **Checked:** 17 site tests pass; build-donate --check up to date; live blockchain page shows no addresses, live donate page shows only bc1qxudt9x4hcftvwkfryln2qhn4e5g2qvt09mlp56 and 0x724Dfe717565742b066465813773586df98d9372
+- **Undo:** Roll back the Pages deployment
+- **Ref:** site/blockchain.html
