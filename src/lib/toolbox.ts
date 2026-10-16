@@ -47,7 +47,7 @@ export function secretVerdict(text: string): string | null {
 }
 
 export const hex = (b: ArrayBuffer) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('')
-export const sha256 = async (data: Uint8Array | string) => hex(await crypto.subtle.digest('SHA-256', typeof data === 'string' ? new TextEncoder().encode(data) : data))
+export const sha256 = async (data: Uint8Array | string) => hex(await crypto.subtle.digest('SHA-256', (typeof data === 'string' ? new TextEncoder().encode(data) : data) as BufferSource))
 
 /** One hash for the whole bundle: sorted `repo/path sha256` lines. It changes when any file is added, removed or edited. */
 export async function manifestRoot(files: Entry[]): Promise<string> {

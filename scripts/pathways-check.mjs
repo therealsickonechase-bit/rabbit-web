@@ -178,6 +178,18 @@ export const PROBES = [
     const errors = Object.entries(summary.report ?? {}).filter(([, r]) => r.error).map(([g]) => g)
     return { ok: !errors.length && built < 48 * 60 && compared < 48 * 60 ? true : 'warn', detail: `${summary.variants} verified variants in ${summary.genes} genes (root ${String(summary.root).slice(0, 12)}), built ${mins(built)} ago; comparison ${matches ? mins(compared) + ' ago, ' + matches.research.variantMentions.length + ' variant mentions, ' + matches.guides.flagged.length + ' guides flagged' : 'not run yet'}${errors.length ? '; failed genes: ' + errors.join(', ') : ''}` }
   } },
+  { group: 'Blockchain', name: 'toolbox: commands and files published to the cloud, and this PC holds the same files', run: async () => {
+    const m = JSON.parse(sh('gcloud', ['storage', 'cat', 'gs://rabbitsoftware-io-backups/toolbox/manifest.json', '--project', P]))
+    const crypto = await import('node:crypto')
+    let same = 0; const different = [], missing = []
+    for (const f of m.files) {
+      const p = join(PROJECTS, f.repo, f.path)
+      if (!existsSync(p)) { missing.push(`${f.repo}/${f.path}`); continue }
+      if (crypto.createHash('sha256').update(readFileSync(p)).digest('hex') === f.sha256) same++; else different.push(`${f.repo}/${f.path}`)
+    }
+    const a = age(m.generatedAt), drift = different.length + missing.length
+    return { ok: !drift && a < 48 * 60 ? true : 'warn', detail: `${m.counts.files} files and ${m.counts.commands} commands published ${mins(a)} ago (root ${String(m.root).slice(0, 12)}); this PC: ${same} same, ${different.length} changed since, ${missing.length} missing${drift ? ` (republish with Run-Toolbox.ps1; first: ${[...different, ...missing].slice(0, 3).join(', ')})` : ''}` }
+  } },
   { group: 'Blockchain', name: 'public ledger: app and Google Cloud copy agree', run: async () => {
     const [app, mirror] = await Promise.all([fetch('https://app.rabbitsoftware.io/api/chain/head').then((r) => r.json()), fetch(`${GCS.ledger}/ledger/chain_head.json?cb=${Date.now()}`).then((r) => r.json())])
     return { ok: app.length === mirror.length && app.headHash === mirror.headHash, detail: `length ${app.length}/${mirror.length}, head ${String(app.headHash).slice(0, 10)}` }
