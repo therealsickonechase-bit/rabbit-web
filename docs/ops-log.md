@@ -475,3 +475,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** verify-anchor.py: digest matches, snapshot commitment ok (7 files re-hashed); openssl ts -verify on the .tsr says OK (15:10:49 GMT); Bitcoin proof pending as expected for a new anchor
 - **Undo:** Nothing to undo; the commitment is additive and older anchors are unchanged
 - **Ref:** docs/anchoring.md
+
+### 2026-10-17 15:18 UTC - Docs / website
+- **Did:** Wrote docs/maxwell-protocol.md (block format, hash rule, work target, transaction kinds, who may mine, what a miner needs, fork rule, known limits) from the code as it is, without adding a chain_id or any field (site/chain-identifiers.md forbids minting one). Corrected the roadmap: the fork-choice rule already existed (maxwell_adopt.py, tested). Added canonical links and Open Graph/Twitter tags to the blockchain, proof, network, status and research pages (only the home page had them).
+- **Checked:** qa-audit 88 tests pass (2 new: tags agree with each page title/description, preview image exists); live pages serve the new tags
+- **Undo:** Revert the commits and redeploy Pages
+- **Ref:** docs/maxwell-protocol.md

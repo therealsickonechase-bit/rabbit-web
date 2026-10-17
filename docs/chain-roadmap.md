@@ -13,7 +13,7 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 | 3 | `verify-ledger.py` for the RabbitOS ledger | NEXT | |
 | 4 | Run the Maxwell verifier as a cloud job; show the result on the Proof page | NEXT | |
 | 5 | Sign blocks with a dedicated key | NEXT | |
-| 6 | Write and test the fork-choice rule (PC and cloud miners) | NEXT | |
+| 6 | Write down the fork-choice rule (PC and cloud miners) | **DONE** | 2026-10-17: I had listed this as missing; it already exists in `maxwell_adopt.py` (the app mirror is the referee: one block per index, HTTP 409 for a different hash; public copy wins; a mirrored fork needs a person) and is tested in `test_maxwell_cloud.py`. Now written in `docs/maxwell-protocol.md` section 5. |
 | 7 | Free second mirror outside Google (daily commit to a public GitHub repo) | NEXT | |
 | 8 | Block explorer page on the site | NEXT | |
 | 9 | Restore drill from backups alone | NEXT | |
@@ -27,6 +27,9 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 | 17 | Publish the web-snapshot files (`maxwell/web-snapshots/`) and add them to the anchor manifest, so web blocks are re-checkable | NEXT | today those files exist only on the PC |
 | 18 | `status/chain-graph.json` from the status job (blocks, anchors, miners, stores, edges) and a time slider | NEXT | |
 | 19 | RabbitOS ledger as its own lane, linked through the head hash each web snapshot commits; Ethereum and XRP lanes greyed until funded | NEXT | |
+| 20 | Protocol and mining requirements document | **DONE** | 2026-10-17: `docs/maxwell-protocol.md` (block format, hash rule, work target, transaction kinds, who may mine, what a miner needs, fork rule, known limits). Documents what exists; adds no `chain_id` or field, per `site/chain-identifiers.md`. |
+| 21 | Share tags and canonical links on the chain pages | **DONE** | 2026-10-17: Open Graph, Twitter card and canonical link on blockchain, proof, network, status and research (only the home page had them); a test keeps them in step with each page's title and description. |
+| 22 | Git version tags / releases and GitHub topics for the public repos | WAITING | none exist today; public-facing change, needs your go-ahead |
 
 ## 1. The tree
 
@@ -82,7 +85,7 @@ L0  SOURCES            public literature and data: PubMed, Europe PMC, ClinicalT
 | Platform snapshot blocks (the web miner) and link blocks | BUILT | Nightly cloud miner (`rabbit-miner`, 05:00) and PC steps; blocks 2, 3, 5, 6, 8, 10, 13 are of this kind. |
 | Difficulty 2 (light work) | BUILT, by design | Makes tampering visible, not expensive. Said plainly on the site. Not a security claim. |
 | Blocks are signed by their author | **MISSING** | Blocks carry a hash and a nonce, not a signature, so anyone with write access to the chain file could append a block. A signature by a dedicated key (Cloud KMS or a local ed25519 key) would say "this block came from the project". Verifier gets one more check. |
-| Rule for two miners at once (PC and cloud) | **PARTIAL** | `maxwell_adopt.py` takes over the public chain and the app accepts only a block that extends the head, so there are no forks in practice. There is no written fork-choice rule (what happens if both mine at the same height). Write it down and test it. |
+| Rule for two miners at once (PC and cloud) | BUILT, now documented | `maxwell_adopt.py`: the app mirror is the referee (one block per index, 409 on a different hash), public copy wins, a mirrored fork needs a person; tested in `test_maxwell_cloud.py`; written in `docs/maxwell-protocol.md` section 5. |
 | Independent mirror outside Google | **MISSING** | The chain lives in Google Cloud, the app, the PC and (via backups) Cloudflare. Add a free public mirror that is not Google: a public GitHub repo that gets `maxwell_chain.json` + `chain_head.json` committed daily (git history becomes another witness). |
 
 ### L3: witnesses
