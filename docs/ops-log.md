@@ -421,3 +421,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** Test for the bundler passes; restore of Maxwell-blockchain from the cloud copy matched the original head commit bdfcc1d4; manifest root 4a21833e
 - **Undo:** Disable the new task; Enable-ScheduledTask 'RabbitOS GitHub Vault Sync' to go back; delete github-bundles/ in the bucket (versioned, 90 days)
 - **Ref:** docs/github-mirrors.md
+
+### 2026-10-17 12:44 UTC - GitHub / Research
+- **Did:** 21 org mirrors put back on GitHub as private repos under therealsickonechase-bit (Publish-MirrorsToGithub.ps1; all private, heads match). Brought vcf_parser, clinvar_adapter, trial_matcher and variant_types from the August Maxwell package into research-agents with 9 tests.
+- **Checked:** gh shows all 21 private with head commits equal to the mirrors; python tests pass
+- **Undo:** Delete the 21 repos on GitHub (gh repo delete, owner only); remove the 4 modules and test from research-agents (git revert e130577)
+- **Ref:** docs/github-mirrors.md
