@@ -433,3 +433,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** Lock tested: a second process waited 18 s for the first, a killed holder freed the lock at once; all scripts parse. First real proof is the next nightly run.
 - **Undo:** Remove the one dot-source line from each of the four scripts and delete Wait-HeavyJobSlot.ps1
 - **Ref:** scripts/powershell/Wait-HeavyJobSlot.ps1
+
+### 2026-10-17 14:09 UTC - Anchoring
+- **Did:** Verified the existing free Bitcoin anchoring independently (scripts/verify-anchor.py: the anchor holding Maxwell block 12 is in Bitcoin blocks 971827/971838/971845, replayed values equal each block's Merkle root). Added a second free witness to the anchor job: an RFC 3161 timestamp from FreeTSA (anchor.json.tsr, best effort). Redeployed rabbit-anchor; site blockchain page explains both and links the checker. Ethereum/XRP stay off until funded (mainnet-only guards left in place on purpose).
+- **Checked:** anchor-job tests 13 pass (5 new); the request bytes equal the one FreeTSA accepted and 'openssl ts -verify' said OK on a real reply; verify-anchor tests 3 pass; qa-audit 69 pass; job ran: upgraded an anchor to Bitcoin block 971865
+- **Undo:** gcloud run jobs deploy the previous revision (git revert the anchor-job commit and run Setup-GcpAnchor.ps1); the .tsr files are additive and harmless
+- **Ref:** docs/anchoring.md
