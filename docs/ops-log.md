@@ -409,3 +409,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** Script parses; physics_research.py and record_anchor.py ran by hand; first full nightly run to be watched
 - **Undo:** Remove the 3 steps from Run-DailyBackups.ps1; stored records and blocks stay (append-only)
 - **Ref:** Run-DailyBackups.ps1
+
+### 2026-10-17 02:56 UTC - Backups
+- **Did:** Claude chats are saved (keys and tokens redacted) to gs://rabbitsoftware-io-backups/claude-chats/ by Save-ClaudeChats.ps1, now and in the nightly job
+- **Checked:** 26 chats uploaded; redaction counts printed per file
+- **Undo:** Remove the step from Run-DailyBackups.ps1; delete the claude-chats/ folder in the bucket
+- **Ref:** Save-ClaudeChats.ps1

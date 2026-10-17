@@ -55,6 +55,8 @@ $steps = @(
     @{ Name = 'Maxwell: mirror new blocks to the public ledger'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; python maxwell_chain_sync.py --once } finally { Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; Pop-Location } } },
     # Record the hash of every new Maxwell block: a line in ~\RabbitOS\logs\maxwell-anchors.log and block-NNNN.json in gs://rabbitsoftware-io-backups/maxwell/anchors/ (hashes, counts and times only).
     @{ Name = 'Maxwell: record new block hashes (local log + Google Cloud)'; Block = { Push-Location $maxwellDir; try { python record_anchor.py; $anchorDir = Join-Path $HOME 'RabbitOS\anchors'; if (Test-Path $anchorDir) { gcloud storage cp "$anchorDir\*.json" gs://rabbitsoftware-io-backups/maxwell/anchors/ --quiet; if ($LASTEXITCODE -ne 0) { throw 'anchor upload failed' } } } finally { Pop-Location } } },
+    # Claude chats, keys and tokens redacted, to gs://rabbitsoftware-io-backups/claude-chats/ (only chats that changed).
+    @{ Name = 'Google: Claude chats (redacted)'; Script = 'Save-ClaudeChats.ps1'; Params = @{} },
     @{ Name = 'Google: public ledger + datasets'; Script = 'Sync-RabbitGcs.ps1'; Params = @{ Ledger = $true; Exports = $true } },
     @{ Name = 'Google: Maxwell files';            Script = 'Sync-RabbitGcs.ps1'; Params = @{ Maxwell = $true } },
     @{ Name = 'Platform: Supabase, Cloudflare, repos'; Script = 'Backup-Platform.ps1'; Params = @{} }
