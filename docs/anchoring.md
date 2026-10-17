@@ -18,6 +18,10 @@ python scripts/verify-anchor.py 2026-10-17T070013Z        # rabbitsoftware-cloud
 
 It checks that `sha256(anchor.json)` is the digest the proof is for, replays the proof's hash steps, and compares the result with the Merkle root of the Bitcoin block named in the proof, fetched from Blockstream or mempool.space. Verified on 2026-10-17: the anchor containing **Maxwell block 12** is attested in Bitcoin blocks 971827, 971838 and 971845, and every replayed value equals that block's Merkle root. The standard `ots verify anchor.json.ots` tool does the same with a Bitcoin node.
 
+## What else an anchor now commits to
+
+Since 2026-10-17 `anchor.json` also holds `"snapshots": {"count", "upTo", "manifest"}`: a commitment to the saved record set of every research anchor block (`maxwell/snapshots/block-NNNN.ndjson.gz`). The per-file hashes are published in `anchors/snapshots.json`; the manifest is the SHA-256 of the lines `<block> <sha256>` in block order. So Bitcoin vouches for the exact records each research root was built from, not only for the chain heads. `verify-anchor.py` recomputes the manifest, compares it with the one in `anchor.json`, and re-downloads every covered file to check its hash. First anchor with the commitment: `2026-10-17T151045Z`.
+
 ## Check the FreeTSA witness
 
 ```

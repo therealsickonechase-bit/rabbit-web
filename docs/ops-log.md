@@ -469,3 +469,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** qa-audit 86 tests pass (6 new, real chain and anchor fixtures); page script executed in jsdom against the fixtures: 16 blocks, 6 anchors, 6 Bitcoin nodes, 3 sources, 50 edges, detail panel, filter and keyboard OK; deployed, page and module serve 200 with the JavaScript type
 - **Undo:** Remove network.html/js/view from the site and the links, redeploy Pages
 - **Ref:** site/network.html
+
+### 2026-10-17 15:13 UTC - Anchors / backups
+- **Did:** Proved the nightly backup end to end (2026-10-17 09:54-10:08, 14 steps, 0 failed). First anchor carrying the snapshot-manifest commitment and a FreeTSA timestamp: 2026-10-17T151045Z (maxwell length 16, ledger 20, 7 saved record sets). docs/anchoring.md and the tracker updated.
+- **Checked:** verify-anchor.py: digest matches, snapshot commitment ok (7 files re-hashed); openssl ts -verify on the .tsr says OK (15:10:49 GMT); Bitcoin proof pending as expected for a new anchor
+- **Undo:** Nothing to undo; the commitment is additive and older anchors are unchanged
+- **Ref:** docs/anchoring.md

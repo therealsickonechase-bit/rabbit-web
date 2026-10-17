@@ -8,8 +8,8 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 
 | # | Step | State | Last update |
 |---|---|---|---|
-| 1 | Prove the nightly backup completes end to end | **DOING** | 2026-10-17: first full run after the fix started 09:54. An earlier try that morning exposed a bug in my own lock helper (it overwrote each script's `$log` variable, so every step failed to log); fixed, regression-tested inside a caller script, rerun. |
-| 2 | Put the snapshot manifest hash into the anchors | **DOING** | 2026-10-17: anchor job, `verify-anchor.py` and the pinned manifest vector done and tested (anchor job 17 tests, verifier 6); job deployed. The first anchor that carries the commitment is made after the nightly run publishes the newest snapshot. |
+| 1 | Prove the nightly backup completes end to end | **DONE** | 2026-10-17: full run 09:54 to 10:08 (14.5 min), all 14 steps OK, "failed steps: 0". The first attempt that morning failed because of a bug in my lock helper (caller variable overwritten); fixed and regression-tested. Still worth a glance at tomorrow's scheduled 03:00 run, which is the first one started by Task Scheduler itself. |
+| 2 | Put the snapshot manifest hash into the anchors | **DONE** | 2026-10-17: anchor 2026-10-17T151045Z is the first to carry it: 7 saved record sets (blocks 1, 4, 7, 9, 11, 12, 14), manifest `03f29bb2…`. `verify-anchor.py` re-downloaded all 7 and the commitment checks out; the FreeTSA timestamp on the same anchor verifies with `openssl ts -verify` (15:10:49 GMT). Its Bitcoin proof is still pending, as every new anchor is for a few hours; the anchor job upgrades it and the Proof page re-checks it. |
 | 3 | `verify-ledger.py` for the RabbitOS ledger | NEXT | |
 | 4 | Run the Maxwell verifier as a cloud job; show the result on the Proof page | NEXT | |
 | 5 | Sign blocks with a dedicated key | NEXT | |
