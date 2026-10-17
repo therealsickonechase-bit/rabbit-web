@@ -39,6 +39,7 @@ export const CORE_PLATFORMS: readonly CorePlatform[] = [
 ]
 
 export const CORE_AFTER: readonly string[] = [
+  'maxwell-core dashboard         open the desktop dashboard (http://127.0.0.1:8646/); the Maxwell Core icon does the same',
   'maxwell-core status            compare your node with the Google Cloud gateway',
   'maxwell-core open cloudshell   open the RabbitOS cloud shell',
   'maxwell-core open core         open the live view: research, networks, data and agents',
