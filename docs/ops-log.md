@@ -439,3 +439,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** anchor-job tests 13 pass (5 new); the request bytes equal the one FreeTSA accepted and 'openssl ts -verify' said OK on a real reply; verify-anchor tests 3 pass; qa-audit 69 pass; job ran: upgraded an anchor to Bitcoin block 971865
 - **Undo:** gcloud run jobs deploy the previous revision (git revert the anchor-job commit and run Setup-GcpAnchor.ps1); the .tsr files are additive and harmless
 - **Ref:** docs/anchoring.md
+
+### 2026-10-17 14:20 UTC - Proof / website
+- **Did:** New public Proof page (rabbitsoftware.io/proof): the status job (every 5 min) now re-checks Bitcoin-confirmed anchors against the real Bitcoin blocks and publishes status/proof-live.json, plus a plain-language research digest in status/digest.json. Added docs/start-here.md. No funds involved.
+- **Checked:** qa-audit 80 tests pass (real anchor fixture); live: 6 anchors, first 3 verified against real blocks and the rest following; page and module serve 200 with JavaScript type
+- **Undo:** Remove the proof block from status.mjs and redeploy Setup-GcpStatusFeed.ps1; delete proof.html/proof.js/proof-view.mjs from the site and redeploy Pages
+- **Ref:** docs/start-here.md
