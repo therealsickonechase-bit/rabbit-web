@@ -499,3 +499,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** status-job suite 132 pass (maxwell-core 12, site-core 8); Linux amd64 and emulated arm64 containers; installer on clean Debian incl. systemd-analyze verify; live gateway answers with CORS and refuses owner methods; page script run against real data in jsdom incl. with sources down; catalog 392
 - **Undo:** gcloud run services delete maxwell-core --region us-west2 and delete service account rabbit-maxwell-core; remove core.html/js/view and the CSP entry and redeploy Pages; revert the commits
 - **Ref:** docs/maxwell-core.md
+
+### 2026-10-17 17:03 UTC - Maxwell Core
+- **Did:** Core 0.3.0 with platform installers (Pi, Linux, Windows, macOS, Docker, Cloud), reproducible ZIP, download page, node registry/aggregator/panel, core:nodes leaf; built and tested, NOT deployed
+- **Checked:** npm test in workers/qa-audit (157), python unittest maxwell_links, Pi script on arm64 Debian, Windows installer on this PC
+- **Undo:** git revert the commits in rabbitsoftware-cloudflare (d92a0af, ceb770e) and research-agents (1332b8c); nothing was deployed
+- **Ref:** docs/chain-roadmap.md items 35-40

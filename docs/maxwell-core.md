@@ -79,3 +79,9 @@ Safety choices: the RPC listens only on the loopback address; it checks the `Hos
 1. **Hardware:** a Raspberry Pi 5 or a small mini PC as the always-on node (a one-time cost of roughly the price of a modest phone; I have not priced it today), or stay with the PC and Google Cloud.
 2. **Who else runs a node:** the model gets stronger with nodes you do not control.
 3. **Whether to pursue Phase 4** (the wider transparency-log ecosystem) once the Core exists.
+
+## 8. Version 0.3: platforms, heartbeats and the one download
+
+- **One ZIP, a section per platform**: `rabbitsoftware.io/maxwell-core` offers `maxwell-core-0.3.0.zip` with `platforms/raspberry-pi` (`setup-pi.sh`: checks for a Pi and a 64-bit OS, optionally installs Node.js with a checksum check, installs the service, optionally makes the Pi a named node), `linux`, `windows`, `macos` (not tested), `docker`, `google-cloud`. Built reproducibly by `scripts/build-maxwell-core-zip.mjs`.
+- **How it talks to the rest of the project**: `maxwell-core/COMMS.md`. Reads are public HTTPS; a named node writes a signed heartbeat and nothing else; `maxwell-core open cloudshell` and `maxwell-core status` connect a node to RabbitOS.
+- **Phase 1 pieces built**: heartbeats, `site/nodes/registry.json`, `status/nodes.json` (status job), the Nodes panel on `/core`, and the `core:nodes` leaf in the rabbit web snapshot. Open: Network-map lane, RabbitOS app view, the PC as a registered node.
