@@ -9,6 +9,9 @@ Checked 2026-10-16. "Registered" means listed in the Google Cloud **Agent Regist
 | **RabbitOS Research Agent** | A2A (JSON-RPC `message/send`), agent card at `/.well-known/agent-card.json` | Cloud Run `rabbit-research-agent` (`https://rabbit-research-agent-vxx5lz7c5a-wl.a.run.app`) | public, read only: live search of PubMed, Europe PMC, ClinicalTrials.gov, openFDA; stores nothing; no secrets; service account with no roles | `pwsh -File scripts/powershell/Setup-GcpResearchAgent.ps1` |
 | **RabbitOS Hub** | MCP (JSON-RPC over HTTP), 25 read-only tools | Cloud Run `rabbitos-hub-mcp` (`.../mcp`) | public tools need no key; owner tools need a hub key | `pwsh -File scripts/powershell/Setup-GcpHub.ps1` |
 
+| **Maxwell Core gateway** | JSON-RPC 2.0 and a REST interface (Bitcoin Core style) | Cloud Run `maxwell-core` (`https://maxwell-core-vxx5lz7c5a-wl.a.run.app`) | public, read only: the Maxwell chain, its miners, witnesses and anchors; no roles, no secrets; 120 requests a minute per client | `pwsh -File scripts/powershell/Setup-GcpCore.ps1` |
+| **Maxwell witnesses** | signed head (Ed25519) | Cloud Run job `rabbit-witness` and the PC task `RabbitOS Witness` | public signatures under `witness/`; the cloud key is only in Secret Manager | `pwsh -File scripts/powershell/Setup-GcpWitness.ps1` |
+
 Register or refresh both: `pwsh -File scripts/powershell/Register-AgentRegistry.ps1` (`-WhatIf` first; `-Remove` deletes the registry entries only). The list it registers is `scripts/agent-registry.json`.
 
 Call the research agent from anywhere:

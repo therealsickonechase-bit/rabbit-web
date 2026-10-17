@@ -493,3 +493,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** status-job suite 119 pass (7 Maxwell Core tests: refusals, RPC errors, auth, rebinding/origin refusal, CLI end to end); verify-anchor 13 python tests pass; live: three Bitcoin blocks confirmed by two real sources; node ran, answered, stopped and removed its cookie; catalog 392 pass
 - **Undo:** Unregister the scheduled task RabbitOS Witness; delete ~/.maxwell; revert the commits
 - **Ref:** docs/maxwell-core.md
+
+### 2026-10-17 16:31 UTC - Maxwell Core / website
+- **Did:** Maxwell Core 0.2.0: public read-only gateway + REST interface and more RPC methods; Linux/Raspberry Pi packaging (Dockerfile, compose, systemd units, install.sh, README); Cloud Run service maxwell-core (no roles, no secrets, scale to zero) at the Cloud Run address; rabbitsoftware.io/core (node, networks, research, agents, open data in one page); cloud-shell access via catalog curl commands. Found and fixed by testing on Linux: the 'am I the main program' check broke on Linux paths (also in witness.mjs); Cloud Run reserves /healthz so /health was added.
+- **Checked:** status-job suite 132 pass (maxwell-core 12, site-core 8); Linux amd64 and emulated arm64 containers; installer on clean Debian incl. systemd-analyze verify; live gateway answers with CORS and refuses owner methods; page script run against real data in jsdom incl. with sources down; catalog 392
+- **Undo:** gcloud run services delete maxwell-core --region us-west2 and delete service account rabbit-maxwell-core; remove core.html/js/view and the CSP entry and redeploy Pages; revert the commits
+- **Ref:** docs/maxwell-core.md

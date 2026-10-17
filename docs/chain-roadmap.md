@@ -38,6 +38,10 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 | 28 | Maxwell Core phase 1: node heartbeats, `status/nodes.json`, a `core:nodes` leaf in the rabbit web snapshot, a Core lane on the Network map, RabbitOS cloud-shell view | NEXT | |
 | 29 | Maxwell Core phase 2: mining and signed blocks inside the Core | LATER | |
 | 30 | Always-on node hardware (Raspberry Pi 5 or mini PC with Linux) and packaging (Docker, systemd) | WAITING | owner decision; no custom kernel needed |
+| 31 | Maxwell Core for Linux and Raspberry Pi: Dockerfile (amd64, arm64), compose, hardened systemd units, `install.sh`, README guide | **DONE** | 2026-10-17: run in Linux containers: unprivileged, read-only root, no capabilities, 26 MB; ARM64 under emulation gives the same tip hash; installer on a clean Debian (dry run changes nothing, user and permissions, cookie mode 600, `systemd-analyze verify` passes, uninstall keeps data). Not yet on a physical Pi. |
+| 32 | Maxwell Core on Google Cloud: public read-only gateway (Cloud Run `maxwell-core`) | **DONE** | 2026-10-17: live at the Cloud Run address; REST and JSON-RPC answer from the real chain; owner methods are refused; CORS open; rate-limited. |
+| 33 | rabbitsoftware.io/core: research, networks, data and agents in one page, from the Core gateway and the public files | **DONE** | 2026-10-17: six panels that load and fail independently; 132 status-job tests (8 new); page script run against real data in a simulated browser. |
+| 34 | Cloud shell access to the Core | **DONE** | catalog entries (curl against the gateway) in the Maxwell Core group; the cloud shell can also run the CLI with `--url`. |
 
 ## 1. The tree
 

@@ -1,6 +1,6 @@
 # Maxwell Core: one node program for the Maxwell chain
 
-Planned and started 2026-10-17. **Maxwell Core** is a single program that does for the Maxwell chain what Bitcoin Core does for Bitcoin: keep a verified local copy, answer questions about it over a local RPC, and take part in checking it. RabbitOS manages it, rabbitweb tracks it, rabbitsoftware.io shows it.
+Planned and started 2026-10-17; version 0.2.0 built the same day. **Maxwell Core** is a single program that does for the Maxwell chain what Bitcoin Core does for Bitcoin: keep a verified local copy, answer questions about it over a local RPC, and take part in checking it. RabbitOS manages it, rabbitweb tracks it, rabbitsoftware.io shows it.
 
 ## 1. Would this work? Honest answer
 
@@ -30,6 +30,7 @@ Planned and started 2026-10-17. **Maxwell Core** is a single program that does f
 | Phase | What | State |
 |---|---|---|
 | **0: read-only node** | `maxwell-core`: init, sync, verify, serve a JSON-RPC on 127.0.0.1 with cookie auth, a CLI, and `witness` (signs the head it verified, with the same code as `witness.mjs`) | **built, tested (see section 5)** |
+| **0.2: gateway, REST, Linux and Pi, Google Cloud, one-page view** | a public read-only gateway (JSON-RPC and a REST interface like Bitcoin Core's), more methods (`getchaintips`, `getmininginfo`, `getnetworkinfo`, `getpeerinfo`, `getwitnessinfo`, `getanchorinfo`, `uptime`); Dockerfile and compose, systemd units, `install.sh` and a Raspberry Pi guide (`maxwell-core/README.md`); a Cloud Run service `maxwell-core`; the page rabbitsoftware.io/core | **built and live (section 7)** |
 | 1: RabbitOS manages it, rabbitweb tracks it | each node publishes a small signed heartbeat (version, height, best hash, last sync); the status job aggregates `status/nodes.json`; the rabbit web miner adds a leaf `core:nodes` (count and agreement) so the platform snapshot block commits to the node set; the Network map gets a "Core nodes" lane; the cloud shell page shows the nodes | planned |
 | 2: mining moves into the Core | `getblocktemplate` / `submitblock` equivalents, owner-only (needs the ingest secret); the research-anchor and web-snapshot miners become Core modules; signed blocks | planned |
 | 3: packaging | Docker image, `systemd` unit, Raspberry Pi guide, Windows service; optional build of the node on bare metal | planned |
@@ -41,7 +42,7 @@ Planned and started 2026-10-17. **Maxwell Core** is a single program that does f
 - **rabbitweb (tracks):** the platform snapshot already commits the ledger head, code commits and research counts into a Maxwell block; node heartbeats become one more leaf, so the chain records which nodes agreed on which head, when.
 - **rabbitsoftware.io (shows):** the Network map and the Proof page already show blocks, anchors, Bitcoin witnesses and the independent witnesses; Core nodes appear as one more lane.
 
-## 5. Phase 0 in detail
+## 5. Phase 0 in detail (the private node)
 
 Code: `maxwell-core/maxwell-core.mjs` in the `rabbitsoftware-cloudflare` repository (one file next to a copy of `witness.mjs`; Node 22 or newer; no dependencies).
 
@@ -56,6 +57,22 @@ node maxwell-core.mjs witness --name mynode      # signs the head this node veri
 ```
 
 Safety choices: the RPC listens only on the loopback address; it checks the `Host` header (a defence against DNS-rebinding) and rejects any request that carries a browser `Origin`; every call needs the cookie; request bodies are limited to 64 KB; the node never writes anywhere except its own data folder; a new chain that contradicts the stored one is refused and flagged, never silently adopted.
+
+## 7. Version 0.2: what exists now, and how to reach it
+
+| Where | What | How |
+|---|---|---|
+| **Google Cloud** | Cloud Run service `maxwell-core`: the public read-only gateway, no roles, no secrets, scales to zero | `https://maxwell-core-vxx5lz7c5a-wl.a.run.app`; set up with `pwsh -File scripts/powershell/Setup-GcpCore.ps1` |
+| **RabbitOS cloud shell** | the same gateway, read from the owner's shell | `curl -s https://maxwell-core-vxx5lz7c5a-wl.a.run.app/rest/chaininfo.json` (also `/rest/block/12.json`, `/rest/witnesses.json`, `/rest/anchors.json`, `/rest/mininginfo.json`, `/rest/peers.json`); listed on the Commands page under *Maxwell Core* |
+| **rabbitsoftware.io** | one live page for everything: the node and its chain, the networks that witness it, the research, the agents and the open data | `https://rabbitsoftware.io/core.html` (reads the gateway, the status bucket and the open data hub; each panel loads on its own) |
+| **Raspberry Pi / any Linux** | the same program as a service | `maxwell-core/README.md`: `sudo ./install.sh` (checked on a clean Debian, including `systemd-analyze verify`), or Docker (amd64 and arm64) |
+| **Your own PC** | the private node with the cookie RPC | `node maxwell-core/maxwell-core.mjs serve` |
+
+**Measured:** about 26 MB of memory while running, in an unprivileged container with a read-only root filesystem and no capabilities. The ARM64 image was run under emulation and computes the same tip hash as amd64, so the hashing agrees across processor families. It has not been run on a physical Raspberry Pi.
+
+**Security choices:** the private RPC is loopback-only for good, cookie-protected and refuses browsers; the public gateway can be bound elsewhere but serves public data only, never owner methods or the server's folder, and rate-limits clients (120 a minute).
+
+**Found by testing on Linux:** the program did nothing on Linux at first, because its "am I the main program?" check built a Windows-style file address; fixed in `maxwell-core.mjs` and `witness.mjs`. Google Cloud's front end also reserves the path `/healthz`, so `/health` was added.
 
 ## 6. What is still open for you to decide
 
