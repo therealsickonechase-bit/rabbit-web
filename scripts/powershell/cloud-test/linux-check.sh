@@ -45,6 +45,7 @@ if [ ! -f /var/lib/mc-test-phase1 ]; then
   P "service runs as: $(ps -o user= -C node | head -1)"
   [ "$FAIL" = 0 ] && touch /var/lib/mc-test-phase1 && P "PHASE 1 done; rebooting to prove it starts by itself" && sync && reboot
   [ "$FAIL" = 0 ] || P "MC-TEST-RESULT: FAIL (phase 1)"
+  sleep 15
 else
   P "PHASE 2 after reboot on $(uname -m): uptime $(cut -d' ' -f1 /proc/uptime)s"
   systemctl is-active --quiet maxwell-core; ok $? "service started by itself at boot"
@@ -57,4 +58,5 @@ else
     FAIL=1
   fi
   if [ "$FAIL" = 0 ]; then P "MC-TEST-RESULT: PASS"; else P "MC-TEST-RESULT: FAIL (phase 2)"; fi
+  sleep 15      # let the last line reach the serial console before this script (and its output pipe) ends
 fi
