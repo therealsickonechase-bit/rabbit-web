@@ -26,11 +26,11 @@ Nothing below needs an account, API key, registration or payment.
 | XRP Ledger | **Not on** | Needs about 1 to 2 XRP (base reserve is 1 XRP) at `rN8pnpYCaZEQAXE5kL1GC9ThpJYZ8Rd1nX`. Job `rabbit-anchor-chains` is paused. |
 | Donation wallet | **Built, empty** | Cloud KMS key, watcher, alerts, lien; no funds have ever moved. |
 
-## Open integrity finding (2026-10-17)
+## Integrity finding of 2026-10-17: found, explained and closed
 
-`verify-maxwell.py` rebuilds each research anchor's Merkle root from the public records that existed at the block's time. Blocks 9, 11 and 12 reproduce exactly. Blocks 1, 4 and 7 have the right record count but a different root: some record was edited in place after it was anchored. Block 1 was traced to a single Europe PMC title whose capitalisation was refreshed ("Clinical Implications..." became "Clinical implications..."); with the 14 October backup, block 1 reproduces exactly. Blocks 4 and 7 were not fully traced (the backups do not hold the state from that day). This is not evidence of tampering, but it means an anchor can only be re-checked while the records it covered are unchanged.
+`verify-maxwell.py` first reported that the research anchors of blocks 1, 4 and 7 did not rebuild from today's records (right count, different root). Cause: **two records had their titles edited at the source after they were anchored** (`europepmc:42810557`, a capitalisation refresh, and `grant:5P01CA254867-05`), between 13:12 and 22:55 UTC on 2026-10-16. I proved this by recovering the exact older record sets: the 14 October export (block 1), the 16 October database dump (block 4), and the dump's values merged with the later export (block 7). All six research anchors then reproduced exactly. It is not tampering, but it showed that an anchor can only be re-checked while the records stay unchanged.
 
-**Recommended fix (not built yet):** publish the exact record set used (a snapshot of the seven fields) next to each research anchor in the public ledger bucket, so every future block can be re-checked forever even if the source later edits a record.
+**Fixed for good:** every new research anchor now saves the exact record set it covered (`anchor_snapshots/block-NNNN.ndjson.gz`, only the seven public anchored fields, deterministic bytes). The six existing ones were backfilled (each only after its root was proven to reproduce) and all are published at `maxwell/snapshots/` in the public ledger bucket. `verify-maxwell.py` now rebuilds each root from its snapshot and also reports how many records were edited since. Live run: 14 blocks OK, 6 of 6 research anchors OK from saved records.
 
 ## Fixed today
 
@@ -64,6 +64,6 @@ Nothing below needs an account, API key, registration or payment.
 ## Next, in order
 
 1. Watch tomorrow's nightly backup (it should show every step in `~\RabbitOS\logs\backup-<date>.log`).
-2. Build the per-anchor record snapshot.
+2. Put the snapshot manifest hash into the anchors (see chain-roadmap.md).
 3. Add a second Google Cloud owner and a budget alert.
 4. Fund the anchor accounts only if and when you want Ethereum and XRP witnesses.

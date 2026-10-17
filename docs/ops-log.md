@@ -451,3 +451,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** verify-maxwell tests 4 pass; live run: 14 blocks OK, anchors 9/11/12 rebuild exactly; export now real NDJSON (1603 research lines); qa-audit 80 pass
 - **Undo:** Revert the commits; the repaired exports can be rolled back through the bucket's object versions
 - **Ref:** docs/readiness.md
+
+### 2026-10-17 14:48 UTC - Maxwell / proof
+- **Did:** Per-anchor record snapshots: maxwell_research_anchor.py now saves the exact record set of every new research anchor (anchor_snapshots/block-NNNN.ndjson.gz, public anchored fields only); Sync-RabbitGcs -Ledger publishes them to maxwell/snapshots/ after checking every line; verify-maxwell.py rebuilds roots from them and reports edits since. Backfilled blocks 1, 4, 7, 9, 11, 12 after proving each root (sources: 14-Oct export, 16-Oct database dump, current records). Cause of the earlier mismatch: two record titles edited at the source after anchoring. Wrote docs/chain-roadmap.md (full tree, done and missing steps).
+- **Checked:** research-agents anchor tests 25 pass (2 new), verify-maxwell tests 5 pass; live verify-maxwell: 14 blocks OK, 6 of 6 research anchors OK from saved records; 6 snapshots in the public bucket
+- **Undo:** Revert the commits; delete maxwell/snapshots/ in the public ledger bucket (the chain is unaffected)
+- **Ref:** docs/chain-roadmap.md

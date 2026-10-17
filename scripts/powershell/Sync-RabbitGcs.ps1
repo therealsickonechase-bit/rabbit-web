@@ -87,6 +87,19 @@ if ($Ledger) {
         if ($j.blocks -and $extra.Count -eq 0 -and $badBlocks.Count -eq 0) { Copy-ToBucket $mc "gs://$PublicBucket/maxwell/maxwell_chain.json" }
         else { Write-Warning 'maxwell_chain.json has unexpected fields; NOT published.' }
     }
+    # The exact record set each research anchor covered (written when the block was mined), so the anchor can be re-checked forever. Public records only:
+    # a snapshot is published only if every line holds nothing but the seven anchored fields.
+    $snapDir = Join-Path $MaxwellRoot 'anchor_snapshots'
+    if (Test-Path -LiteralPath $snapDir -PathType Container) {
+        $stable = @('id', 'source', 'title', 'url', 'topic_id', 'run_id', 'first_seen_at')
+        foreach ($f in Get-ChildItem -LiteralPath $snapDir -Filter 'block-*.ndjson.gz' -File) {
+            if ($f.Name -notmatch '^block-\d{4}\.ndjson\.gz$') { Write-Warning "Skipping odd snapshot name $($f.Name)"; continue }
+            $ok = $true
+            $fs = [IO.File]::OpenRead($f.FullName); $gz = New-Object IO.Compression.GZipStream($fs, [IO.Compression.CompressionMode]::Decompress); $sr = New-Object IO.StreamReader($gz, [Text.Encoding]::UTF8)
+            try { while (($line = $sr.ReadLine()) -ne $null) { if ($line.Trim()) { $o = $line | ConvertFrom-Json; if (@($o.PSObject.Properties.Name | Where-Object { $_ -notin $stable }).Count -gt 0) { $ok = $false; break } } } } finally { $sr.Dispose() }
+            if ($ok) { Copy-ToBucket $f.FullName "gs://$PublicBucket/maxwell/snapshots/$($f.Name)" } else { Write-Warning "$($f.Name) has fields beyond the anchored ones; NOT published." }
+        }
+    }
 }
 
 if ($Exports) {
