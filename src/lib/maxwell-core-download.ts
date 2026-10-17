@@ -32,13 +32,16 @@ export const CORE_PLATFORMS: readonly CorePlatform[] = [
   { id: 'raspberry-pi', name: 'Raspberry Pi', note: 'Pi 3, 4, 5 or Zero 2 W with a 64-bit OS. Tested on emulated 64-bit ARM; not yet on physical Pi hardware.',
     steps: ['cd platforms/raspberry-pi', 'sudo ./setup-pi.sh --dry-run', 'sudo ./setup-pi.sh --install-node --name pi-kitchen'] },
   { id: 'linux', name: 'Linux', note: 'Debian, Ubuntu and anything with systemd.', steps: ['cd platforms/linux', 'sudo ./install.sh --dry-run', 'sudo ./install.sh', 'maxwell-cli getblockchaininfo'] },
-  { id: 'windows', name: 'Windows', note: 'Windows 10 or 11, current user, no administrator rights. Needs Node.js 22.',
-    steps: ['powershell -ExecutionPolicy Bypass -File platforms\windows\install.ps1 -WhatIf', 'powershell -ExecutionPolicy Bypass -File platforms\windows\install.ps1'] },
-  { id: 'macos', name: 'macOS', note: 'Not yet tested on a Mac.', steps: ['cd platforms/macos', './install.sh --dry-run', './install.sh'] },
+  { id: 'windows', name: 'Windows', note: 'Windows 10 or 11. For one user no administrator rights are needed; -System installs for the whole PC from an administrator terminal. Needs Node.js 18 or newer.',
+    steps: ['powershell -ExecutionPolicy Bypass -File platforms\windows\install.ps1 -WhatIf', 'powershell -ExecutionPolicy Bypass -File platforms\windows\install.ps1            (this user)', 'powershell -ExecutionPolicy Bypass -File platforms\windows\install.ps1 -System    (whole PC; administrator terminal)'] },
+  { id: 'macos', name: 'macOS', note: 'Not yet tested on a Mac.', steps: ['cd platforms/macos', './install.sh --dry-run', './install.sh               (this user)', 'sudo ./install.sh --system  (whole Mac)'] },
   { id: 'docker', name: 'Docker', note: 'amd64 and arm64.', steps: ['cd platforms/docker', 'docker compose up -d', 'docker compose exec maxwell-core node maxwell-core.mjs cli getblockchaininfo'] },
 ]
 
 export const CORE_AFTER: readonly string[] = [
+  'maxwell-core verify            re-check every block here and compare with the network',
+  'maxwell-core watch             live view of your chain, the cloud, witnesses and nodes',
+  'maxwell-core update            is a newer signed version available? (add --apply to install)',
   'maxwell-core dashboard         open the desktop dashboard (http://127.0.0.1:8646/); the Maxwell Core icon does the same',
   'maxwell-core status            compare your node with the Google Cloud gateway',
   'maxwell-core open cloudshell   open the RabbitOS cloud shell',
