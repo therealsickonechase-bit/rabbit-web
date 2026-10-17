@@ -78,6 +78,8 @@ if ($Cloudflare) {
         # D1
         try {
             $raw = npx wrangler d1 list --json 2>$null | Out-String
+            if ($raw.IndexOf('[') -lt 0) { $raw = npx wrangler d1 list --json 2>$null | Out-String }   # the first npx call may only install wrangler
+            if ($raw.IndexOf('[') -lt 0) { throw 'wrangler d1 list returned no JSON (is wrangler logged in?)' }
             $dbs = @(($raw.Substring($raw.IndexOf('[')) | ConvertFrom-Json) | ForEach-Object { $_.name })
             foreach ($db in $dbs) { npx wrangler d1 export $db --remote --output "$cf\d1\$db.sql" 2>&1 | Out-Null; if ($LASTEXITCODE -ne 0) { throw "d1 export failed: $db" } }
             Add-Result 'cloudflare-d1' $true "$($dbs.Count) databases"
