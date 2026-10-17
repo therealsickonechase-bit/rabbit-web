@@ -56,7 +56,7 @@ A head is **trusted** when at least **k** different registered witnesses (differ
 
 | Witness | Where it runs | Key | Extra |
 |---|---|---|---|
-| `pc-witness` | the owner's PC, nightly | `~\RabbitOS\witness\pc-witness.key` (never leaves the PC) | signs only if **both** the Python reference verifier and the JavaScript witness pass |
+| `pc-witness` | the owner's PC, every 6 hours (scheduled task `RabbitOS Witness`) and in the nightly job | `~\RabbitOS\witness\pc-witness.key` (never leaves the PC) | signs only if **both** the Python reference verifier and the JavaScript witness pass |
 | `cloud-witness` | a Google Cloud Run job, every 6 hours at :45 | Secret Manager `cloud-witness-key` (generated in memory and piped in; never on disk) | its service account can write only `witness/cloud-witness/` |
 
 Both are run by the project. They show the mechanism working, they catch accidents and bugs (for example a corrupted copy, a rollback, a mining mistake), and they use different machines, keys, languages (the PC adds Python) and schedules. **They are not independent third parties**, and the project can sign anything it likes. The model gets its real strength only when **outside witnesses** are added to the registry. That is the point of section 6.

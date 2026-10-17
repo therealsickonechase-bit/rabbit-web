@@ -692,6 +692,15 @@ const PLATFORM_WEB: CatalogEntry[] = [
 ]
 
 const PLATFORM_CF: CatalogEntry[] = [
+  // Maxwell Core (docs/maxwell-core.md): a read-only node for the Maxwell chain, in the rabbitsoftware-cloudflare repository.
+  ...seed('rabbitsoftware-cloudflare', 'maxwell-core/maxwell-core.mjs', [
+    { id: 'mc-sync', group: 'Maxwell Core', label: 'Maxwell Core: sync and verify the public chain', scope: 'owner', risk: 'network',
+      command: 'node maxwell-core/maxwell-core.mjs sync',
+      description: 'Downloads the public Maxwell chain into ~/.maxwell, verifies every hash, link and work target, and refuses a chain that is invalid, shorter, or contradicts the one already stored.' },
+    { id: 'mc-serve', group: 'Maxwell Core', label: 'Maxwell Core: run the node (RPC on 127.0.0.1)', scope: 'owner', risk: 'local',
+      command: 'node maxwell-core/maxwell-core.mjs serve',
+      description: 'Serves a Bitcoin-Core-style JSON-RPC on the loopback address only, with a cookie file for authentication, and syncs every hour. Query it with: node maxwell-core/maxwell-core.mjs cli getblockchaininfo' },
+  ]),
   ...seed('rabbitsoftware-cloudflare', 'workers', [
     { id: 'cf-test-hub', source: 'workers/hub-mcp/package.json', group: 'Platform tests', label: 'Test: hub MCP (tools, catalog, research, access)', scope: 'owner', risk: 'local',
       command: 'cd workers/hub-mcp && npm test', description: 'Offline. Includes the safety rules: read-only tools, bad input refused, draft never runs.' },

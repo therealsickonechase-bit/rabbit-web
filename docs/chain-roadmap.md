@@ -33,6 +33,11 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 | 23 | Peer-review model: the witness circle (`docs/peer-review.md`, `scripts/witness.mjs`) | **DONE** | 2026-10-17: independent witnesses re-check the public chain and sign the head (Ed25519); a reader trusts a head when k different witnesses agree and none conflicts. Live: `pc-witness` (PC, runs the Python verifier too) and `cloud-witness` (Cloud Run, own key in Secret Manager) both signed the 16-block head; rule k=2 met; stranger's check exits 0; shown on Proof and Network. 110 status-job tests (22 new), real-chain hash reproduction in JavaScript, conflict/rollback/forgery cases. |
 | 24 | Outside witnesses join the circle | WAITING | the model only means something with parties the project does not control; the 5-minute guide is in `docs/peer-review.md` section 6 and on the Proof page |
 | 25 | Alert on `witness_conflict` / `witness_refused` / lost quorum | NEXT | |
+| 26 | Two independent Bitcoin sources must agree (verifier and status job, optional own Bitcoin Core); PC witness every 6 hours | **DONE** | 2026-10-17: live check passes with mempool.space and Blockstream agreeing on all three blocks; one source is shown as "not counted", disagreement as a red flag; scheduled task `RabbitOS Witness` (00:20, 06:20, 12:20, 18:20). Status job 112 tests. |
+| 27 | Maxwell Core phase 0: a read-only node (sync, verify, Bitcoin-Core-style JSON-RPC on loopback with cookie auth, CLI, witness) | **DONE** | 2026-10-17: `maxwell-core/` in rabbitsoftware-cloudflare, zero dependencies; synced the real 16-block chain on this PC; 7 tests (RPC errors, refusal of invalid/shorter/conflicting chains, auth, DNS-rebinding and browser-origin refusal, CLI end to end). Plan: `docs/maxwell-core.md`. |
+| 28 | Maxwell Core phase 1: node heartbeats, `status/nodes.json`, a `core:nodes` leaf in the rabbit web snapshot, a Core lane on the Network map, RabbitOS cloud-shell view | NEXT | |
+| 29 | Maxwell Core phase 2: mining and signed blocks inside the Core | LATER | |
+| 30 | Always-on node hardware (Raspberry Pi 5 or mini PC with Linux) and packaging (Docker, systemd) | WAITING | owner decision; no custom kernel needed |
 
 ## 1. The tree
 

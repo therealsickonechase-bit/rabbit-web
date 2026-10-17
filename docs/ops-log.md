@@ -487,3 +487,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** status-job suite 110 pass (22 new, real-chain fixture reproduces 16 of 16 hashes in JavaScript); live: both witnesses signed the 16-block head, status/witness.json trusted=true 2 of 2, stranger's check exits 0; catalog tests 392 pass
 - **Undo:** Disable scheduler job rabbit-witness-6h and delete job rabbit-witness, secret cloud-witness-key and service accounts rabbit-witness-job/rabbit-witness-scheduler; remove the witness entries from site/witness/registry.json; remove the nightly Run-Witness step
 - **Ref:** docs/peer-review.md
+
+### 2026-10-17 16:02 UTC - Maxwell Core / verification
+- **Did:** Improvements: the Bitcoin check (verify-anchor.py and the status job) now asks every source (mempool.space, Blockstream, optionally your own Bitcoin Core over JSON-RPC) and counts a proof only when at least two different sources answer and agree; one source is 'not counted', disagreement a red flag. PC witness now also runs every 6 hours (scheduled task RabbitOS Witness). New: Maxwell Core phase 0 (maxwell-core/maxwell-core.mjs in rabbitsoftware-cloudflare): a read-only node with sync/verify, Bitcoin-Core-style JSON-RPC on 127.0.0.1 with a cookie, a CLI and a witness mode; synced the real 16-block chain into ~/.maxwell on this PC. Plan and phases in docs/maxwell-core.md.
+- **Checked:** status-job suite 119 pass (7 Maxwell Core tests: refusals, RPC errors, auth, rebinding/origin refusal, CLI end to end); verify-anchor 13 python tests pass; live: three Bitcoin blocks confirmed by two real sources; node ran, answered, stopped and removed its cookie; catalog 392 pass
+- **Undo:** Unregister the scheduled task RabbitOS Witness; delete ~/.maxwell; revert the commits
+- **Ref:** docs/maxwell-core.md
