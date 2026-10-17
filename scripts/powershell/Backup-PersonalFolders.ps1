@@ -55,7 +55,7 @@ $logDir = Join-Path $HOME 'RabbitOS\logs'; New-Item -ItemType Directory -Force $
 $log = Join-Path $logDir ("personal-gcs-{0}.log" -f (Get-Date -Format 'yyyy-MM-dd'))
 function Log($m) { $line = "[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss'), $m; Add-Content -Path $log -Value $line; Write-Host $line }
 # Heavy jobs run one at a time (after a wake-up Task Scheduler starts every missed job at once and memory runs out).
-. (Join-Path $PSScriptRoot 'Wait-HeavyJobSlot.ps1') -Name 'personal-folders-backup' -Log { param($m) Log $m }
+& (Join-Path $PSScriptRoot 'Wait-HeavyJobSlot.ps1') -JobName 'personal-folders-backup' -Say { param($m) Log $m }
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) { throw 'gcloud is not installed or not on PATH.' }
 
 $created = $false

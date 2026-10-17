@@ -47,7 +47,7 @@ $logDir = Join-Path $HOME 'RabbitOS\logs'; New-Item -ItemType Directory -Force $
 $log = Join-Path $logDir ("hf-gcs-{0}.log" -f (Get-Date -Format 'yyyy-MM-dd'))
 function Log($m) { $line = "[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss'), $m; Add-Content -Path $log -Value $line; Write-Host $line }
 # Heavy jobs run one at a time (after a wake-up Task Scheduler starts every missed job at once and memory runs out).
-. (Join-Path $PSScriptRoot 'Wait-HeavyJobSlot.ps1') -Name 'huggingface-backup' -Log { param($m) Log $m }
+& (Join-Path $PSScriptRoot 'Wait-HeavyJobSlot.ps1') -JobName 'huggingface-backup' -Say { param($m) Log $m }
 # A scheduled task can start with a shorter PATH than a terminal: add the usual Python Scripts folders (where pip puts hf.exe) and the Google Cloud SDK.
 trap { Log ("FAIL  " + $_.Exception.Message); try { . (Join-Path $PSScriptRoot 'Write-CloudLog.ps1'); Write-CloudLog -Job 'huggingface-backup' -Event 'backup_failed' -Ok $false -Fields @{ reason = $_.Exception.Message.Substring(0, [Math]::Min(200, $_.Exception.Message.Length)) } } catch { }; exit 1 }   # a run started by Task Scheduler has no console, so always leave the reason in the log
 foreach ($extra in (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\Scripts'), (Join-Path $env:APPDATA 'Python\Python312\Scripts'), (Join-Path $env:LOCALAPPDATA 'Google\Cloud SDK\google-cloud-sdk\bin')) { if ((Test-Path $extra) -and ($env:PATH -notlike "*$extra*")) { $env:PATH = "$env:PATH;$extra" } }

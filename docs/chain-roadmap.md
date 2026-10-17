@@ -2,6 +2,28 @@
 
 Reviewed 2026-10-17. Every state below is one of: **VERIFIED** (a command or test was run and its output seen on that date), **BUILT** (code and tests exist, not re-run today) or **MISSING** (not built, or built but switched off). Where something depends on money it says so. Nothing here needs funds except the two items marked $.
 
+## Progress tracker (updated as work finishes)
+
+State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (needs something from the owner), **LATER $** (needs a little money).
+
+| # | Step | State | Last update |
+|---|---|---|---|
+| 1 | Prove the nightly backup completes end to end | **DOING** | 2026-10-17: first full run after the fix started 09:54. An earlier try that morning exposed a bug in my own lock helper (it overwrote each script's `$log` variable, so every step failed to log); fixed, regression-tested inside a caller script, rerun. |
+| 2 | Put the snapshot manifest hash into the anchors | **DOING** | 2026-10-17: anchor job, `verify-anchor.py` and the pinned manifest vector done and tested (anchor job 17 tests, verifier 6); job deployed. The first anchor that carries the commitment is made after the nightly run publishes the newest snapshot. |
+| 3 | `verify-ledger.py` for the RabbitOS ledger | NEXT | |
+| 4 | Run the Maxwell verifier as a cloud job; show the result on the Proof page | NEXT | |
+| 5 | Sign blocks with a dedicated key | NEXT | |
+| 6 | Write and test the fork-choice rule (PC and cloud miners) | NEXT | |
+| 7 | Free second mirror outside Google (daily commit to a public GitHub repo) | NEXT | |
+| 8 | Block explorer page on the site | NEXT | |
+| 9 | Restore drill from backups alone | NEXT | |
+| 10 | Second Google Cloud owner and a budget alert | WAITING | needs the owner in the console |
+| 11 | Append-only record versions in Supabase | NEXT | |
+| 12 | Fund the Ethereum and XRP accounts; unpause `rabbit-anchor-chains-6h` | LATER $ | |
+| 13 | First small wallet test and withdrawal | LATER $ | |
+| 14 | Appeal the GitHub suspension (or retire the org) | WAITING | owner |
+| 15 | Decide on the cloud-shell Gemini key | WAITING | optional |
+
 ## 1. The tree
 
 ```

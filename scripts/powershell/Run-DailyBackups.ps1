@@ -13,7 +13,7 @@ New-Item -ItemType Directory -Force $logDir | Out-Null
 $log = Join-Path $logDir ("backup-{0}.log" -f (Get-Date -Format 'yyyy-MM-dd'))
 function Log($m) { ("[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss'), $m) | Tee-Object -FilePath $log -Append }
 # Heavy jobs run one at a time (after a wake-up Task Scheduler starts every missed job at once and memory runs out).
-. (Join-Path $PSScriptRoot 'Wait-HeavyJobSlot.ps1') -Name 'daily-backups' -Log { param($m) Log $m }
+& (Join-Path $PSScriptRoot 'Wait-HeavyJobSlot.ps1') -JobName 'daily-backups' -Say { param($m) Log $m }
 $failed = 0
 . (Join-Path $PSScriptRoot 'Write-CloudLog.ps1')
 $jobStarted = Get-Date

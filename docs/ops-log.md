@@ -457,3 +457,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** research-agents anchor tests 25 pass (2 new), verify-maxwell tests 5 pass; live verify-maxwell: 14 blocks OK, 6 of 6 research anchors OK from saved records; 6 snapshots in the public bucket
 - **Undo:** Revert the commits; delete maxwell/snapshots/ in the public ledger bucket (the chain is unaffected)
 - **Ref:** docs/chain-roadmap.md
+
+### 2026-10-17 14:55 UTC - Backups / anchors
+- **Did:** Regression in my own Wait-HeavyJobSlot helper found by the first full nightly run: dot-sourcing it overwrote each script's $log path with its -Log scriptblock (PowerShell variables are case-insensitive), so every step failed to log. Helper now runs in its own scope with distinct parameter names (-JobName, -Say) and keeps the mutex in a global. Also: the anchor job now commits to a manifest of the saved research-record sets (snapshots.json + anchor.json snapshots field); verify-anchor.py checks it; progress tracker added to docs/chain-roadmap.md.
+- **Checked:** Caller-scope regression test passes (log variable stays a path, logging works); anchor-job 17 tests, verify-anchor 6 tests, verify-maxwell 5 tests; nightly job now logs START/OK per step
+- **Undo:** Revert the commits; redeploy the previous anchor job with Setup-GcpAnchor.ps1
+- **Ref:** scripts/powershell/Wait-HeavyJobSlot.ps1
