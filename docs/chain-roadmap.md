@@ -48,6 +48,10 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 | 38 | rabbitweb `core:nodes` leaf (`research-agents/maxwell_links.py`) | **DONE** | 2026-10-17: counts and head hash only; the clock alone never grows the chain |
 | 39 | Core lane on the Network map, RabbitOS app view of the nodes, `Run-CoreHeartbeat.ps1` + scheduled task so the PC is a node | NEXT | the PC needs its own node key first (owner step) |
 | 40 | Deploy items 36-37: status job (`Setup-GcpStatusFeed.ps1 -RunNow`), Core gateway (`Setup-GcpCore.ps1`), site (Pages deploy) | WAITING | needs your go-ahead |
+| 41 | Maxwell Core 0.5.0: system-wide install on every OS (Windows `-System`, macOS `--system`, Linux/Pi), terminal `verify` / `watch` / `update`, Node 18+, signed self-update | **DONE, DEPLOYED** | 2026-10-17: Windows machine-wide install run for real as SYSTEM (locked data folder, admin CLI); Node 18, 20, 24 suites pass; live signed release pointer verifies |
+| 42 | Independent peer review of 0.5.0 (a separate reviewer agent, read-only) | **DONE, fixes applied** | 2026-10-17: 23 findings; fixed: crash on a malformed request (reproduced and fixed), corrupt chain file, pinned genesis hash and minimum difficulty, signed issue date against replayed releases, Windows untrusted-Node / pre-created folder / junction / PATH-corruption problems, unsafe `rm -rf`, macOS ownership order, Node install atomic + libatomic. Open: single release key (no rotation), chain trust without a witness quorum gate, Alpine/musl, Windows task runs as SYSTEM (LocalService would be tighter) |
+| 43 | Raspberry-Pi-like VM test: Debian arm64 and armv7 with a real systemd boot, real Node download, restart | **IN PROGRESS** | emulated, not a physical Pi |
+| 44 | macOS and real-hardware CI (GitHub Actions workflow written on local branch `ci/maxwell-core-platforms`) | **BLOCKED** | GitHub reports the account is locked for a billing issue, so no job starts; fix billing, then push that branch |
 
 ## 1. The tree
 
