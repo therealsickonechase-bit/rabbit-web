@@ -25,6 +25,7 @@ A one-page guide for visitors, collaborators and anyone deciding whether to trus
 2. Do the check on your own machine: download `scripts/verify-anchor.py` from the public repository and run `python verify-anchor.py <anchor id>`. It replays the OpenTimestamps proof and compares it with that Bitcoin block's Merkle root from a public Bitcoin API.
 3. Compare the ledger with its independent copy in Google Cloud (`ledger/chain_head.json`) and read the Maxwell chain (`maxwell/maxwell_chain.json`) to see each block name the hash of the one before it. Both links are on the [blockchain page](https://rabbitsoftware.io/blockchain.html).
 4. Verify the FreeTSA timestamp of an anchor with `openssl ts -verify` and the certificates from freetsa.org.
+5. Re-check the whole Maxwell chain (every hash, link, work target and research root) with `python verify-maxwell.py`. Read `docs/readiness.md` for what is live, what is not, and one open finding about early research anchors.
 
 More detail: [anchoring.md](anchoring.md) and [github-mirrors.md](github-mirrors.md).
 

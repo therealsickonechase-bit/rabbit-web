@@ -445,3 +445,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** qa-audit 80 tests pass (real anchor fixture); live: 6 anchors, first 3 verified against real blocks and the rest following; page and module serve 200 with JavaScript type
 - **Undo:** Remove the proof block from status.mjs and redeploy Setup-GcpStatusFeed.ps1; delete proof.html/proof.js/proof-view.mjs from the site and redeploy Pages
 - **Ref:** docs/start-here.md
+
+### 2026-10-17 14:37 UTC - Proof / backups
+- **Did:** Added scripts/verify-maxwell.py (independent check of every Maxwell hash, link, work target and research Merkle root) and docs/readiness.md. Found and fixed: Sync-RabbitGcs -Exports stored every export as decimal byte values (29 existing objects repaired, bucket versioned). Found: Maxwell research anchors for blocks 1, 4, 7 do not rebuild from today's records (a record was edited in place; block 1 traced to one Europe PMC title). Site blockchain page now states the light work step and links the verifier.
+- **Checked:** verify-maxwell tests 4 pass; live run: 14 blocks OK, anchors 9/11/12 rebuild exactly; export now real NDJSON (1603 research lines); qa-audit 80 pass
+- **Undo:** Revert the commits; the repaired exports can be rolled back through the bucket's object versions
+- **Ref:** docs/readiness.md

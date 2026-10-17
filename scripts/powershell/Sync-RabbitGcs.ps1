@@ -99,7 +99,9 @@ if ($Exports) {
         do {
             $url = "$Origin/api/data/${name}?format=ndjson&limit=200" + $(if ($cursor) { "&cursor=$([uri]::EscapeDataString($cursor))" } else { '' })
             $r = Invoke-WebRequest $url -TimeoutSec 60
-            if ($r.Content) { Add-Content $out ([string]$r.Content).TrimEnd() -Encoding utf8 }
+            # PowerShell 7 hands back raw bytes (byte[]) for the ndjson content type; [string] on that would join the byte VALUES with spaces ("123 34 105 ..."), so decode as UTF-8 text.
+            $text = if ($r.Content -is [byte[]]) { [Text.Encoding]::UTF8.GetString($r.Content) } else { [string]$r.Content }
+            if ($text) { Add-Content $out $text.TrimEnd() -Encoding utf8 }
             $cursor = $r.Headers['X-Next-Cursor']; if ($cursor -is [array]) { $cursor = $cursor[0] }
             $pages++
         } while ($cursor -and $pages -lt 500)
