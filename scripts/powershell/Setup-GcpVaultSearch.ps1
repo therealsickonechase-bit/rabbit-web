@@ -19,6 +19,8 @@ param(
     [switch]$SkipImport
 )
 $ErrorActionPreference = 'Stop'
+# Heavy jobs run one at a time (after a wake-up Task Scheduler starts every missed job at once and memory runs out).
+. (Join-Path $PSScriptRoot 'Wait-HeavyJobSlot.ps1') -Name 'vault-search-reindex'
 $preview = [bool]$WhatIfPreference
 $WhatIfPreference = $false
 function Step($m) { Write-Host "`n== $m" -ForegroundColor Cyan }

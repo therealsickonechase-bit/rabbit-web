@@ -427,3 +427,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** gh shows all 21 private with head commits equal to the mirrors; python tests pass
 - **Undo:** Delete the 21 repos on GitHub (gh repo delete, owner only); remove the 4 modules and test from research-agents (git revert e130577)
 - **Ref:** docs/github-mirrors.md
+
+### 2026-10-17 13:56 UTC - Backups / PC
+- **Did:** Root cause of the missing nightly backup: after the PC woke at 4:59 AM, Task Scheduler (StartWhenAvailable) started every missed job at once (daily backup, Hugging Face, personal folders, vault reindex) and the 7.7 GB PC ran out of memory. Added Wait-HeavyJobSlot.ps1 (machine-wide mutex, waits up to 3 h then proceeds) and called it from Run-DailyBackups, Backup-HuggingFace, Backup-PersonalFolders and Setup-GcpVaultSearch so heavy jobs run one at a time. Also Backup-Platform retries the D1 listing.
+- **Checked:** Lock tested: a second process waited 18 s for the first, a killed holder freed the lock at once; all scripts parse. First real proof is the next nightly run.
+- **Undo:** Remove the one dot-source line from each of the four scripts and delete Wait-HeavyJobSlot.ps1
+- **Ref:** scripts/powershell/Wait-HeavyJobSlot.ps1
