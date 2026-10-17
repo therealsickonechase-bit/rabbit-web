@@ -50,6 +50,8 @@ $steps = @(
     @{ Name = 'Toolbox: publish commands and files'; Script = 'Run-Toolbox.ps1'; Params = @{} },
     @{ Name = 'Maxwell: rabbit web snapshot'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python rabbitweb_miner.py --apply } finally { Pop-Location } } },
     @{ Name = 'Maxwell: mirror new blocks to the public ledger'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; python maxwell_chain_sync.py --once } finally { Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; Pop-Location } } },
+    # Record the hash of every new Maxwell block: a line in ~\RabbitOS\logs\maxwell-anchors.log and block-NNNN.json in gs://rabbitsoftware-io-backups/maxwell/anchors/ (hashes, counts and times only).
+    @{ Name = 'Maxwell: record new block hashes (local log + Google Cloud)'; Block = { Push-Location $maxwellDir; try { python record_anchor.py; $anchorDir = Join-Path $HOME 'RabbitOS\anchors'; if (Test-Path $anchorDir) { gcloud storage cp "$anchorDir\*.json" gs://rabbitsoftware-io-backups/maxwell/anchors/ --quiet; if ($LASTEXITCODE -ne 0) { throw 'anchor upload failed' } } } finally { Pop-Location } } },
     @{ Name = 'Google: public ledger + datasets'; Script = 'Sync-RabbitGcs.ps1'; Params = @{ Ledger = $true; Exports = $true } },
     @{ Name = 'Google: Maxwell files';            Script = 'Sync-RabbitGcs.ps1'; Params = @{ Maxwell = $true } },
     @{ Name = 'Platform: Supabase, Cloudflare, repos'; Script = 'Backup-Platform.ps1'; Params = @{} }

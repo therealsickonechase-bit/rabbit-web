@@ -397,3 +397,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** Unit tests: hub 61, qa-audit 69, a2a 15, rabbit-web 392, python physics 5; agy mcp list shows rabbitos-hub enabled
 - **Undo:** Connect-Antigravity.ps1 -Remove; revert the commits; nothing live was changed
 - **Ref:** docs/antigravity.md
+
+### 2026-10-17 00:43 UTC - Maxwell
+- **Did:** Mined research anchor block 11 (1511 public records, includes 49 antigravity physics papers); mirrored to the app, published to the public Google Cloud ledger, status job rerun; hash recorded in ~/RabbitOS/logs/maxwell-anchors.log and gs://rabbitsoftware-io-backups/maxwell/anchors/block-0011.json
+- **Checked:** research_link shows the antigravity records as Maxwell block 11; public mirror has 12 blocks
+- **Undo:** Blocks are append-only and cannot be removed; a later block can supersede it. Delete the log line and anchors/block-0011.json only to remove the note
+- **Ref:** maxwell_research_anchor.py --apply
