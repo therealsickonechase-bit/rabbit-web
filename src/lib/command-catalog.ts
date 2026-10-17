@@ -131,6 +131,12 @@ const RABBIT_WEB: CatalogEntry[] = [
       command: 'Sync-RabbitChain',
       description: 'Run in PowerShell on your PC after Import-Module. Pulls the public ledger into a local .jsonl, verifies the hash chain, refuses a broken one. Uploads nothing.' },
   ]),
+  // Peer review of the Maxwell chain (docs/peer-review.md): independent witnesses that re-check the public chain and sign the head they verified.
+  ...seed('rabbit-web', 'scripts/powershell/Run-Witness.ps1', [
+    { id: 'web-witness-pc', group: 'Peer review', label: 'Run the PC witness of the Maxwell chain', scope: 'owner', risk: 'network',
+      command: 'pwsh -File scripts/powershell/Run-Witness.ps1 -WhatIf',
+      description: 'Re-checks the public chain with the Python verifier and the JavaScript witness; only if both pass it signs the head with the PC witness key and publishes the signature. Drop -WhatIf to run. The private key never leaves the PC.' },
+  ]),
   // Research search from the terminal and Google Antigravity (public Hub research tools; read only).
   ...seed('rabbit-web', 'scripts/research-search.mjs', [
     { id: 'web-research-search', group: 'Research', label: 'Research search from the terminal (antigravity)', scope: 'owner', risk: 'network',
@@ -585,6 +591,7 @@ const PLATFORM_WEB: CatalogEntry[] = [
     ...gcpScript('vault-search', 'Setup-GcpVaultSearch.ps1', 'Vault search (Vertex AI Search)', 'Makes the private vault copy searchable. Owner-only: not connected to the hub or any service. Run again with -ImportOnly to pick up new notes.'),
     ...gcpScript('wallet', 'Setup-GcpWallet.ps1', 'Donation wallet key (Cloud KMS HSM)', 'Creates the secp256k1 signing key rabbit-wallet/maxwell-donations. The private key never leaves the hardware module and nobody gets signing rights.'),
     ...gcpScript('anchor', 'Setup-GcpAnchor.ps1', 'Bitcoin anchoring (OpenTimestamps)', 'Cloud Run job rabbit-anchor: stamps the public ledger and Maxwell chain heads, stores proofs under anchors/ in the public ledger bucket, upgrades them once Bitcoin confirms. No keys, no fees.'),
+    ...gcpScript('witness', 'Setup-GcpWitness.ps1', 'Cloud witness of the Maxwell chain', 'Cloud Run job rabbit-witness with its own key (kept only in Secret Manager): independently re-checks the public chain and signs the head it verified, every 6 hours. Writes only witness/cloud-witness/ in the public ledger bucket.'),
     ...gcpScript('vault-mirror-secrets', 'Setup-GcpVaultMirrorSecrets.ps1', 'Vault mirror: store the read-only GitHub token', 'Step 1 of 2. You paste a read-only fine-grained GitHub token (Contents: read-only on the vault repository); it is stored in Secret Manager and never printed. Creates the account rabbit-vault-mirror. Run this one yourself.'),
     ...gcpScript('vault-mirror', 'Setup-GcpVaultMirror.ps1', 'Vault mirror: GitHub to Google Cloud, hourly', 'Step 2 of 2. Cloud Run job rabbit-vault-mirror clones the vault repository from GitHub every hour and copies it to the private vault bucket under github-mirror/ (never .git, Local/EEG or the PC folder view). The Obsidian plugin and the PC sync task keep working unchanged.', { extra: '-RunNow' }),
     ...gcpScript('wallet-watch', 'Setup-GcpWalletWatch.ps1', 'Wallet receiving record and alert', 'Cloud Run job rabbit-wallet-watch every 30 minutes: reads the donation and anchoring addresses from public networks, writes a private record to the reports bucket (wallet/state.json) and emails you when money arrives. No signing permission.'),

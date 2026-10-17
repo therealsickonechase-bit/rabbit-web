@@ -481,3 +481,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** qa-audit 88 tests pass (2 new: tags agree with each page title/description, preview image exists); live pages serve the new tags
 - **Undo:** Revert the commits and redeploy Pages
 - **Ref:** docs/maxwell-protocol.md
+
+### 2026-10-17 15:41 UTC - Peer review / chain
+- **Did:** Built the witness circle (docs/peer-review.md): scripts/witness.mjs (zero-dependency; reproduces Python's block hashes exactly, verifies the chain, refuses rollback and conflicting history, signs with Ed25519, evaluates k-of-n), the registry at rabbitsoftware.io/witness/registry.json, the status job's aggregator (status/witness.json), a Proof-page section and a Network-map line. Two project witnesses: pc-witness (PC; Run-Witness.ps1, nightly; signs only if the Python verifier AND the JavaScript witness pass) and cloud-witness (Cloud Run job rabbit-witness, own key in Secret Manager cloud-witness-key, service account limited to witness/cloud-witness/, every 6 h at :45). Fixed a design flaw found live: a witness ahead of a stale cached copy is 'ahead', not a conflict.
+- **Checked:** status-job suite 110 pass (22 new, real-chain fixture reproduces 16 of 16 hashes in JavaScript); live: both witnesses signed the 16-block head, status/witness.json trusted=true 2 of 2, stranger's check exits 0; catalog tests 392 pass
+- **Undo:** Disable scheduler job rabbit-witness-6h and delete job rabbit-witness, secret cloud-witness-key and service accounts rabbit-witness-job/rabbit-witness-scheduler; remove the witness entries from site/witness/registry.json; remove the nightly Run-Witness step
+- **Ref:** docs/peer-review.md

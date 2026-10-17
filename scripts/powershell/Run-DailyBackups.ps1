@@ -60,6 +60,8 @@ $steps = @(
     # Claude chats, keys and tokens redacted, to gs://rabbitsoftware-io-backups/claude-chats/ (only chats that changed).
     @{ Name = 'Google: Claude chats (redacted)'; Script = 'Save-ClaudeChats.ps1'; Params = @{} },
     @{ Name = 'Google: public ledger + datasets'; Script = 'Sync-RabbitGcs.ps1'; Params = @{ Ledger = $true; Exports = $true } },
+    # The PC's witness of the Maxwell chain: both the Python reference verifier and the JavaScript witness must pass on the public copy (just published above) before it signs the head and publishes the signature.
+    @{ Name = 'Witness: the PC cosigns the public chain'; Script = 'Run-Witness.ps1'; Params = @{} },
     @{ Name = 'Google: Maxwell files';            Script = 'Sync-RabbitGcs.ps1'; Params = @{ Maxwell = $true } },
     @{ Name = 'Platform: Supabase, Cloudflare, repos'; Script = 'Backup-Platform.ps1'; Params = @{} }
 )

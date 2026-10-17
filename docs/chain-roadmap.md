@@ -30,6 +30,9 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 | 20 | Protocol and mining requirements document | **DONE** | 2026-10-17: `docs/maxwell-protocol.md` (block format, hash rule, work target, transaction kinds, who may mine, what a miner needs, fork rule, known limits). Documents what exists; adds no `chain_id` or field, per `site/chain-identifiers.md`. |
 | 21 | Share tags and canonical links on the chain pages | **DONE** | 2026-10-17: Open Graph, Twitter card and canonical link on blockchain, proof, network, status and research (only the home page had them); a test keeps them in step with each page's title and description. |
 | 22 | Git version tags / releases and GitHub topics for the public repos | WAITING | none exist today; public-facing change, needs your go-ahead |
+| 23 | Peer-review model: the witness circle (`docs/peer-review.md`, `scripts/witness.mjs`) | **DONE** | 2026-10-17: independent witnesses re-check the public chain and sign the head (Ed25519); a reader trusts a head when k different witnesses agree and none conflicts. Live: `pc-witness` (PC, runs the Python verifier too) and `cloud-witness` (Cloud Run, own key in Secret Manager) both signed the 16-block head; rule k=2 met; stranger's check exits 0; shown on Proof and Network. 110 status-job tests (22 new), real-chain hash reproduction in JavaScript, conflict/rollback/forgery cases. |
+| 24 | Outside witnesses join the circle | WAITING | the model only means something with parties the project does not control; the 5-minute guide is in `docs/peer-review.md` section 6 and on the Proof page |
+| 25 | Alert on `witness_conflict` / `witness_refused` / lost quorum | NEXT | |
 
 ## 1. The tree
 
