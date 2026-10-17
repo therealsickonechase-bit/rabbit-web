@@ -39,6 +39,9 @@ function Import-MaxwellEnv {
 }
 $steps = @(
     # Maxwell first: anchor the public research records into the chain (adds a block only when the research changed), then mirror new blocks.
+    # Antigravity / physics literature (OpenAlex, INSPIRE-HEP; public titles and links only) goes into the research store first, so the research anchor below covers it.
+    @{ Name = 'Research: physics papers (antigravity)'; Block = { Push-Location $maxwellDir; try { python physics_research.py } finally { Pop-Location } } },
+    @{ Name = 'Research: send findings to RabbitOS'; Script = 'Run-ResearchSync.ps1'; Params = @{ Mode = 'Sync' } },
     # First, take over any blocks the Cloud Run miner added (the public copy is verified block by block; the app's mirror decides if the two ever disagree).
     @{ Name = 'Maxwell: adopt the public chain'; Block = { Push-Location $maxwellDir; try { python maxwell_adopt.py --apply } finally { Pop-Location } } },
     @{ Name = 'Maxwell: research anchor'; Block = { Push-Location $maxwellDir; try { Import-MaxwellEnv; Remove-Item Env:RABBIT_INGEST_SECRET -ErrorAction SilentlyContinue; python maxwell_research_anchor.py --apply } finally { Pop-Location } } },

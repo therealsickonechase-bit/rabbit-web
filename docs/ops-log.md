@@ -403,3 +403,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** research_link shows the antigravity records as Maxwell block 11; public mirror has 12 blocks
 - **Undo:** Blocks are append-only and cannot be removed; a later block can supersede it. Delete the log line and anchors/block-0011.json only to remove the note
 - **Ref:** maxwell_research_anchor.py --apply
+
+### 2026-10-17 02:21 UTC - Research
+- **Did:** Nightly job now fetches antigravity/physics papers (physics_research.py), syncs them to RabbitOS before the Maxwell research anchor, and records each new block hash to the local log and gs://rabbitsoftware-io-backups/maxwell/anchors/
+- **Checked:** Script parses; physics_research.py and record_anchor.py ran by hand; first full nightly run to be watched
+- **Undo:** Remove the 3 steps from Run-DailyBackups.ps1; stored records and blocks stay (append-only)
+- **Ref:** Run-DailyBackups.ps1
