@@ -27,9 +27,13 @@ export default async function DownloadsPage() {
 
         <section className="bg-surface border border-line rounded-lg p-4 space-y-4" aria-label="Maxwell Core">
           <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="flex items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/maxwell-core.png" width={64} height={64} alt="Maxwell Core icon" className="rounded-xl border border-line shrink-0" />
             <div>
               <h2 className="font-medium">Maxwell Core{core ? ` ${core.version}` : ''}</h2>
               <p className="text-sm text-muted">The node for the research chain, the kernel of RabbitOS. It keeps its own verified copy of the chain, and reports to rabbitsoftware.io so the network shows on the live view. One ZIP for Raspberry Pi, Linux, Windows, macOS and Docker. It starts by itself at boot or sign-in and adds a Maxwell Core desktop icon that opens a local dashboard: your chain, the cloud network, the other nodes, the research, and a way into the RabbitOS cloud shell. Needs Node.js 18 or newer. Install it for your user, or for the whole computer with administrator rights, and use it from any terminal: maxwell-core verify, watch, status, update. Read-only: it never mines and holds no secret that can change the chain.</p>
+            </div>
             </div>
             {core
               ? <a className="text-xs rounded-md border border-accent text-accent px-3 py-1 hover:bg-accent-soft" href={core.url} rel="noopener noreferrer">Download · {humanSize(core.bytes)}</a>
