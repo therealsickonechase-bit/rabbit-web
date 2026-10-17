@@ -23,6 +23,10 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 | 13 | First small wallet test and withdrawal | LATER $ | |
 | 14 | Appeal the GitHub suspension (or retire the org) | WAITING | owner |
 | 15 | Decide on the cloud-shell Gemini key | WAITING | optional |
+| 16 | Network map page (rabbitsoftware.io/network): blocks, hash links, anchors, Bitcoin witnesses, sources | **DONE** | 2026-10-17: live; built only from files already published; 6 new tests (86 total); page script executed against real data in a simulated browser (16 blocks, 6 anchors, 6 Bitcoin witnesses, click/filter/keyboard work). Not seen in a real browser by me: please open it. |
+| 17 | Publish the web-snapshot files (`maxwell/web-snapshots/`) and add them to the anchor manifest, so web blocks are re-checkable | NEXT | today those files exist only on the PC |
+| 18 | `status/chain-graph.json` from the status job (blocks, anchors, miners, stores, edges) and a time slider | NEXT | |
+| 19 | RabbitOS ledger as its own lane, linked through the head hash each web snapshot commits; Ethereum and XRP lanes greyed until funded | NEXT | |
 
 ## 1. The tree
 

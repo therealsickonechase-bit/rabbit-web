@@ -463,3 +463,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** Caller-scope regression test passes (log variable stays a path, logging works); anchor-job 17 tests, verify-anchor 6 tests, verify-maxwell 5 tests; nightly job now logs START/OK per step
 - **Undo:** Revert the commits; redeploy the previous anchor job with Setup-GcpAnchor.ps1
 - **Ref:** scripts/powershell/Wait-HeavyJobSlot.ps1
+
+### 2026-10-17 15:07 UTC - Network map
+- **Did:** New public page rabbitsoftware.io/network: a live map of the Maxwell chain (16 blocks), the hash links between blocks, which anchor covers each block, the Bitcoin block that witnesses it (with the status job's re-check), and the sources that feed it (research records, platform state, RabbitOS ledger). Built only from files already published; no new backend. Click or keyboard on a block shows its facts; filter research or platform snapshots; table fallback.
+- **Checked:** qa-audit 86 tests pass (6 new, real chain and anchor fixtures); page script executed in jsdom against the fixtures: 16 blocks, 6 anchors, 6 Bitcoin nodes, 3 sources, 50 edges, detail panel, filter and keyboard OK; deployed, page and module serve 200 with the JavaScript type
+- **Undo:** Remove network.html/js/view from the site and the links, redeploy Pages
+- **Ref:** site/network.html
