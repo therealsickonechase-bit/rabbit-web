@@ -142,6 +142,17 @@ const RABBIT_WEB: CatalogEntry[] = [
       command: 'pwsh -File scripts/powershell/Connect-Antigravity.ps1 -WhatIf',
       description: 'Registers the Hub MCP with the agy CLI so Antigravity can call research_link and research_search. Public read-only tools, no key. Drop -WhatIf to apply; -Remove undoes it.' },
   ]),
+  // GitHub mirrors in Google Cloud (docs/github-mirrors.md): bundles of the GitHub Live mirrors in the private vault bucket, restorable without GitHub.
+  ...seed('rabbit-web', 'scripts/powershell/Backup-GithubMirrors.ps1', [
+    { id: 'web-gh-bundles', group: 'Backups', label: 'Bundle the GitHub mirrors and copy them to Google Cloud', scope: 'owner', risk: 'network',
+      command: 'pwsh -File scripts/powershell/Backup-GithubMirrors.ps1 -WhatIf',
+      description: 'Packs each mirror into a verified git bundle and uploads them to the private vault bucket. Nothing is deleted. Drop -WhatIf to run.' },
+  ]),
+  ...seed('rabbit-web', 'scripts/powershell/Restore-GithubMirror.ps1', [
+    { id: 'web-gh-restore', group: 'Backups', label: 'List or restore a GitHub mirror from Google Cloud', scope: 'owner', risk: 'network',
+      command: 'pwsh -File scripts/powershell/Restore-GithubMirror.ps1 -List',
+      description: 'Lists the bundles in the cloud. Add -Repo NAME -Target FOLDER to restore one (checked against the manifest hash). Pushes nothing.' },
+  ]),
   ...seed('rabbit-web', 'package.json', [
     { id: 'web-dev', source: 'README.md', group: 'Local development', label: 'Next dev server', scope: 'owner', risk: 'local',
       command: 'npm run dev',

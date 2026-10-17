@@ -415,3 +415,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** 26 chats uploaded; redaction counts printed per file
 - **Undo:** Remove the step from Run-DailyBackups.ps1; delete the claude-chats/ folder in the bucket
 - **Ref:** Save-ClaudeChats.ps1
+
+### 2026-10-17 12:31 UTC - Backups
+- **Did:** New GitHub pathway that needs no org-admin account: github-bundles.py packs the 34 GitHub Live mirrors into verified git bundles (31 bundled, 1.47 GB; 2 empty upstream), Backup-GithubMirrors.ps1 uploads them to gs://rabbitsoftware-io-vault-private/github-bundles/, Restore-GithubMirror.ps1 restores from the cloud. New daily task 'RabbitOS GitHub Mirrors to Google Cloud'; old 'RabbitOS GitHub Vault Sync' disabled (not deleted).
+- **Checked:** Test for the bundler passes; restore of Maxwell-blockchain from the cloud copy matched the original head commit bdfcc1d4; manifest root 4a21833e
+- **Undo:** Disable the new task; Enable-ScheduledTask 'RabbitOS GitHub Vault Sync' to go back; delete github-bundles/ in the bucket (versioned, 90 days)
+- **Ref:** docs/github-mirrors.md
