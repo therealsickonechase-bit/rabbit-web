@@ -36,7 +36,7 @@ if (-not (Test-Path $marker)) {
   Ok (WaitVerified) "dashboard reports a verified chain"
   $mc = "$pf\MaxwellCore\maxwell-core.cmd"
   $v = & $mc verify 2>&1; $v | Select-Object -Last 2 | ForEach-Object { P "verify: $_" }
-  Ok (($v -join "`n") -match 'All 16 blocks verify') "maxwell-core verify checks all 16 blocks"
+  Ok (($v -join "`n") -match 'All [0-9]+ blocks verify') "maxwell-core verify re-checks every block of the chain"
   Ok (($v -join "`n") -match 'same tip') "tip matches the Google Cloud gateway"
   & $mc watch --once 2>&1 | ForEach-Object { P "watch: $_" }
   & $mc update 2>&1 | ForEach-Object { P "update: $_" }

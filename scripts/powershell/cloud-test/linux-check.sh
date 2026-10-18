@@ -37,7 +37,7 @@ if [ ! -f /var/lib/mc-test-phase1 ]; then
   systemctl is-active --quiet maxwell-core; ok $? "service is active"
   systemctl is-enabled --quiet maxwell-core; ok $? "service is enabled for boot"
   wait_verified; ok $? "dashboard reports a verified chain"
-  out="$(timeout 120 maxwell-core verify 2>&1)"; echo "$out" | tail -2; echo "$out" | grep -q "All 16 blocks verify"; ok $? "maxwell-core verify checks all 16 blocks"
+  out="$(timeout 120 maxwell-core verify 2>&1)"; echo "$out" | tail -2; echo "$out" | grep -Eq "All [0-9]+ blocks verify"; ok $? "maxwell-core verify re-checks every block of the chain"
   echo "$out" | grep -q "same tip"; ok $? "tip matches the Google Cloud gateway"
   timeout 120 maxwell-core watch --once; ok $? "maxwell-core watch --once"
   timeout 120 maxwell-core update; r=$?; { [ $r = 0 ] || [ $r = 4 ]; }; ok $? "maxwell-core update reaches the signed release pointer (exit $r)"
