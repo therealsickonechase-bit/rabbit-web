@@ -57,6 +57,12 @@ State key: **DONE** (finished and checked), **DOING**, **NEXT**, **WAITING** (ne
 | 47 | Research explorer is idle: `research_topics` has 0 queued topics (58 explored), so the record count has been flat at 1,656 | WAITING | owner decision: queue new topics (a production data write) or add automatic topic generation |
 | 48 | PC is short of memory (about 0.6 GB free of 7.7 GB while Docker, VS Code and the scheduled jobs run); everything on it is slower | WAITING | owner: close Docker Desktop when not testing, limit WSL memory (.wslconfig), or add RAM |
 | 49 | Push the local commits to GitHub (3 repos) and clear the GitHub billing lock, then run the macOS workflow (`ci/maxwell-core-platforms`) | WAITING | owner |
+| 50 | **Topic designer** (`research-agents/topic_designer.py`): proposes new (condition, gene) research topics from what the records already contain, ranked by evidence, novelty and diversity, with a human approval step before anything is queued | **BUILDING** | fixes the idle explorer (item 47); deterministic, no AI; proposals are files until you approve |
+| 51 | **Chain statistics** (`maxwell_stats.py`): blocks per day by producer, intervals, and which snapshot leaves changed in each block, to judge whether blocks are meaningful or noisy before changing any mining rule | NEXT | measure before redesigning |
+| 52 | **Witness-quorum adoption** in Maxwell Core: an opt-in setting so a node only adopts the part of the chain that k witnesses have signed | NEXT | closes the open review finding "extending the chain needs no witness quorum" |
+| 53 | **Release-key rotation**: a release signed by an existing key can introduce a new key or revoke one, kept in the installed copy | NEXT | closes "one release key, no rotation" |
+| 54 | **Guide-scoring teaching tool** in the CRISPR explorer: a transparent, documented heuristic score for public sequences, labelled teaching-only (no lab protocols, no clinical claims); review what the explorer already scores first | LATER | |
+| 55 | Windows boot task as LocalService instead of SYSTEM | LATER | tighter privileges |
 
 ## 1. The tree
 
