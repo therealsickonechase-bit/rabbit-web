@@ -6,6 +6,7 @@ set -u
 P() { echo "MC-TEST: $*"; }
 FAIL=0
 ok() { if [ "$1" = 0 ]; then P "PASS  $2"; else P "FAIL  $2"; FAIL=1; fi; }
+BASE="$(curl -fsS -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/mc-base 2>/dev/null || echo https://rabbitsoftware.io/downloads)"
 MODE="$(curl -fsS -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/mc-mode 2>/dev/null || echo linux)"
 wait_verified() {
   for i in $(seq 1 90); do
@@ -21,10 +22,10 @@ if [ ! -f /var/lib/mc-test-phase1 ]; then
   apt-get -o DPkg::Lock::Timeout=120 update -qq >/dev/null 2>&1
   apt-get -o DPkg::Lock::Timeout=120 install -y -qq curl unzip xz-utils sudo ca-certificates >/dev/null 2>&1
   cd /tmp || exit 1
-  curl -fsSL https://rabbitsoftware.io/downloads/maxwell-core-latest.json -o latest.json; ok $? "release pointer downloaded from rabbitsoftware.io"
+  curl -fsSL "$BASE/maxwell-core-latest.json" -o latest.json; ok $? "release pointer downloaded from $BASE"
   VER="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' latest.json)"; FILE="$(sed -n 's/.*"file": *"\([^"]*\)".*/\1/p' latest.json)"; SHA="$(sed -n 's/.*"sha256": *"\([^"]*\)".*/\1/p' latest.json)"
   P "release $VER ($FILE)"
-  curl -fsSLO "https://rabbitsoftware.io/downloads/$FILE"; ok $? "zip downloaded"
+  curl -fsSLO "$BASE/$FILE"; ok $? "zip downloaded"
   echo "$SHA  $FILE" | sha256sum -c - >/dev/null 2>&1; ok $? "zip matches the signed checksum"
   unzip -q "$FILE"; cd "maxwell-core-$VER" || exit 1
   if [ "$MODE" = pi ]; then

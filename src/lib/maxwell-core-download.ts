@@ -4,7 +4,9 @@
 export const CORE_SITE = 'https://rabbitsoftware.io'
 export const CORE_LATEST_URL = `${CORE_SITE}/downloads/maxwell-core-latest.json`
 
-export type CoreLatest = { version: string; file: string; sha256: string; bytes: number; url: string; page: string }
+export const CORE_MIRROR = 'https://rabbitsoftware-io-ledger-public.storage.googleapis.com/releases/maxwell-core'
+
+export type CoreLatest = { version: string; file: string; sha256: string; bytes: number; url: string; mirror: string; page: string }
 
 /** Accepts only a well-formed pointer to a zip on rabbitsoftware.io; anything else returns null and the page shows a plain link instead. */
 export function parseCoreLatest(raw: unknown): CoreLatest | null {
@@ -15,7 +17,7 @@ export function parseCoreLatest(raw: unknown): CoreLatest | null {
   if (typeof file !== 'string' || file !== `maxwell-core-${version}.zip`) return null
   if (typeof sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(sha256)) return null
   if (typeof bytes !== 'number' || !Number.isInteger(bytes) || bytes < 1 || bytes > 50 * 1024 * 1024) return null
-  return { version, file, sha256, bytes, url: `${CORE_SITE}/downloads/${file}`, page: `${CORE_SITE}/maxwell-core` }
+  return { version, file, sha256, bytes, url: `${CORE_SITE}/downloads/${file}`, mirror: `${CORE_MIRROR}/${file}`, page: `${CORE_SITE}/maxwell-core` }
 }
 
 export async function fetchCoreLatest(fetchImpl: typeof fetch = fetch): Promise<CoreLatest | null> {

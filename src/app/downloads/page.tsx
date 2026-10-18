@@ -43,6 +43,7 @@ export default async function DownloadsPage() {
             <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
               <div><dt className="text-muted inline">File: </dt><dd className="inline font-mono">{core.file}</dd></div>
               <div><dt className="text-muted inline">Licence: </dt><dd className="inline">UPL-1.0</dd></div>
+              <div className="sm:col-span-2"><dt className="text-muted inline">Also stored on Google Cloud: </dt><dd className="inline"><a className="underline" href={core.mirror} rel="noopener noreferrer">{core.file}</a> (same file, same checksum)</dd></div>
               <div className="sm:col-span-2"><dt className="text-muted inline">SHA-256: </dt><dd className="inline font-mono break-all">{core.sha256}</dd></div>
             </dl>
           )}

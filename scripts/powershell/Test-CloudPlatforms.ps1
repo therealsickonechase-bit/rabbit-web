@@ -20,6 +20,7 @@ param(
     [switch]$SkipWindows,
     [string[]]$Only = @(),                     # re-run just some machines, for example -Only mc-test-win
     [switch]$Keep,
+    [switch]$FromMirror,                       # download the release from the Google Cloud copy instead of rabbitsoftware.io
     [int]$TimeoutMinutes = 45
 )
 $ErrorActionPreference = 'Stop'
@@ -56,7 +57,8 @@ try {
         $args2 = $cmd + @($t.Name, "--project=$Project", "--zone=$Zone", "--machine-type=$($t.Type)", "--image-family=$($t.Family)", "--image-project=$($t.Project)",
             "--boot-disk-size=$($t.Disk)", '--boot-disk-type=pd-balanced', '--labels=purpose=maxwell-core-test', '--max-run-duration=90m', '--instance-termination-action=DELETE',
             '--no-service-account', '--no-scopes', "--metadata-from-file=$($t.Key)=$(Join-Path $here $t.Script)", '--quiet')
-        if ($t.Mode) { $args2 += "--metadata=mc-mode=$($t.Mode)" }
+        $meta = @(); if ($t.Mode) { $meta += "mc-mode=$($t.Mode)" }; if ($FromMirror) { $meta += 'mc-base=https://rabbitsoftware-io-ledger-public.storage.googleapis.com/releases/maxwell-core' }
+        if ($meta.Count) { $args2 += "--metadata=$($meta -join ',')" }
         & gcloud @args2 2>&1 | ForEach-Object { Write-Host "  $_" }
         if ($LASTEXITCODE -ne 0) { throw "could not create $($t.Name)" }
         $created += $t.Name

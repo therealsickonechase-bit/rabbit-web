@@ -8,6 +8,7 @@ function WaitVerified { for ($i = 0; $i -lt 90; $i++) { try { if ((Invoke-WebReq
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $marker = 'C:\mc-test-phase1'
 $pf = $env:ProgramFiles
+$base = try { Invoke-RestMethod -Headers @{ 'Metadata-Flavor' = 'Google' } 'http://metadata.google.internal/computeMetadata/v1/instance/attributes/mc-base' -TimeoutSec 5 } catch { 'https://rabbitsoftware.io/downloads' }
 
 if (-not (Test-Path $marker)) {
   P "PHASE 1 on $([Environment]::OSVersion.VersionString), PowerShell $($PSVersionTable.PSVersion), user $(whoami)"
@@ -24,9 +25,9 @@ if (-not (Test-Path $marker)) {
   [Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'Machine') + ";$pf\nodejs", 'Machine'); $env:Path += ";$pf\nodejs"
   P "node $(& "$pf\nodejs\node.exe" -v)"
   # the release, as a user would get it
-  $p = Invoke-RestMethod https://rabbitsoftware.io/downloads/maxwell-core-latest.json
+  $p = Invoke-RestMethod "$base/maxwell-core-latest.json"
   Ok ($null -ne $p.signature) "release pointer is signed (version $($p.version))"
-  Invoke-WebRequest "https://rabbitsoftware.io/downloads/$($p.file)" -OutFile "C:\$($p.file)" -UseBasicParsing
+  Invoke-WebRequest "$base/$($p.file)" -OutFile "C:\$($p.file)" -UseBasicParsing
   Ok ((Get-FileHash "C:\$($p.file)" -Algorithm SHA256).Hash.ToLower() -eq $p.sha256) "zip matches the signed checksum"
   Expand-Archive "C:\$($p.file)" -DestinationPath C:\mcx -Force
   $dir = "C:\mcx\maxwell-core-$($p.version)"

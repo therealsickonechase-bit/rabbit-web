@@ -5,7 +5,7 @@ import { CORE_LATEST_URL, CORE_PLATFORMS, checksumCommands, fetchCoreLatest, par
 const good = { version: '0.3.0', file: 'maxwell-core-0.3.0.zip', sha256: 'ab'.repeat(32), bytes: 41694 }
 
 test('a well-formed pointer becomes a download on rabbitsoftware.io', () => {
-  assert.deepEqual(parseCoreLatest(good), { ...good, url: 'https://rabbitsoftware.io/downloads/maxwell-core-0.3.0.zip', page: 'https://rabbitsoftware.io/maxwell-core' })
+  assert.deepEqual(parseCoreLatest(good), { ...good, url: 'https://rabbitsoftware.io/downloads/maxwell-core-0.3.0.zip', mirror: 'https://rabbitsoftware-io-ledger-public.storage.googleapis.com/releases/maxwell-core/maxwell-core-0.3.0.zip', page: 'https://rabbitsoftware.io/maxwell-core' })
 })
 
 test('anything else is refused, so the page falls back to a plain link', () => {
