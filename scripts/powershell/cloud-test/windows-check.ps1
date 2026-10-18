@@ -8,15 +8,15 @@ function WaitVerified { for ($i = 0; $i -lt 90; $i++) { try { if ((Invoke-WebReq
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $marker = 'C:\mc-test-phase1'
 $pf = $env:ProgramFiles
-$base = try { $r = Invoke-WebRequest -UseBasicParsing -Headers @{ 'Metadata-Flavor' = 'Google' } 'http://metadata.google.internal/computeMetadata/v1/instance/attributes/mc-base' -TimeoutSec 5; $c = $r.Content; if ($c -is [byte[]]) { $c = [Text.Encoding]::UTF8.GetString($c) }; $c.Trim() } catch { 'https://rabbitsoftware.io/downloads' }      # Windows PowerShell 5.1 can hand back bytes for this content type
+$mcBase = try { $r = Invoke-WebRequest -UseBasicParsing -Headers @{ 'Metadata-Flavor' = 'Google' } 'http://metadata.google.internal/computeMetadata/v1/instance/attributes/mc-base' -TimeoutSec 5; $c = $r.Content; if ($c -is [byte[]]) { $c = [Text.Encoding]::UTF8.GetString($c) }; $c.Trim() } catch { 'https://rabbitsoftware.io/downloads' }      # Windows PowerShell 5.1 can hand back bytes for this content type
 
 if (-not (Test-Path $marker)) {
   P "PHASE 1 on $([Environment]::OSVersion.VersionString), PowerShell $($PSVersionTable.PSVersion), user $(whoami)"
   # Node.js 22 (official zip, checked against nodejs.org's checksum list) into Program Files
-  $base = 'https://nodejs.org/dist/latest-v22.x'
-  $sums = (Invoke-WebRequest "$base/SHASUMS256.txt" -UseBasicParsing).Content
+  $nodeBase = 'https://nodejs.org/dist/latest-v22.x'
+  $sums = (Invoke-WebRequest "$nodeBase/SHASUMS256.txt" -UseBasicParsing).Content
   $nz = ([regex]::Match($sums, 'node-v[\d.]+-win-x64\.zip')).Value
-  Invoke-WebRequest "$base/$nz" -OutFile "C:\$nz" -UseBasicParsing
+  Invoke-WebRequest "$nodeBase/$nz" -OutFile "C:\$nz" -UseBasicParsing
   $want = ($sums -split "`n" | Where-Object { $_ -match [regex]::Escape($nz) } | Select-Object -First 1).Split(' ')[0]
   Ok ((Get-FileHash "C:\$nz" -Algorithm SHA256).Hash.ToLower() -eq $want) "Node.js $nz matches nodejs.org checksum"
   Expand-Archive "C:\$nz" -DestinationPath C:\nodetmp -Force
@@ -25,9 +25,9 @@ if (-not (Test-Path $marker)) {
   [Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'Machine') + ";$pf\nodejs", 'Machine'); $env:Path += ";$pf\nodejs"
   P "node $(& "$pf\nodejs\node.exe" -v)"
   # the release, as a user would get it
-  $p = Invoke-RestMethod "$base/maxwell-core-latest.json"
+  $p = Invoke-RestMethod "$mcBase/maxwell-core-latest.json"
   Ok ($null -ne $p.signature) "release pointer is signed (version $($p.version))"
-  Invoke-WebRequest "$base/$($p.file)" -OutFile "C:\$($p.file)" -UseBasicParsing
+  Invoke-WebRequest "$mcBase/$($p.file)" -OutFile "C:\$($p.file)" -UseBasicParsing
   Ok ((Get-FileHash "C:\$($p.file)" -Algorithm SHA256).Hash.ToLower() -eq $p.sha256) "zip matches the signed checksum"
   Expand-Archive "C:\$($p.file)" -DestinationPath C:\mcx -Force
   $dir = "C:\mcx\maxwell-core-$($p.version)"
