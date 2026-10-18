@@ -415,6 +415,18 @@ const RA: CatalogEntry[] = [
     { id: 'ra-task-loop', group: 'Task worker', label: 'task_worker keep polling', scope: 'owner', risk: 'secret',
       command: 'python task_worker.py', needs: ['RABBIT_URL', 'RABBIT_INGEST_SECRET'], description: 'Polls every 20 seconds.' },
   ]),
+  ...seed('research-agents', 'topic_designer.py', [
+    { id: 'td-propose', group: 'Topic designer', label: 'Topic designer: propose the next research topics', scope: 'owner', risk: 'network',
+      command: 'python topic_designer.py propose --max 8',
+      description: 'Reads the public topics and records, finds (condition, gene) pairs that appear together in several records and are not yet explored, checks each gene symbol against NCBI Gene (an alias becomes the official symbol), and writes topic_proposals.json with the reasons. Sends nothing.' },
+    { id: 'td-list', group: 'Topic designer', label: 'Topic designer: show the open proposals', scope: 'owner', risk: 'local',
+      command: 'python topic_designer.py list', description: 'The proposals waiting for your decision, with their evidence.' },
+    { id: 'td-approve', group: 'Topic designer', label: 'Topic designer: approve proposals (shows the plan first)', scope: 'owner', risk: 'secret',
+      command: 'python topic_designer.py approve ID --apply', needs: ['RABBIT_URL', 'RABBIT_INGEST_SECRET'],
+      description: 'Queues the chosen proposals in the app for the explorer (at most 10 at a time, only listed conditions and gene symbols). Without --apply it only shows what would be queued.' },
+    { id: 'td-reject', group: 'Topic designer', label: 'Topic designer: reject proposals for good', scope: 'owner', risk: 'local',
+      command: 'python topic_designer.py reject ID', description: 'Remembers the condition and gene so the designer never proposes them again.' },
+  ]),
   ...seed('research-agents', 'dna_variant_index.py', [
     { id: 'dna-index-build', group: 'DNA matching', label: 'Build the DNA variant index (public ClinVar + RefSeq)', scope: 'owner', risk: 'network',
       command: 'python dna_variant_index.py build', description: 'Downloads RefSeq transcripts and ClinVar pathogenic single-base variants for 32 cancer genes, checks each variant against its transcript and writes dna_index/. About 100 NCBI requests; no personal data.' },
