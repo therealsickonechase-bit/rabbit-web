@@ -8,7 +8,7 @@ function WaitVerified { for ($i = 0; $i -lt 90; $i++) { try { if ((Invoke-WebReq
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $marker = 'C:\mc-test-phase1'
 $pf = $env:ProgramFiles
-$base = try { Invoke-RestMethod -Headers @{ 'Metadata-Flavor' = 'Google' } 'http://metadata.google.internal/computeMetadata/v1/instance/attributes/mc-base' -TimeoutSec 5 } catch { 'https://rabbitsoftware.io/downloads' }
+$base = try { $r = Invoke-WebRequest -UseBasicParsing -Headers @{ 'Metadata-Flavor' = 'Google' } 'http://metadata.google.internal/computeMetadata/v1/instance/attributes/mc-base' -TimeoutSec 5; $c = $r.Content; if ($c -is [byte[]]) { $c = [Text.Encoding]::UTF8.GetString($c) }; $c.Trim() } catch { 'https://rabbitsoftware.io/downloads' }      # Windows PowerShell 5.1 can hand back bytes for this content type
 
 if (-not (Test-Path $marker)) {
   P "PHASE 1 on $([Environment]::OSVersion.VersionString), PowerShell $($PSVersionTable.PSVersion), user $(whoami)"
