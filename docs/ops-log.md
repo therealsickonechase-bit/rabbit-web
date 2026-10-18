@@ -505,3 +505,9 @@ Other logs that already exist (not duplicated here):
 - **Checked:** npm test in workers/qa-audit (157), python unittest maxwell_links, Pi script on arm64 Debian, Windows installer on this PC
 - **Undo:** git revert the commits in rabbitsoftware-cloudflare (d92a0af, ceb770e) and research-agents (1332b8c); nothing was deployed
 - **Ref:** docs/chain-roadmap.md items 35-40
+
+### 2026-10-18 00:43 UTC - Maxwell Core and whole-system audit
+- **Did:** Maxwell Core 0.5.6 released (signed update restarts the node, restart command, dashboard warm cache, upgrade replaces the old node); stale tests fixed; site link test added; docs updated; real-machine tests on Google Cloud
+- **Checked:** all suites pass in three repos; Google Cloud arm64, x64 and Windows Server passed on 0.5.3; this PC updated 0.5.5 to 0.5.6 through the signed updater
+- **Undo:** git revert the commits in rabbitsoftware-cloudflare and rabbit-web; roll the site back with a Pages deployment; the previous program files are kept in .previous on installed copies
+- **Ref:** docs/chain-roadmap.md items 45-49
