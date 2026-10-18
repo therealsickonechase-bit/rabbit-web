@@ -32,7 +32,7 @@ Contact records, API keys and audit writes stay closed; agent tasks proposed her
 | Public proof | anyone | Already-public audit head only; no private audit entries or sealing controls. |
 | Contact records, API keys, audit writes, task execution | closed | Not reachable anonymously. Members, Guests, Keys and Settings pages are removed. Ingest and agent endpoints keep their signed auth. |
 | Open model API | anyone, read-only | `/api/model/body`, `/api/model/state`, `/api/model/concepts` (MeSH), `/api/model/openapi.json`, `/llms.txt`. Teaching data only; no personal data. |
-| **Downloads** (`/downloads`) | anyone, read-only | Existing public packages with licence/checksum. Account uploads and removal are disabled. |
+| **Downloads** (`/downloads`) | anyone, read-only | **Maxwell Core** (the node that verifies the research chain: Raspberry Pi, Linux, Windows, macOS, Docker; installs system-wide or per user, terminal commands, signed self-update; version and checksum read from rabbitsoftware.io) and existing public packages with licence/checksum. Account uploads and removal are disabled. |
 | Public feed | anyone, read-only | `/api/public/research-feed` for rabbitsoftware.io. |
 | Owner cloud shell, Vault cloud jobs | existing verified owner session only | `/cloudshell`, `/vault-jobs`; separate opt-in BFF boundary, not anonymous account access. Services are not deployed by this change. |
 

@@ -80,8 +80,18 @@ Safety choices: the RPC listens only on the loopback address; it checks the `Hos
 2. **Who else runs a node:** the model gets stronger with nodes you do not control.
 3. **Whether to pursue Phase 4** (the wider transparency-log ecosystem) once the Core exists.
 
-## 8. Version 0.3: platforms, heartbeats and the one download
+## 8. Versions 0.3 to 0.5: platforms, heartbeats and the one download
 
 - **One ZIP, a section per platform**: `rabbitsoftware.io/maxwell-core` offers `maxwell-core-0.3.0.zip` with `platforms/raspberry-pi` (`setup-pi.sh`: checks for a Pi and a 64-bit OS, optionally installs Node.js with a checksum check, installs the service, optionally makes the Pi a named node), `linux`, `windows`, `macos` (not tested), `docker`, `google-cloud`. Built reproducibly by `scripts/build-maxwell-core-zip.mjs`.
 - **How it talks to the rest of the project**: `maxwell-core/COMMS.md`. Reads are public HTTPS; a named node writes a signed heartbeat and nothing else; `maxwell-core open cloudshell` and `maxwell-core status` connect a node to RabbitOS.
 - **Phase 1 pieces built**: heartbeats, `site/nodes/registry.json`, `status/nodes.json` (status job), the Nodes panel on `/core`, and the `core:nodes` leaf in the rabbit web snapshot. Open: Network-map lane, RabbitOS app view, the PC as a registered node.
+
+### What 0.4 and 0.5 added
+
+- **Desktop**: a local dashboard (`http://127.0.0.1:8646/`, public data only) and an icon on the desktop, Start menu, applications menu or in Applications; the node starts by itself (boot or sign-in).
+- **System-wide install**: Linux and Raspberry Pi always (service account, `/opt/maxwell-core`, `/var/lib/maxwell`); Windows `-System` (Program Files, locked ProgramData, SYSTEM task at boot, system PATH); macOS `--system` (LaunchDaemon that runs as the installing user). Per-user modes need no administrator rights.
+- **Terminal**: `maxwell-core verify | watch | status | dashboard | start | update [--apply] | open <page>`, plus `maxwell-cli` (Bitcoin-Core-style RPC). `update --apply` accepts only a release whose pointer is signed with the project release key (private key in `~/RabbitOS/release`, never in a repository or a synced folder), whose ZIP matches the signed SHA-256 and its own checksum list, which is no older than 120 days, and which starts correctly from a staging folder; the old files are kept in `.previous`.
+- **Works on**: Node.js 18, 20, 22 and later (a small fallback JSON parser covers Node without `context.source`), x64, arm64 and 32-bit ARM, systemd or cron start-up, Windows PowerShell 5.1 and 7. The first block and the minimum difficulty are pinned in code.
+- **Tested on real machines** (Google Cloud, `scripts/powershell/Test-CloudPlatforms.ps1`): Debian arm64 (the Raspberry Pi setup path), Debian x64 and Windows Server 2022, each installing the published release, verifying the chain and surviving a reboot. Raspberry Pi hardware and a real Mac have not been tested.
+- **Independent review**: a separate reviewer found 23 issues in 0.5.0 (the worst: a malformed request could crash the node); all but the open items below were fixed. Open: one release key with no rotation, extending the chain needs no witness quorum, Alpine/musl is not supported, the Windows boot task runs as SYSTEM.
+

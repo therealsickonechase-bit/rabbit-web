@@ -47,6 +47,7 @@ record; Cloudflare Workers serve it; the Python research agents feed it through 
 | Overview, Twin Atlas, Chemistry & DNA | everyone signed in (read-only; owner can switch off with `GUEST_MIRROR=off`) | The digital twin (name and date of birth hidden from guests): identity, convergence gate, RF mesh nodes, readings vs baseline, reference variants |
 | Brain Network | everyone signed in; stored EEG and AI illustrations owner-only | 3D brain and detailed body with organs, spinal cord and nerve routes tied to scenarios and a physiology model; live OpenBCI/BrainFlow signals from a local bridge; Qwen-Image pictures through a Hugging Face Space; **My data portrait** from the local self-data hub |
 | Agents, Chain & Audit | everyone signed in (read-only); sealing batches is owner-only |
+| Downloads (`/downloads`, no sign-in) | anyone, read-only | **Maxwell Core**, the node that verifies the research chain on your own machine (Raspberry Pi, Linux, Windows, macOS, Docker), with the terminal commands `maxwell-core verify`, `watch`, `status`, `update` and `open cloudshell`, plus public data packages. Version and checksum come from rabbitsoftware.io; see `docs/maxwell-core.md`. |
 | Members | owner | Accounts and roles. |
 | Ingest | agents | HMAC-signed, replay-protected writes from the research machines |
 | Open model API | anyone, read-only | `/api/model/body`, `/state`, `/concepts` (MeSH), `/openapi.json` and `/llms.txt`: teaching data for people, AI models and open-source tools; no personal data |
